@@ -21,7 +21,7 @@ function svg(tag, attributes = {}, text) {
   return node;
 }
 
-const clip = (text, max = 14) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
+const clip = (text, max = 16) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 const polar = (cx, cy, radius, degrees) => [cx + radius * Math.sin((degrees * Math.PI) / 180), cy - radius * Math.cos((degrees * Math.PI) / 180)];
 
 function table(head, rows, className = '') {
@@ -141,7 +141,7 @@ export function mountManual(root, { getDescriptor, getSettings = () => null, loa
     for (const { pot, group, dots, needle, label } of refs.potNodes) {
       const entry = page.pots[pot.id];
       const shifted = state.shift && entry.shift;
-      group.style.setProperty('--ring', page.colour);
+      group.style.setProperty('--ring', entry.colour ?? page.colour);
       const lit = Math.max(1, Math.round(entry.def * (RING_DOTS - 1)) + 1);
       dots.forEach((dot, i) => dot.classList.toggle('lit', i < lit));
       needle.setAttribute('transform', `rotate(${(RING_START + entry.def * 270).toFixed(1)} ${pot.x} ${pot.y})`);
@@ -168,7 +168,10 @@ export function mountManual(root, { getDescriptor, getSettings = () => null, loa
     ]);
     const node = table(['Knob', `${page.name}, normal`, 'Hold B1', 'B2 does'], rows, 'manual-pots');
     node.style.setProperty('--ring', page.colour);
-    return node;
+    if (!page.note) return node;
+    const wrap = el('div');
+    wrap.append(node, el('p', 'manual-muted manual-pagenote', page.note));
+    return wrap;
   }
 
   // ------------------------------------------------------------------ the readout

@@ -57,6 +57,41 @@ export function b2Of(help) {
 export function panelPages(descriptor) {
   const pager = descriptor?.components?.find((component) => component.kind === 'pager' && Array.isArray(component.pageNames) && component.pots === 6);
   if (!pager) return [];
+  const pages = describedPages(pager);
+  return isCompactBuild(pages) ? [...pages, masterPage(pages)] : pages;
+}
+
+/** The compact firmware names the sampler's pot 4 "Loop Mode" and has no FX Granular page; the full build has the opposite. */
+export function isCompactBuild(pages) {
+  return !pages.some((page) => page.name === 'FX Granular') && pages.find((page) => /^Sampler \d+$/.test(page.name))?.pots[3]?.name === 'Loop Mode';
+}
+
+/**
+ * The compact build's Master page. It lives in the FX Granular slot of the firmware and is not part of the HostLink pager, so
+ * it is described here from the firmware's panel code: fw/include/pentavox/mod/panel_destination_map.h (what each knob sets),
+ * panel_shift.h (B1 over a filter is its resonance), src/hw/panel_frame.cpp (ring colours and the output-level meter) and
+ * app_parameters.h (factory values: filters centred, output level 0.85, drive shapers off).
+ */
+export function masterPage(pages) {
+  const colourOf = (name) => pages.find((page) => page.name === name)?.colour ?? '#888888';
+  const knob = (id, name, def, colour, shift = '') => ({ id, name, shift, b2: '', def, colour });
+  return {
+    index: pages.length,
+    name: 'Master',
+    colour: '#b9b6ad',
+    note: 'In the compact build this page takes the place of FX Granular, so B3 reaches it from FX Live. Each filter ring wears the colour of the voice it belongs to, a filter knob at centre is bypass, the Output level ring is a peak meter and the two drive shapers are red.',
+    pots: [
+      knob(0, 'Plaits 1 filter', 0.5, colourOf('Voice 1'), 'Filter resonance'),
+      knob(1, 'Plaits 2 filter', 0.5, colourOf('Voice 2'), 'Filter resonance'),
+      knob(2, 'Sampler filter', 0.5, colourOf('Sampler 1'), 'Filter resonance'),
+      knob(3, 'Output level', 0.85, '#9a9a9a'),
+      knob(4, 'Chebyshev amount', 0, '#ff0000'),
+      knob(5, 'Fold amount', 0, '#ff0000'),
+    ],
+  };
+}
+
+function describedPages(pager) {
   return pager.pageNames.map((name, index) => ({
     index,
     name,
