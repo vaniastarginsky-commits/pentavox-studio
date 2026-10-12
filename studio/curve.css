@@ -1,0 +1,108 @@
+/* Knob record cards and the curve editor. Everything derives from the Studio tokens (--surface, --line, --text, --accent…),
+   so both themes follow without a palette of their own. The accent is reserved for the curve, the selection and the one primary action. */
+
+.lock-open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 9px; }
+.lock-open:hover .lock-shape, .lock-open:focus-visible .lock-shape { border-color: var(--accent); }
+.lock-open:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 2px; }
+
+.curve-dialog {
+  --plate: color-mix(in srgb, var(--surface-2) 55%, var(--surface));
+  --plate-line: color-mix(in srgb, var(--text) 8%, transparent);
+  --plate-major: color-mix(in srgb, var(--text) 18%, transparent);
+  --plate-ink: var(--muted);
+  --curve: var(--accent);
+  width: min(1120px, 96vw); max-height: 94vh; padding: 0; border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface); color: var(--text); box-shadow: var(--shadow); overflow: hidden;
+}
+.curve-dialog[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.curve-dialog::backdrop { background: color-mix(in srgb, var(--text) 38%, transparent); }
+.curve-dialog.busy { cursor: progress; }
+
+/* Header and footer share the app bar's rhythm: a hairline, quiet controls, one accent. */
+.ce-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.ce-title { margin: 0 8px 0 0; font-size: 1.05rem; letter-spacing: -.02em; }
+.ce-dest { flex: 1 1 220px; min-width: 0; }
+.ce-header button.active { background: var(--surface-2); }
+.ce-close { margin-left: 4px; width: 36px; padding: 0; font-size: 1.15rem; line-height: 1; }
+.ce-body { display: grid; gap: 12px; padding: 16px 18px; overflow: auto; align-content: start; }
+.ce-footer { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--surface-2) 40%, var(--surface)); }
+.ce-message { margin: 0 auto 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; max-width: 66ch; }
+.ce-message.error { color: var(--accent); }
+
+.curve-dialog select, .curve-dialog .ce-number, .curve-dialog .ce-search {
+  min-width: 0; padding: .5rem .6rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text);
+}
+.curve-dialog .ce-search { border-radius: 999px; padding: .55rem 1rem; }
+.ce-number { width: 5.2rem; font-variant-numeric: tabular-nums; }
+
+/* The plate: tinted paper in the light theme, a deeper tone in the dark one. */
+.ce-plate { display: block; width: 100%; height: auto; aspect-ratio: 1000 / 380; background: var(--plate); border: 1px solid var(--line); border-radius: 12px; cursor: crosshair; touch-action: none; user-select: none; }
+.ce-plate:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 2px; }
+.ce-grid line { stroke: var(--plate-line); stroke-width: 1; }
+.ce-grid line.major { stroke: var(--plate-major); }
+.ce-tick { fill: var(--plate-ink); font-size: 13px; font-variant-numeric: tabular-nums; }
+.ce-fill { fill: var(--curve); opacity: .16; }
+.ce-line { fill: none; stroke: var(--curve); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.ce-zero { stroke: var(--plate-ink); stroke-width: 1.2; stroke-dasharray: 5 5; opacity: .85; }
+.ce-zero-label { fill: var(--plate-ink); font-size: 12px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.ce-handle { fill: var(--surface); stroke: var(--curve); stroke-width: 1.6; cursor: ns-resize; }
+.ce-point { fill: var(--curve); stroke: var(--surface); stroke-width: 2; cursor: grab; }
+.ce-point.selected { fill: var(--surface); stroke: var(--curve); stroke-width: 3; }
+
+/* Controls reuse the Studio's segmented look: a sunken track with a raised chip for the active choice. */
+.ce-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ce-tools, .ce-segment, .ce-snap-group { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.ce-tools button, .ce-segment button, .ce-toggle { border: 0; background: transparent; }
+.ce-tools .ce-tool { width: 36px; height: 32px; padding: 0; display: grid; place-items: center; border-radius: 7px; color: var(--muted); }
+.ce-tools .ce-tool:hover { color: var(--text); }
+.ce-tools .ce-tool.active, .ce-segment button.active, .ce-toggle.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, .14); }
+.ce-tools .ce-tool.active { color: var(--accent); }
+.tool-icon { width: 20px; height: 20px; }
+.ce-tools .ce-polar { width: 36px; height: 32px; padding: 0; font-size: 1.05rem; border-radius: 7px; color: var(--muted); }
+.ce-tools .ce-polar.active { color: var(--accent); }
+.ce-segment button { padding: .4rem .8rem; border-radius: 7px; color: var(--muted); }
+.ce-segment button.active { font-weight: 600; }
+.ce-readout { flex: 1 1 140px; color: var(--muted); font-size: .82rem; font-variant-numeric: tabular-nums; white-space: pre; min-height: 1.2em; }
+.ce-snap { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.ce-toggle { padding: .4rem .8rem; border-radius: 7px; color: var(--muted); }
+.ce-toggle.active { color: var(--text); font-weight: 600; }
+
+.ce-length { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.ce-field { display: grid; gap: 4px; font-size: .75rem; color: var(--muted); }
+.ce-edit { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+
+/* Library: the same list-and-detail pattern as the routing sources. */
+.ce-library { display: grid; grid-template-columns: 180px minmax(0, 1fr) 280px; grid-template-rows: minmax(0, 1fr); height: clamp(440px, 66vh, 620px); border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.ce-lib-side, .ce-lib-preview, .ce-lib-grid, .ce-lib-main { min-height: 0; }
+.ce-lib-side, .ce-lib-preview, .ce-lib-grid { overscroll-behavior: contain; }
+.ce-lib-side { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-right: 1px solid var(--line); overflow: auto; }
+.ce-lib-heading { margin: 0 0 6px; padding: 4px 8px; font-size: .95rem; letter-spacing: -.01em; }
+.ce-lib-side .ce-lib-heading { color: var(--muted); font-size: .8rem; font-weight: 600; }
+.ce-lib-cat { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: .5rem .65rem; border: 1px solid transparent; border-radius: 8px; background: transparent; text-align: left; }
+.ce-lib-cat small { min-width: 24px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--muted); text-align: center; font-size: .75rem; font-variant-numeric: tabular-nums; }
+.ce-lib-cat:hover { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+.ce-lib-cat.active { background: var(--surface-2); border-color: var(--line); font-weight: 600; }
+.ce-lib-main { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; }
+.ce-lib-main .ce-search { margin: 12px 14px 4px; }
+.ce-lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; padding: 10px 14px 14px; overflow: auto; align-content: start; }
+.ce-lib-item { display: grid; gap: 4px; justify-items: stretch; padding: 10px 12px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); text-align: center; }
+.ce-lib-item:hover { background: color-mix(in srgb, var(--surface-2) 50%, var(--surface)); }
+.ce-lib-item.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.ce-lib-name { font-size: .84rem; font-weight: 600; }
+.ce-thumb { width: 100%; height: 54px; color: var(--text); }
+.ce-thumb polyline { fill: none; stroke: currentColor; stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; opacity: .8; }
+.ce-lib-item.selected .ce-thumb polyline, .ce-thumb.large polyline { stroke: var(--accent); opacity: 1; }
+.ce-thumb.large { height: 130px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--plate); }
+.ce-thumb.large polyline { stroke-width: 2.2; }
+.ce-lib-preview { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-left: 1px solid var(--line); overflow: auto; background: color-mix(in srgb, var(--surface-2) 30%, var(--surface)); }
+.ce-lib-hint { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+.ce-lib-actions { display: flex; gap: 8px; }
+.ce-lib-save { display: grid; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
+.ce-lib-empty { color: var(--muted); grid-column: 1 / -1; padding: 12px; }
+
+@media (max-width: 760px) {
+  .ce-snap, .ce-edit { margin-left: 0; }
+  .ce-library { grid-template-columns: 1fr; grid-template-rows: none; height: auto; }
+  .ce-lib-side { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); }
+  .ce-lib-preview { order: 3; border-left: 0; border-top: 1px solid var(--line); }
+}

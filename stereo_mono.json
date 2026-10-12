@@ -1,0 +1,23 @@
+{
+ "_note": "Engines whose L/R correlation with stereo enabled is >= 0.95 in tools/palette probes (owner_three_sets recipe, 2026-10-05); stereo adds nothing audible. Not measured: engines absent from that recipe.",
+ "engines": [
+  "bass_drum",
+  "c_saw",
+  "f_m",
+  "formant_speech",
+  "grain",
+  "kick",
+  "l_p_c_speech",
+  "loopback",
+  "morph",
+  "natural_speech",
+  "phase_weave",
+  "plucked",
+  "reed_pipe",
+  "six_op",
+  "speech",
+  "string",
+  "virtual_analog_crossfade",
+  "virtual_analog_dual"
+ ]
+}

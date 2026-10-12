@@ -1,0 +1,504 @@
+{
+  "schemaHash": 639964394,
+  "count": 83,
+  "entries": [
+    {
+      "id": 0,
+      "symbol": "None",
+      "group": "Global",
+      "name": "— none —"
+    },
+    {
+      "id": 1,
+      "symbol": "Voice1Harmonics",
+      "group": "Plaits 1",
+      "name": "Harmonics"
+    },
+    {
+      "id": 2,
+      "symbol": "Voice1Timbre",
+      "group": "Plaits 1",
+      "name": "Timbre"
+    },
+    {
+      "id": 3,
+      "symbol": "Voice1Morph",
+      "group": "Plaits 1",
+      "name": "Morph"
+    },
+    {
+      "id": 4,
+      "symbol": "Voice1Decay",
+      "group": "Plaits 1",
+      "name": "Decay"
+    },
+    {
+      "id": 5,
+      "symbol": "Voice1Level",
+      "group": "Plaits 1",
+      "name": "Level"
+    },
+    {
+      "id": 6,
+      "symbol": "Voice1Balance",
+      "group": "Plaits 1",
+      "name": "Aux send"
+    },
+    {
+      "id": 7,
+      "symbol": "Voice1Attack",
+      "group": "Plaits 1",
+      "name": "Attack"
+    },
+    {
+      "id": 8,
+      "symbol": "Voice2Harmonics",
+      "group": "Plaits 2",
+      "name": "Harmonics"
+    },
+    {
+      "id": 9,
+      "symbol": "Voice2Timbre",
+      "group": "Plaits 2",
+      "name": "Timbre"
+    },
+    {
+      "id": 10,
+      "symbol": "Voice2Morph",
+      "group": "Plaits 2",
+      "name": "Morph"
+    },
+    {
+      "id": 11,
+      "symbol": "Voice2Decay",
+      "group": "Plaits 2",
+      "name": "Decay"
+    },
+    {
+      "id": 12,
+      "symbol": "Voice2Level",
+      "group": "Plaits 2",
+      "name": "Level"
+    },
+    {
+      "id": 13,
+      "symbol": "Voice2Balance",
+      "group": "Plaits 2",
+      "name": "Aux send"
+    },
+    {
+      "id": 14,
+      "symbol": "Voice2Attack",
+      "group": "Plaits 2",
+      "name": "Attack"
+    },
+    {
+      "id": 15,
+      "symbol": "Voice3Harmonics",
+      "group": "Plaits 3",
+      "name": "Harmonics"
+    },
+    {
+      "id": 16,
+      "symbol": "Voice3Timbre",
+      "group": "Plaits 3",
+      "name": "Timbre"
+    },
+    {
+      "id": 17,
+      "symbol": "Voice3Morph",
+      "group": "Plaits 3",
+      "name": "Morph"
+    },
+    {
+      "id": 18,
+      "symbol": "Voice3Decay",
+      "group": "Plaits 3",
+      "name": "Decay"
+    },
+    {
+      "id": 19,
+      "symbol": "Voice3Level",
+      "group": "Plaits 3",
+      "name": "Level"
+    },
+    {
+      "id": 20,
+      "symbol": "Voice3Balance",
+      "group": "Plaits 3",
+      "name": "Aux send"
+    },
+    {
+      "id": 21,
+      "symbol": "Voice3Attack",
+      "group": "Plaits 3",
+      "name": "Attack"
+    },
+    {
+      "id": 22,
+      "symbol": "Sampler1Start",
+      "group": "Sampler 1",
+      "name": "Start"
+    },
+    {
+      "id": 23,
+      "symbol": "Sampler1End",
+      "group": "Sampler 1",
+      "name": "End"
+    },
+    {
+      "id": 24,
+      "symbol": "Sampler1Cutoff",
+      "group": "Sampler 1",
+      "name": "Cutoff"
+    },
+    {
+      "id": 25,
+      "symbol": "Sampler1Resonance",
+      "group": "Sampler 1",
+      "name": "Resonance"
+    },
+    {
+      "id": 26,
+      "symbol": "Sampler1Attack",
+      "group": "Sampler 1",
+      "name": "Attack"
+    },
+    {
+      "id": 27,
+      "symbol": "Sampler1Decay",
+      "group": "Sampler 1",
+      "name": "Decay"
+    },
+    {
+      "id": 28,
+      "symbol": "Sampler1Level",
+      "group": "Sampler 1",
+      "name": "Level"
+    },
+    {
+      "id": 29,
+      "symbol": "Sampler1Balance",
+      "group": "Sampler 1",
+      "name": "Aux send"
+    },
+    {
+      "id": 30,
+      "symbol": "Sampler1Transpose",
+      "group": "Sampler 1",
+      "name": "Transpose"
+    },
+    {
+      "id": 31,
+      "symbol": "Sampler2Start",
+      "group": "Sampler 2",
+      "name": "Start"
+    },
+    {
+      "id": 32,
+      "symbol": "Sampler2End",
+      "group": "Sampler 2",
+      "name": "End"
+    },
+    {
+      "id": 33,
+      "symbol": "Sampler2Cutoff",
+      "group": "Sampler 2",
+      "name": "Cutoff"
+    },
+    {
+      "id": 34,
+      "symbol": "Sampler2Resonance",
+      "group": "Sampler 2",
+      "name": "Resonance"
+    },
+    {
+      "id": 35,
+      "symbol": "Sampler2Attack",
+      "group": "Sampler 2",
+      "name": "Attack"
+    },
+    {
+      "id": 36,
+      "symbol": "Sampler2Decay",
+      "group": "Sampler 2",
+      "name": "Decay"
+    },
+    {
+      "id": 37,
+      "symbol": "Sampler2Level",
+      "group": "Sampler 2",
+      "name": "Level"
+    },
+    {
+      "id": 38,
+      "symbol": "Sampler2Balance",
+      "group": "Sampler 2",
+      "name": "Aux send"
+    },
+    {
+      "id": 39,
+      "symbol": "Sampler2Transpose",
+      "group": "Sampler 2",
+      "name": "Transpose"
+    },
+    {
+      "id": 40,
+      "symbol": "FxStutterRatchet",
+      "group": "FX",
+      "name": "Stutter ratchet"
+    },
+    {
+      "id": 41,
+      "symbol": "FxStutterDecay",
+      "group": "FX",
+      "name": "Stutter decay"
+    },
+    {
+      "id": 42,
+      "symbol": "FxStutterChance",
+      "group": "FX",
+      "name": "Stutter chance"
+    },
+    {
+      "id": 43,
+      "symbol": "FxTapeRate",
+      "group": "FX",
+      "name": "Tape rate"
+    },
+    {
+      "id": 44,
+      "symbol": "FxTapeMix",
+      "group": "FX",
+      "name": "Tape mix"
+    },
+    {
+      "id": 45,
+      "symbol": "FxFilterPosition",
+      "group": "FX",
+      "name": "Filter position"
+    },
+    {
+      "id": 46,
+      "symbol": "FxReverbSize",
+      "group": "FX",
+      "name": "Reverb size"
+    },
+    {
+      "id": 47,
+      "symbol": "FxReverbDamp",
+      "group": "FX",
+      "name": "Reverb damp"
+    },
+    {
+      "id": 48,
+      "symbol": "FxReverbMix",
+      "group": "FX",
+      "name": "Reverb mix"
+    },
+    {
+      "id": 49,
+      "symbol": "FxGranularDensity",
+      "group": "FX",
+      "name": "Granular density"
+    },
+    {
+      "id": 50,
+      "symbol": "FxGranularSize",
+      "group": "FX",
+      "name": "Granular size"
+    },
+    {
+      "id": 51,
+      "symbol": "FxGranularPosition",
+      "group": "FX",
+      "name": "Granular position"
+    },
+    {
+      "id": 52,
+      "symbol": "FxGranularScatter",
+      "group": "FX",
+      "name": "Granular scatter"
+    },
+    {
+      "id": 53,
+      "symbol": "FxGranularPitch",
+      "group": "FX",
+      "name": "Granular pitch"
+    },
+    {
+      "id": 54,
+      "symbol": "FxGranularPitchSpread",
+      "group": "FX",
+      "name": "Granular pitch spread"
+    },
+    {
+      "id": 55,
+      "symbol": "FxGranularFeedback",
+      "group": "FX",
+      "name": "Granular feedback"
+    },
+    {
+      "id": 56,
+      "symbol": "FxGranularMix",
+      "group": "FX",
+      "name": "Granular mix"
+    },
+    {
+      "id": 57,
+      "symbol": "FxGranularReverse",
+      "group": "FX",
+      "name": "Granular reverse"
+    },
+    {
+      "id": 58,
+      "symbol": "FxChebAmount",
+      "group": "FX",
+      "name": "Chebyshev amount"
+    },
+    {
+      "id": 59,
+      "symbol": "FxFoldAmount",
+      "group": "FX",
+      "name": "Fold amount"
+    },
+    {
+      "id": 60,
+      "symbol": "FxFilterResonance",
+      "group": "FX",
+      "name": "Filter resonance"
+    },
+    {
+      "id": 61,
+      "symbol": "FxPhaserRate",
+      "group": "FX",
+      "name": "Phaser rate"
+    },
+    {
+      "id": 62,
+      "symbol": "FxPhaserDepth",
+      "group": "FX",
+      "name": "Phaser depth"
+    },
+    {
+      "id": 63,
+      "symbol": "FxPhaserCenter",
+      "group": "FX",
+      "name": "Phaser center"
+    },
+    {
+      "id": 64,
+      "symbol": "FxPhaserFeedback",
+      "group": "FX",
+      "name": "Phaser feedback"
+    },
+    {
+      "id": 65,
+      "symbol": "FxPhaserMix",
+      "group": "FX",
+      "name": "Phaser mix"
+    },
+    {
+      "id": 66,
+      "symbol": "FxPhaserCvAtten",
+      "group": "FX",
+      "name": "Phaser CV amount"
+    },
+    {
+      "id": 67,
+      "symbol": "GlobalInputLevel",
+      "group": "Global",
+      "name": "Input level"
+    },
+    {
+      "id": 68,
+      "symbol": "Voice1Model",
+      "group": "Plaits 1",
+      "name": "Model"
+    },
+    {
+      "id": 69,
+      "symbol": "Voice2Model",
+      "group": "Plaits 2",
+      "name": "Model"
+    },
+    {
+      "id": 70,
+      "symbol": "Voice3Model",
+      "group": "Plaits 3",
+      "name": "Model"
+    },
+    {
+      "id": 71,
+      "symbol": "Sampler1Slot",
+      "group": "Sampler 1",
+      "name": "Slot"
+    },
+    {
+      "id": 72,
+      "symbol": "Sampler2Slot",
+      "group": "Sampler 2",
+      "name": "Slot"
+    },
+    {
+      "id": 73,
+      "symbol": "FxStutterTrigger",
+      "group": "FX",
+      "name": "Stutter trigger"
+    },
+    {
+      "id": 74,
+      "symbol": "FxStutterHold",
+      "group": "FX",
+      "name": "Stutter hold"
+    },
+    {
+      "id": 75,
+      "symbol": "FxDelayTime",
+      "group": "FX",
+      "name": "Delay time"
+    },
+    {
+      "id": 76,
+      "symbol": "FxDelayFeedback",
+      "group": "FX",
+      "name": "Delay feedback"
+    },
+    {
+      "id": 77,
+      "symbol": "FxDelayMix",
+      "group": "FX",
+      "name": "Delay mix"
+    },
+    {
+      "id": 78,
+      "symbol": "Voice1Filter",
+      "group": "Plaits 1",
+      "name": "Filter"
+    },
+    {
+      "id": 79,
+      "symbol": "Voice2Filter",
+      "group": "Plaits 2",
+      "name": "Filter"
+    },
+    {
+      "id": 80,
+      "symbol": "Voice1FilterRes",
+      "group": "Plaits 1",
+      "name": "Filter resonance"
+    },
+    {
+      "id": 81,
+      "symbol": "Voice2FilterRes",
+      "group": "Plaits 2",
+      "name": "Filter resonance"
+    },
+    {
+      "id": 82,
+      "symbol": "GlobalOutputLevel",
+      "group": "Global",
+      "name": "Output level"
+    }
+  ]
+}

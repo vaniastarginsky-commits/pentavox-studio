@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <script>try { const t = localStorage.getItem('pentavox.studio.theme'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pentavox Studio</title>
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./top.css">
+  <link rel="stylesheet" href="./curve.css">
+  <link rel="stylesheet" href="./dx7.css">
+</head>
+<body>
+  <script>
+    // Opened by double-click (file://): the module scripts are blocked there and the page stays empty. Say so.
+    if (location.protocol === 'file:') document.write('<div style="font:16px/1.5 system-ui;max-width:42rem;margin:12vh auto;padding:0 1rem;color:#ddd">'
+      + '<h1 style="font-size:1.4rem">Studio needs its local server</h1>'
+      + '<p>This page was opened as a file, so the browser blocks its scripts. Start the server from the project folder:</p>'
+      + '<pre style="background:#000;padding:.8rem;border-radius:6px">./studio/serve.sh</pre>'
+      + '<p>It opens Studio in the browser and prints the address (http://127.0.0.1:8766/studio/index.html, or the next free port).</p></div>');
+  </script>
+  <header class="app-header">
+    <div class="masthead">
+      <a class="brand" href="/studio/index.html"><span class="brand-mark">P</span><span>Pentavox <b>Studio</b></span></a>
+      <div class="connection-bar">
+        <div id="session-footer" class="session-footer" hidden></div>
+        <span id="connection-status" class="connection-status" title="Port busy? Close the official programmer.">Module not connected</span>
+        <button id="connect-button" type="button" class="primary">Connect</button>
+        <button id="theme-toggle" type="button" class="theme-toggle" aria-label="Toggle theme">☾</button>
+        <small>Port busy? Close the official programmer.</small>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Sections">
+      <button type="button" data-tab="sampler">Sampler</button>
+      <span class="tab-divider" aria-hidden="true"></span>
+      <button type="button" class="active" aria-current="page" data-tab="palette">Engines</button>
+      <button type="button" data-tab="routing">CV routing</button>
+      <button type="button" data-tab="midi">MIDI routing</button>
+      <button type="button" data-tab="locks">Knob record</button>
+      <button type="button" data-tab="settings">Settings</button>
+      <button type="button" data-tab="presets">Presets</button>
+    </nav>
+  </header>
+  <main>
+    <div id="disconnect-banner" class="banner warning" role="alert" hidden><span id="disconnect-text">The module is disconnected, so edits are not sent to it.</span> <button type="button" id="banner-reconnect">Reconnect</button></div>
+    <section id="sampler-tab" class="tab-panel" hidden><div id="sampler-root"></div></section>
+    <section id="palette-tab" class="tab-panel palette-panel"><div id="palette-root"></div></section>
+    <section id="routing-tab" class="tab-panel" hidden><div id="routing-root" class="disconnected"><p>Connect Pentavox to see its routes.</p></div></section>
+    <section id="midi-tab" class="tab-panel" hidden><div id="midi-root" class="disconnected"><p>Connect Pentavox to route MIDI controllers.</p></div></section>
+    <section id="locks-tab" class="tab-panel" hidden><div id="locks-root" class="lock-root"></div></section>
+    <section id="settings-tab" class="tab-panel" hidden><div id="settings-root" class="disconnected"><p>Connect Pentavox to see the module settings.</p></div></section>
+    <section id="presets-tab" class="tab-panel" hidden><div id="presets-root" class="disconnected"><p>Connect Pentavox to load and save presets.</p></div></section>
+  </main>
+  <dialog id="sdcard-dialog" class="sd-dialog" aria-label="SD card files">
+    <button type="button" class="sd-dialog-close" aria-label="Close">Close</button>
+    <div id="sdcard-root"></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
