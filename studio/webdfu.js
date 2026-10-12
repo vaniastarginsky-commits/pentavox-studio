@@ -12,21 +12,26 @@ const REQ = { DNLOAD: 1, GETSTATUS: 3, CLRSTATUS: 4, ABORT: 6 };
 const STATE = { dfuIDLE: 2, dfuDNLOAD_SYNC: 3, dfuDNBUSY: 4, dfuDNLOAD_IDLE: 5, dfuMANIFEST_SYNC: 6, dfuMANIFEST: 7, dfuMANIFEST_WAIT_RESET: 8, dfuERROR: 10 };
 const CMD = { SET_ADDRESS: 0x21, ERASE: 0x41 };
 
-/** Parse a DfuSe alt-setting name: "@Internal Flash /0x08000000/04*016Kg,01*064Kg,07*128Kg" -> { name, segments: [{ start, end, sectorSize, erasable, writable }] }. */
+/**
+ * Parse a DfuSe alt-setting name: "@Internal Flash /0x08000000/04*016Kg,01*064Kg,07*128Kg" -> { name, segments: [{ start, end, sectorSize, erasable, writable }] }.
+ * The name may carry several address groups: "@Flash /0x90000000/64*4Kg/0x90040000/60*64Kg/0x90400000/60*64Kg".
+ */
 export function parseMemoryLayout(descriptor) {
-  const match = /^@([^/]*)\/\s*(0x[0-9a-fA-F]+)\s*\/(.+)$/.exec((descriptor ?? '').trim());
+  const match = /^@([^/]*)((?:\/\s*0x[0-9a-fA-F]+\s*\/[^/]+)+)\s*$/.exec((descriptor ?? '').trim());
   if (!match) return null;
-  let address = Number.parseInt(match[2], 16);
   const segments = [];
-  for (const part of match[3].split(',')) {
-    const m = /^\s*(\d+)\s*\*\s*(\d+)\s*([BKM ])?\s*([a-gA-G])\s*$/.exec(part);
-    if (!m) return null;
-    const count = Number(m[1]);
-    const unit = { K: 1024, M: 1024 * 1024 }[m[3]?.trim()] ?? 1;
-    const sectorSize = Number(m[2]) * unit;
-    const flags = m[4].toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0) + 1;   // a=1 readable, b=2 erasable, c=3 ... g=7 (bit 0 read, 1 erase, 2 write)
-    segments.push({ start: address, end: address + count * sectorSize, sectorSize, readable: (flags & 1) !== 0, erasable: (flags & 2) !== 0, writable: (flags & 4) !== 0 });
-    address += count * sectorSize;
+  for (const group of match[2].matchAll(/\/\s*(0x[0-9a-fA-F]+)\s*\/([^/]+)/g)) {
+    let address = Number.parseInt(group[1], 16);
+    for (const part of group[2].split(',')) {
+      const m = /^\s*(\d+)\s*\*\s*(\d+)\s*([BKM ])?\s*([a-gA-G])\s*$/.exec(part);
+      if (!m) return null;
+      const count = Number(m[1]);
+      const unit = { K: 1024, M: 1024 * 1024 }[m[3]?.trim()] ?? 1;
+      const sectorSize = Number(m[2]) * unit;
+      const flags = m[4].toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0) + 1;   // a=1 readable, b=2 erasable, c=3 ... g=7 (bit 0 read, 1 erase, 2 write)
+      segments.push({ start: address, end: address + count * sectorSize, sectorSize, readable: (flags & 1) !== 0, erasable: (flags & 2) !== 0, writable: (flags & 4) !== 0 });
+      address += count * sectorSize;
+    }
   }
   return { name: match[1].trim(), segments };
 }
