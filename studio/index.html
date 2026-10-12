@@ -26,6 +26,7 @@
         <div id="session-footer" class="session-footer" hidden></div>
         <span id="connection-status" class="connection-status" title="Port busy? Close the official programmer.">Module not connected</span>
         <button id="connect-button" type="button" class="primary">Connect</button>
+        <button id="demo-button" type="button" title="Explore Studio on a simulated module, no hardware needed">Demo</button>
         <button id="theme-toggle" type="button" class="theme-toggle" aria-label="Toggle theme">☾</button>
         <small>Port busy? Close the official programmer.</small>
       </div>
@@ -42,6 +43,7 @@
     </nav>
   </header>
   <main>
+    <div id="demo-banner" class="banner" role="status" hidden>Demo mode: a simulated module. Nothing is sent to hardware and edits are not saved.</div>
     <div id="disconnect-banner" class="banner warning" role="alert" hidden><span id="disconnect-text">The module is disconnected, so edits are not sent to it.</span> <button type="button" id="banner-reconnect">Reconnect</button></div>
     <section id="sampler-tab" class="tab-panel" hidden><div id="sampler-root"></div></section>
     <section id="palette-tab" class="tab-panel palette-panel"><div id="palette-root"></div></section>

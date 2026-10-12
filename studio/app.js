@@ -20,6 +20,9 @@ import { apiFetch, siteUrl } from './site.js';
 import { pairedDfuDevices } from './webdfu.js';
 
 const connectButton = document.querySelector('#connect-button');
+const demoButton = document.querySelector('#demo-button');
+const demoBanner = document.getElementById('demo-banner');
+let demoMode = new URLSearchParams(location.search).get('sim') === '1';
 const connectionStatus = document.querySelector('#connection-status');
 const routingRoot = document.querySelector('#routing-root');
 // The pot map lives inside the CV routing tab (between Base CV and Panel pots), so it is a detached host the routing view adopts.
@@ -64,6 +67,7 @@ function draftKey(info = session?.info) {
 }
 
 function persistDraft() {
+  if (demoMode) return;
   const key = draftKey();
   if (!key) return;
   try {
@@ -250,7 +254,11 @@ function syncFooter() {
   sessionFooter.hidden = !controller || !usesSession;
 }
 
-async function connect() {
+async function connect({ demo = false } = {}) {
+  demoMode = demo;
+  demoBanner.hidden = !demo;
+  document.body.classList.toggle('demo-mode', demo);
+  globalThis.dispatchEvent(new Event('pentavox-demo'));
   stopDfuWatch();
   connectButton.disabled = true;
   connectionStatus.textContent = 'Connecting…';
@@ -258,14 +266,14 @@ async function connect() {
     persistDraft();
     if (client) { try { await client.close(); } catch { /* already disconnected */ } }
     const assets = await assetsPromise;
-    const transport = new URLSearchParams(location.search).get('sim') === '1'
+    const transport = demoMode
       ? Promise.all([fetchBytes('./tests/fixtures/descriptor.json'), fetchBytes('./tests/fixtures/live.bin'), fetchJson('./tests/fixtures/meta.json')])
         .then(([descriptor, live, meta]) => new SimTransport(descriptor, live, { schemaHash: meta.schemaHash }))
       : openWebSerial();
     client = new HostLinkClient(await transport);
     session = new StudioSession(client, load(assets.destinations), { paletteCatalog: assets.paletteCatalog, composerCatalog: assets.composerCatalog });
     const result = await session.connect();
-    const restoredDraft = restoreDraft(session);
+    const restoredDraft = demoMode ? false : restoreDraft(session);
     if (restoredDraft && session.pending) await session.flushLive();
     if (!session.table || !session.voices) throw new Error(result.reason ?? 'This firmware has no live fields');
     client.onDisconnect(markDisconnected);
@@ -282,13 +290,16 @@ async function connect() {
     unsubscribePaletteLive = controller.subscribe(() => paletteMount?.refreshLive());
     unsubscribeDraft = controller.subscribe(persistDraft);
     paletteMount?.refreshLive();
-    connectionStatus.textContent = `${result.info.moduleName} · ${result.info.fwVersion}${location.search.includes('sim=1') ? ' · simulator' : ''}`;
+    connectionStatus.textContent = `${result.info.moduleName} · ${result.info.fwVersion}${demoMode ? ' · demo' : ''}`;
     connectButton.textContent = 'Reconnect'; connectButton.disabled = false; connectionStatus.dataset.state = 'on'; disconnectBanner.hidden = true; syncFooter();
     persistDraft();
     samplerMount.refreshConnection();
     sdcardMount.refreshConnection();
     locksMount.refreshConnection();
   } catch (error) {
+    demoBanner.hidden = true;
+    document.body.classList.remove('demo-mode');
+    globalThis.dispatchEvent(new Event('pentavox-demo'));
     connectionStatus.textContent = error?.code === 'BUSY_PORT' ? 'Port busy' : 'Not connected'; connectionStatus.dataset.state = 'err';
     connectButton.disabled = false; showError(error);
     connectButton.textContent = 'Reconnect';
@@ -296,7 +307,8 @@ async function connect() {
   }
 }
 
-connectButton.addEventListener('click', connect);
+connectButton.addEventListener('click', () => connect());
+demoButton.addEventListener('click', () => connect({ demo: true }));
 for (const tab of document.querySelectorAll('[data-tab]')) {
   tab.addEventListener('click', () => {
     activeTab = tab.dataset.tab;
@@ -311,7 +323,7 @@ for (const tab of document.querySelectorAll('[data-tab]')) {
   });
 }
 
-if (new URLSearchParams(location.search).get('sim') === '1') connect();
+if (demoMode) connect({ demo: true });
 
 
 // Light/dark override on top of the system setting (persisted; falls back to the system theme).
