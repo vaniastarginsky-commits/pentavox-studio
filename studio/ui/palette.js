@@ -3,7 +3,8 @@ import { EngineAudition } from '../audition.js';
 import { bankCardsView, categoriesView, libraryRowsView, memoryView } from './palette_vm.js';
 import { lcdLabel, lcdSvg } from './lcd.js';
 import { lastBackupInfo } from '../model/preset_backup.js';
-import { apiFetch } from '../site.js';
+import { apiFetch, servedLocally } from '../site.js';
+import { localServerUp, runCloudBuild, runWebFlash } from '../build_flow.js';
 
 /** The confirm text before flashing: a new firmware can change the preset layout, which resets every stored slot. */
 export function flashWarning(backup = lastBackupInfo()) {
@@ -285,6 +286,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   progress.append(progressText, progressBar);
   copyLog.hidden = true;
   let fullLog = '';
+  let cloudResult = null;   // the image of the last cloud build (hosted page without a local build server): flashed over WebUSB
   copyLog.addEventListener('click', async () => { try { await navigator.clipboard.writeText(fullLog); copyLog.textContent = 'Saved'; setTimeout(() => { copyLog.textContent = 'Copy log'; }, 2000); } catch (error) { onError(error); } });
   const dx7Button = button('DX7 banks', 'pill-button'); dx7Button.title = 'Compose the three Six-op FM banks and write them to the SD card';
   dx7Button.addEventListener('click', () => onEditBanks('A'));
@@ -293,8 +295,30 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   function renderBuild(status) { fullLog = [status.stage, status.margins, ...(status.log ?? [])].filter(Boolean).join('\n'); copyLog.hidden = !fullLog; const failed = status.state === 'error' || status.state === 'failed'; progress.hidden = !(['building', 'flashing'].includes(status.state) || failed || (state.touched && status.stage)); progress.classList.toggle('failed', failed); progress.classList.toggle('busy', ['building', 'flashing'].includes(status.state)); progressText.textContent = status.stage ?? status.state ?? ''; const busy = ['building', 'flashing'].includes(status.state); state.busy = busy; updateActions(); flash.disabled = busy || !status.image; if (!busy && state.polling) { clearInterval(state.polling); state.polling = null; } }
   async function poll() { try { const response = await apiFetch('/api/status', { cache: 'no-store' }); if (response.ok) renderBuild(await response.json()); } catch { /* composer server is optional */ } }
   function startPolling() { state.touched = true; if (!state.polling) state.polling = setInterval(poll, 1500); poll(); }
-  build.addEventListener('click', async () => { if (!isCompact() && !model.canBuild()) { onError(new Error('The set does not fit in AXI: replace heavy engines first')); return; } try { const response = await apiFetch('/api/build', { method: 'POST', body: JSON.stringify(model.recipe()) }); const result = await response.json(); if (result.error) throw new Error(result.error); startPolling(); } catch (error) { onError(error); } });
-  flash.addEventListener('click', async () => { if (!confirm(flashWarning())) return; try { const response = await apiFetch('/api/flash', { method: 'POST', body: '{}' }); const result = await response.json(); if (result.error) throw new Error(result.error); startPolling(); } catch (error) { onError(error); } });
+  build.addEventListener('click', async () => {
+    if (!isCompact() && !model.canBuild()) { onError(new Error('The set does not fit in AXI: replace heavy engines first')); return; }
+    try {
+      // A hosted page with no build server on this machine builds in GitHub Actions and flashes over WebUSB; otherwise serve.py does both.
+      if (!servedLocally() && !(await localServerUp(apiFetch))) {
+        cloudResult = null; state.touched = true;
+        cloudResult = await runCloudBuild({ recipe: model.recipe(), compact: isCompact(), onStatus: renderBuild });
+        return;
+      }
+      cloudResult = null;
+      const response = await apiFetch('/api/build', { method: 'POST', body: JSON.stringify(model.recipe()) });
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+      startPolling();
+    } catch (error) { onError(error); }
+  });
+  flash.addEventListener('click', async () => {
+    if (!confirm(flashWarning())) return;
+    if (cloudResult) {
+      try { await runWebFlash({ image: cloudResult.image, onStatus: renderBuild, onFlashState: (flashState) => globalThis.dispatchEvent?.(new CustomEvent('pentavox-flash', { detail: flashState })) }); } catch (error) { onError(error); }
+      return;
+    }
+    try { const response = await apiFetch('/api/flash', { method: 'POST', body: '{}' }); const result = await response.json(); if (result.error) throw new Error(result.error); startPolling(); } catch (error) { onError(error); }
+  });
   dfu.addEventListener('click', async () => { try { const client = getClient(); if (!client) throw new Error('Connect the module first'); await client.reboot(1); startPolling(); } catch (error) { onError(error); } });
   poll();
 

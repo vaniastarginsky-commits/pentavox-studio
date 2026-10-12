@@ -17,6 +17,7 @@ import { mountSampler } from './ui/sampler.js';
 import { mountSdCard } from './ui/sdcard.js';
 import { mountKnobLocks } from './ui/knob_locks.js';
 import { apiFetch, siteUrl } from './site.js';
+import { pairedDfuDevices } from './webdfu.js';
 
 const connectButton = document.querySelector('#connect-button');
 const connectionStatus = document.querySelector('#connection-status');
@@ -89,6 +90,11 @@ document.getElementById('banner-reconnect')?.addEventListener('click', () => con
 const disconnectText = document.getElementById('disconnect-text');
 const DISCONNECTED_TEXT = disconnectText.textContent;
 let dfuWatch = null;
+let webFlash = null;   // 'choosing' | 'flashing' while this page flashes over WebUSB (palette.js reports it)
+globalThis.addEventListener?.('pentavox-flash', (event) => {
+  webFlash = event.detail === 'choosing' || event.detail === 'flashing' ? event.detail : null;
+  if (dfuWatch) startDfuTick();
+});
 
 function showDisconnectedLabel(status = {}) {
   const flashing = status.state === 'flashing';
@@ -99,18 +105,34 @@ function showDisconnectedLabel(status = {}) {
     : inDfu ? 'The module is in DFU mode and ready to flash. After flashing, press Reconnect.' : DISCONNECTED_TEXT;
 }
 
-function stopDfuWatch() { if (dfuWatch) { clearInterval(dfuWatch); dfuWatch = null; } }
+function stopDfuWatch() {
+  if (dfuWatch) { clearInterval(dfuWatch); dfuWatch = null; }
+  globalThis.navigator?.usb?.removeEventListener?.('connect', startDfuTick);
+  globalThis.navigator?.usb?.removeEventListener?.('disconnect', startDfuTick);
+}
+
+let dfuTick = null;
+function startDfuTick() { dfuTick?.(); }
 
 function startDfuWatch() {
   if (dfuWatch) return;
-  const tick = async () => {
+  dfuTick = async () => {
+    let status = null;
     try {
       const response = await apiFetch('/api/status', { cache: 'no-store' });
-      if (dfuWatch && response.ok) showDisconnectedLabel(await response.json());
-    } catch { /* the composer server is optional: keep the plain label */ }
+      if (response.ok) status = await response.json();
+    } catch { /* no build server on this machine */ }
+    if (!status) {
+      // Without the server, WebUSB tells whether a DFU device that this site may use is plugged in.
+      try { status = { dfu: (await pairedDfuDevices()).length > 0 }; } catch { status = {}; }
+    }
+    if (webFlash) status = { ...status, state: 'flashing' };
+    if (dfuWatch) showDisconnectedLabel(status);
   };
-  dfuWatch = setInterval(tick, 2000);
-  tick();
+  dfuWatch = setInterval(dfuTick, 2000);
+  globalThis.navigator?.usb?.addEventListener?.('connect', startDfuTick);
+  globalThis.navigator?.usb?.addEventListener?.('disconnect', startDfuTick);
+  dfuTick();
 }
 
 function markDisconnected() {
@@ -247,6 +269,7 @@ async function connect() {
     if (restoredDraft && session.pending) await session.flushLive();
     if (!session.table || !session.voices) throw new Error(result.reason ?? 'This firmware has no live fields');
     client.onDisconnect(markDisconnected);
+    session.onBusy = (busy) => document.body.classList.toggle('studio-busy', busy);
     controller?.dispose(); controller = new RoutingController(session, load(assets.destinations), { onError: showError });
     unmountRouting?.(); unmountPotMap?.(); unmountSettings?.(); unmountPresets?.(); unmountMidi?.(); unmountFooter?.(); unmountVoices.forEach((dispose) => dispose()); unsubscribePaletteLive?.(); unsubscribeDraft?.();
     routingRoot.classList.remove('disconnected'); unmountRouting = mountRouting(routingRoot, controller, { potMapHost: potMapRoot });

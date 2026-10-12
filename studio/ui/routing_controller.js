@@ -210,11 +210,24 @@ export class RoutingController {
       this.clearTimer(this.timer);
       this.timer = null;
     }
-    if (this.flushing) return this.flushing;
-    this.flushing = this.session.flushLive()
-      .then(() => this.notify())
-      .catch((error) => { this.onError(error); throw error; })
-      .finally(() => { this.flushing = null; });
+    if (this.flushing) { this.flushAgain = true; return this.flushing; }
+    // Edits made while a flush is in flight set `flushAgain` (or leave the session pending): run another flush for them before finishing,
+    // so the caller's await covers every edit made so far, not just the ones the first write carried.
+    this.flushing = (async () => {
+      try {
+        do {
+          this.flushAgain = false;
+          await this.session.flushLive();
+          this.notify();
+        } while (this.flushAgain || this.session.pending);
+      } catch (error) {
+        this.onError(error);
+        throw error;
+      } finally {
+        this.flushing = null;
+        this.flushAgain = false;
+      }
+    })();
     return this.flushing;
   }
 

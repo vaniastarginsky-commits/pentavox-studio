@@ -108,6 +108,17 @@ export class HostLinkClient {
     return operation;
   }
 
+  /**
+   * Run a multi-request operation (a chunked read, BLOB_BEGIN..COMMIT) as ONE unit of the queue: no other request is sent between its
+   * steps. `work` receives a `send(type, body, timeoutMs)` that talks to the module directly. Without this, two operations interleave
+   * their chunks, and a snapshot read in two pieces can come from two different firmware states.
+   */
+  #transaction(work) {
+    const operation = this.queue.then(() => work((type, body = new Uint8Array(), timeoutMs = this.timeoutMs) => this.#requestNow(type, body, timeoutMs)));
+    this.queue = operation.catch(() => {});
+    return operation;
+  }
+
   async hello() {
     const { body } = await this.request(COMMAND.HELLO);
     requireLength(body, 36, 'HELLO');
@@ -158,88 +169,94 @@ export class HostLinkClient {
   }
 
   async getDescriptor(info) {
-    if (info.descriptorLen === 0) return {};
-    const chunkMaximum = info.maxBody - 7;
-    if (chunkMaximum <= 0) {
-      throw new HostLinkError('GET_DESCRIPTOR: maxBody too small', { code: 'BAD_STATUS' });
-    }
-
-    const bytes = new Uint8Array(info.descriptorLen);
-    let offset = 0;
-    while (offset < bytes.length) {
-      const { body } = await this.request(
-        COMMAND.GET_DESCRIPTOR,
-        concat(u32(offset), u16(Math.min(chunkMaximum, bytes.length - offset))),
-      );
-      requireLength(body, 6, 'GET_DESCRIPTOR');
-      const view = new DataView(body.buffer, body.byteOffset, body.byteLength);
-      const echoedOffset = view.getUint32(0, true);
-      const length = view.getUint16(4, true);
-      if (echoedOffset !== offset || length === 0 || length > body.length - 6 || offset + length > bytes.length) {
-        throw new HostLinkError('GET_DESCRIPTOR: bad response range', { code: 'BAD_STATUS' });
+    return this.#transaction(async (send) => {
+      if (info.descriptorLen === 0) return {};
+      const chunkMaximum = info.maxBody - 7;
+      if (chunkMaximum <= 0) {
+        throw new HostLinkError('GET_DESCRIPTOR: maxBody too small', { code: 'BAD_STATUS' });
       }
-      bytes.set(body.subarray(6, 6 + length), offset);
-      offset += length;
-    }
 
-    if (crc32(bytes) !== (info.descriptorCrc >>> 0)) {
-      throw new HostLinkError('Descriptor CRC mismatch', { code: 'CRC' });
-    }
-    return JSON.parse(new TextDecoder().decode(bytes));
+      const bytes = new Uint8Array(info.descriptorLen);
+      let offset = 0;
+      while (offset < bytes.length) {
+        const { body } = await send(
+          COMMAND.GET_DESCRIPTOR,
+          concat(u32(offset), u16(Math.min(chunkMaximum, bytes.length - offset))),
+        );
+        requireLength(body, 6, 'GET_DESCRIPTOR');
+        const view = new DataView(body.buffer, body.byteOffset, body.byteLength);
+        const echoedOffset = view.getUint32(0, true);
+        const length = view.getUint16(4, true);
+        if (echoedOffset !== offset || length === 0 || length > body.length - 6 || offset + length > bytes.length) {
+          throw new HostLinkError('GET_DESCRIPTOR: bad response range', { code: 'BAD_STATUS' });
+        }
+        bytes.set(body.subarray(6, 6 + length), offset);
+        offset += length;
+      }
+
+      if (crc32(bytes) !== (info.descriptorCrc >>> 0)) {
+        throw new HostLinkError('Descriptor CRC mismatch', { code: 'CRC' });
+      }
+      return JSON.parse(new TextDecoder().decode(bytes));
+    });
   }
 
   async getLive(info) {
-    const chunkMaximum = info.maxBody - 14;
-    if (chunkMaximum <= 0) {
-      throw new HostLinkError('GET_LIVE: maxBody too small', { code: 'BAD_STATUS' });
-    }
-
-    const bytes = new Uint8Array(info.liveSize);
-    let offset = 0;
-    while (offset < bytes.length) {
-      const { body } = await this.request(
-        COMMAND.GET_LIVE,
-        concat(u32(offset), u16(Math.min(chunkMaximum, bytes.length - offset))),
-      );
-      requireLength(body, 13, 'GET_LIVE');
-      const view = new DataView(body.buffer, body.byteOffset, body.byteLength);
-      const target = body[0];
-      const echoedOffset = view.getUint32(1, true);
-      const length = view.getUint16(5, true);
-      const total = view.getUint16(7, true);
-      const schemaHash = view.getUint32(9, true);
-      if (
-        target !== 0xff
-        || echoedOffset !== offset
-        || total !== bytes.length
-        || schemaHash !== (info.schemaHash >>> 0)
-        || length === 0
-        || length > body.length - 13
-        || offset + length > bytes.length
-      ) {
-        throw new HostLinkError('GET_LIVE: inconsistent snapshot', { code: 'BAD_STATUS' });
+    return this.#transaction(async (send) => {
+      const chunkMaximum = info.maxBody - 14;
+      if (chunkMaximum <= 0) {
+        throw new HostLinkError('GET_LIVE: maxBody too small', { code: 'BAD_STATUS' });
       }
-      bytes.set(body.subarray(13, 13 + length), offset);
-      offset += length;
-    }
-    return bytes;
+
+      const bytes = new Uint8Array(info.liveSize);
+      let offset = 0;
+      while (offset < bytes.length) {
+        const { body } = await send(
+          COMMAND.GET_LIVE,
+          concat(u32(offset), u16(Math.min(chunkMaximum, bytes.length - offset))),
+        );
+        requireLength(body, 13, 'GET_LIVE');
+        const view = new DataView(body.buffer, body.byteOffset, body.byteLength);
+        const target = body[0];
+        const echoedOffset = view.getUint32(1, true);
+        const length = view.getUint16(5, true);
+        const total = view.getUint16(7, true);
+        const schemaHash = view.getUint32(9, true);
+        if (
+          target !== 0xff
+          || echoedOffset !== offset
+          || total !== bytes.length
+          || schemaHash !== (info.schemaHash >>> 0)
+          || length === 0
+          || length > body.length - 13
+          || offset + length > bytes.length
+        ) {
+          throw new HostLinkError('GET_LIVE: inconsistent snapshot', { code: 'BAD_STATUS' });
+        }
+        bytes.set(body.subarray(13, 13 + length), offset);
+        offset += length;
+      }
+      return bytes;
+    });
   }
 
   async writeBlob(info, target, bytes) {
-    await this.request(
-      COMMAND.BLOB_BEGIN,
-      concat(Uint8Array.of(target), u32(bytes.length), u32(info.schemaHash)),
-    );
+    return this.#transaction(async (send) => {
+      await send(
+        COMMAND.BLOB_BEGIN,
+        concat(Uint8Array.of(target), u32(bytes.length), u32(info.schemaHash)),
+      );
 
-    const chunkMaximum = info.maxBody - 4;
-    if (chunkMaximum <= 0) {
-      throw new HostLinkError('BLOB_DATA: maxBody too small', { code: 'BAD_STATUS' });
-    }
-    for (let offset = 0; offset < bytes.length; offset += chunkMaximum) {
-      const chunk = bytes.subarray(offset, offset + chunkMaximum);
-      await this.request(COMMAND.BLOB_DATA, concat(u32(offset), chunk));
-    }
-    await this.request(COMMAND.BLOB_COMMIT, u32(crc32(bytes)), COMMIT_TIMEOUT_MS);
+      const chunkMaximum = info.maxBody - 4;
+      if (chunkMaximum <= 0) {
+        throw new HostLinkError('BLOB_DATA: maxBody too small', { code: 'BAD_STATUS' });
+      }
+      for (let offset = 0; offset < bytes.length; offset += chunkMaximum) {
+        const chunk = bytes.subarray(offset, offset + chunkMaximum);
+        await send(COMMAND.BLOB_DATA, concat(u32(offset), chunk));
+      }
+      await send(COMMAND.BLOB_COMMIT, u32(crc32(bytes)), COMMIT_TIMEOUT_MS);
+    });
   }
 
   async saveToSlot(slot) {

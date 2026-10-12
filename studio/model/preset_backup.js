@@ -27,6 +27,10 @@ function requireIdle(session) {
 export async function exportBackup(session, { names = {}, onProgress = () => {}, now = () => new Date() } = {}) {
   requireIdle(session);
   if (session.pending) await session.flushLive();
+  return session.exclusive('exporting a backup', () => runExport(session, { names, onProgress, now }));
+}
+
+async function runExport(session, { names, onProgress, now }) {
   const { client, info } = session;
   const original = await client.getLive(info);
   const slots = [];
@@ -78,17 +82,19 @@ export async function importBackup(session, backup, { onProgress = () => {} } = 
   const { client, info } = session;
   const usable = checkBackup(backup, info);
   if (session.pending) await session.flushLive();
-  const original = await client.getLive(info);
-  try {
-    for (let i = 0; i < usable.length; ++i) {
-      onProgress(i + 1, usable.length);
-      const bytes = fromBase64(usable[i].data);
-      if (bytes.length !== info.liveSize) throw new Error(`Slot ${usable[i].slot} in the file has the wrong size`);
-      await client.writeBlob(info, 0xff, bytes);
-      await client.saveToSlot(usable[i].slot - 1);
+  return session.exclusive('importing a backup', async () => {
+    const original = await client.getLive(info);
+    try {
+      for (let i = 0; i < usable.length; ++i) {
+        onProgress(i + 1, usable.length);
+        const bytes = fromBase64(usable[i].data);
+        if (bytes.length !== info.liveSize) throw new Error(`Slot ${usable[i].slot} in the file has the wrong size`);
+        await client.writeBlob(info, 0xff, bytes);
+        await client.saveToSlot(usable[i].slot - 1);
+      }
+    } finally {
+      await client.writeBlob(info, 0xff, original);
     }
-  } finally {
-    await client.writeBlob(info, 0xff, original);
-  }
-  return usable.map((entry) => entry.slot);
+    return usable.map((entry) => entry.slot);
+  });
 }

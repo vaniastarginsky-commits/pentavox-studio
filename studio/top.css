@@ -609,3 +609,6 @@
 .lock-tools { display: flex; flex-wrap: wrap; gap: 6px; }
 .lock-tools button { padding: 5px 10px; font-size: .8rem; }
 .lock-head .lock-title { margin-right: auto; }
+
+/* A backup export/import owns the module's live state: the other tabs cannot be edited until it ends. */
+body.studio-busy .tab-panel:not(#presets-tab) { pointer-events: none; opacity: .55; }

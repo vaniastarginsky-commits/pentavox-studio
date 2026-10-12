@@ -38,19 +38,54 @@ export function apiToken(ask = () => globalThis.prompt?.('Pentavox build server 
 
 export function forgetToken() { try { storage()?.removeItem('pentavox.token'); } catch { /* ignore */ } }
 
+const DEFAULT_PORT = 8766;
+const PORT_SPAN = 20;                 // serve.py tries 8766..8785 until one is free
+let lastDiscovery = 0;
+
+/** serve.py moves to the next free port when 8766 is taken: look for it (GET /api/status only) and remember the one that answers. */
+async function discoverServer(fetchImpl, headers, now = Date.now) {
+  if (now() - lastDiscovery < 30_000) return null;        // do not probe on every poll
+  lastDiscovery = now();
+  for (let port = DEFAULT_PORT + 1; port < DEFAULT_PORT + PORT_SPAN; port += 1) {
+    const base = `http://127.0.0.1:${port}`;
+    try {
+      const controller = typeof AbortController === 'function' ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), 600) : null;
+      const response = await fetchImpl(`${base}/api/status`, { cache: 'no-store', headers, signal: controller?.signal });
+      if (timer) clearTimeout(timer);
+      if (response.ok || response.status === 401) { write('pentavox.server', base); return base; }
+    } catch { /* nothing on this port */ }
+  }
+  return null;
+}
+
 /**
- * fetch() against serve.py. Same-origin pages need nothing extra; a static site sends the token on POSTs. A 401 forgets the saved token
- * so the next click asks again.
+ * fetch() against serve.py. A same-origin page needs nothing extra. A hosted page sends the token on every call: POSTs (Build/Flash) ask for it
+ * once and keep it; GETs (status polling) use the saved one but never prompt. A 401 forgets the saved token so the next click asks again.
+ * When the default port does not answer, the neighbouring ports are tried once in a while.
  */
-export async function apiFetch(path, init = {}, { location = globalThis.location, fetchImpl = globalThis.fetch.bind(globalThis) } = {}) {
+export async function apiFetch(path, init = {}, { location = globalThis.location, fetchImpl = globalThis.fetch.bind(globalThis), now = Date.now } = {}) {
   const base = apiBase(location);
   const headers = { ...(init.headers ?? {}) };
-  if (base && (init.method ?? 'GET') !== 'GET') {
-    const token = apiToken();
-    if (!token) throw new Error('A build server token is needed to build or flash from this page');
-    headers['X-Pentavox-Token'] = token;
+  if (base) {
+    if ((init.method ?? 'GET') !== 'GET') {
+      const token = apiToken();
+      if (!token) throw new Error('A build server token is needed to build or flash from this page');
+      headers['X-Pentavox-Token'] = token;
+    } else {
+      const saved = read('pentavox.token');
+      if (saved) headers['X-Pentavox-Token'] = saved;
+    }
   }
-  const response = await fetchImpl(`${base}${path}`, { ...init, headers });
+  let response;
+  try {
+    response = await fetchImpl(`${base}${path}`, { ...init, headers });
+  } catch (error) {
+    if (!base || read('pentavox.server')) throw error;     // same-origin, or an address the user chose: report as is
+    const found = await discoverServer(fetchImpl, headers, now);
+    if (!found) throw error;
+    response = await fetchImpl(`${found}${path}`, { ...init, headers });
+  }
   if (response.status === 401) forgetToken();
   return response;
 }

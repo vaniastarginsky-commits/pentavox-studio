@@ -10,6 +10,10 @@ function readOnlyError() {
   return new Error('Studio session is read-only');
 }
 
+function busyError(label) {
+  return new Error(`Studio is busy (${label}); wait for it to finish before changing anything`);
+}
+
 export class StudioSession {
   constructor(client, destinations, engineCatalogs = {}) {
     this.client = client;
@@ -113,14 +117,34 @@ export class StudioSession {
     if (this.settings) this.settings = SettingsTable.fromBlob(bytes, this.index);
     if (this.potMap) this.potMap = PotMapTable.fromBlob(bytes, this.index);
     this.editedKeys = new Set(owned.filter((key) => this.index.has(key)));
+    this.#editGeneration += 1;
     this.dirty = true;
     this.pending = this.editedKeys.size > 0;
     return true;
   }
 
+  #editGeneration = 0;
+  #exclusive = null;
+
+  /** True while an exclusive operation (a backup export/import) owns the module's live state. */
+  get busy() { return this.#exclusive !== null; }
+
+  /**
+   * Run `work` as the only thing touching the module: edits and flushes are refused until it ends. A backup reads and writes the module's
+   * live state slot by slot; an edit made in the middle would be flushed into whatever slot happens to be loaded.
+   */
+  async exclusive(label, work) {
+    if (this.#exclusive) throw busyError(this.#exclusive);
+    this.#exclusive = label;
+    this.onBusy?.(true);
+    try { return await work(); } finally { this.#exclusive = null; this.onBusy?.(false); }
+  }
+
   edit(fn) {
     if (this.readOnly || !this.table) throw readOnlyError();
+    if (this.#exclusive) throw busyError(this.#exclusive);
     fn(this.table);
+    this.#editGeneration += 1;
     this.#rememberDirty(this.table);
     this.dirty = true;
     this.pending = true;
@@ -128,7 +152,9 @@ export class StudioSession {
 
   editVoices(fn) {
     if (this.readOnly || !this.voices) throw readOnlyError();
+    if (this.#exclusive) throw busyError(this.#exclusive);
     fn(this.voices);
+    this.#editGeneration += 1;
     this.#rememberDirty(this.voices);
     this.dirty = true;
     this.pending = true;
@@ -136,7 +162,9 @@ export class StudioSession {
 
   editSettings(fn) {
     if (this.readOnly || !this.settings) throw readOnlyError();
+    if (this.#exclusive) throw busyError(this.#exclusive);
     fn(this.settings);
+    this.#editGeneration += 1;
     this.#rememberDirty(this.settings);
     this.dirty = true;
     this.pending = true;
@@ -144,7 +172,9 @@ export class StudioSession {
 
   editPotMap(fn) {
     if (this.readOnly || !this.potMap) throw readOnlyError();
+    if (this.#exclusive) throw busyError(this.#exclusive);
     fn(this.potMap);
+    this.#editGeneration += 1;
     this.#rememberDirty(this.potMap);
     this.dirty = true;
     this.pending = true;
@@ -152,13 +182,21 @@ export class StudioSession {
 
   async flushLive() {
     if (this.readOnly || !this.table || !this.voices) throw readOnlyError();
+    if (this.#exclusive) throw busyError(this.#exclusive);
     if (!this.pending) return;
     const fresh = await this.client.getLive(this.info);
     const mine = this.#currentBlob();
     const owned = new Set([...this.editedKeys, ...this.table.dirtyKeys(), ...this.voices.dirtyKeys(), ...(this.settings?.dirtyKeys() ?? []), ...(this.potMap?.dirtyKeys() ?? [])]);
     const output = merge3(this.base, fresh, mine, this.index, owned);
+    const generation = this.#editGeneration;
     await this.client.writeBlob(this.info, 0xff, output);
     this.base = output;
+    if (generation !== this.#editGeneration) {
+      // The user edited while the write was in flight. The tables now hold that edit; rebuilding them from `output` would drop it. Keep
+      // them, record what the module now has as the new base, and stay pending so the next flush sends the newer edit.
+      this.pending = true;
+      return;
+    }
     this.table = RouteTable.fromBlob(output, this.index);
     this.voices = VoiceTable.fromBlob(output, this.index, this.engineCatalogs);
     if (this.settings) this.settings = SettingsTable.fromBlob(output, this.index);
