@@ -307,6 +307,18 @@ async function connect({ demo = false } = {}) {
   }
 }
 
+// A browser without WebSerial (iPhone/iPad, Safari, Firefox) cannot reach a module, and without WebUSB it cannot flash one: say so and offer the Demo.
+{
+  const nav = globalThis.navigator;
+  const missing = !nav?.serial ? 'connect to a module' : !nav?.usb ? 'flash firmware' : '';
+  if (missing) {
+    connectButton.disabled = !nav?.serial;
+    if (!nav?.serial) connectButton.title = 'This browser has no WebSerial';
+    document.getElementById('unsupported-text').textContent = `This browser cannot ${missing} (no ${nav?.serial ? 'WebUSB' : 'WebSerial'}). Use Chrome or Edge on a computer; the Demo works here.`;
+    document.getElementById('unsupported-banner').hidden = false;
+    document.getElementById('unsupported-demo').addEventListener('click', () => connect({ demo: true }));
+  }
+}
 connectButton.addEventListener('click', () => connect());
 demoButton.addEventListener('click', () => connect({ demo: true }));
 for (const tab of document.querySelectorAll('[data-tab]')) {
