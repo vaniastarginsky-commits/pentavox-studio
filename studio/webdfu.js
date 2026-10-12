@@ -72,7 +72,8 @@ export class DfuDevice {
     this.leaveTimeoutMs = leaveTimeoutMs;
     this.interfaceNumber = 0;
     this.alternate = 0;
-    this.transferSize = 1024;
+    this.transferSize = null;        // the device's own wTransferSize: it computes the address of block n from it, so it must be the chunk size used
+    this.transferSizeError = '';
   }
 
   /** Open the device, claim the DFU interface (alt 0) and read its layout. */
@@ -93,6 +94,7 @@ export class DfuDevice {
     }
     this.layout = parseMemoryLayout(name);
     this.layoutSource = `alt ${alt.alternateSetting} of ${found.alternates.length}, name ${JSON.stringify(name ?? null)}${fallback}`;   // shown when the layout cannot be read
+    try { this.transferSize = await this.readTransferSize(); } catch (error) { this.transferSizeError = String(error.message ?? error); }
     return this;
   }
 
@@ -102,11 +104,31 @@ export class DfuDevice {
     return new Uint8Array(result.data.buffer, result.data.byteOffset, result.data.byteLength);
   }
 
+  /** The whole configuration descriptor (interfaces, DFU functional descriptor), read once. */
+  async readConfigDescriptor() {
+    if (!this.config) {
+      const head = await this.getDescriptor(2, 0, 0, 4);
+      this.config = await this.getDescriptor(2, 0, 0, head[2] | (head[3] << 8));
+    }
+    return this.config;
+  }
+
+  /** wTransferSize from the DFU functional descriptor (type 0x21): the number of bytes the device takes per block, and the stride of its block addresses. */
+  async readTransferSize() {
+    const config = await this.readConfigDescriptor();
+    for (let i = 0; i + 2 <= config.length && config[i] > 0; i += config[i]) {
+      if (config[i + 1] === 0x21 && config[i] >= 9) {
+        const size = config[i + 5] | (config[i + 6] << 8);
+        if (size < 64) throw new Error(`the DFU functional descriptor reports a transfer size of ${size}`);
+        return size;
+      }
+    }
+    throw new Error('the configuration has no DFU functional descriptor');
+  }
+
   /** The name string of an interface/alt setting, found through the configuration descriptor (iInterface) and the string descriptor. */
   async readInterfaceName(interfaceNumber, alternate) {
-    const head = await this.getDescriptor(2, 0, 0, 4);
-    const total = head[2] | (head[3] << 8);
-    const config = await this.getDescriptor(2, 0, 0, total);
+    const config = await this.readConfigDescriptor();
     let iInterface = 0;
     for (let i = 0; i + 9 <= config.length && config[i] > 0; i += config[i]) {
       if (config[i + 1] === 4 && config[i + 2] === interfaceNumber && config[i + 3] === alternate) { iInterface = config[i + 8]; break; }
@@ -159,6 +181,7 @@ export class DfuDevice {
    */
   async flash(image, address = FIRMWARE_ADDRESS, onProgress = () => {}) {
     if (!this.layout) throw new Error(`The DFU device did not describe its memory layout; refusing to write (${this.layoutSource})`);
+    if (!this.transferSize) throw new Error(`The DFU device did not report its transfer size; refusing to write (${this.transferSizeError || 'unknown'})`);
     const sectors = planErase(this.layout, address, image.byteLength);   // throws before anything is touched
     await this.clearError();
     for (let i = 0; i < sectors.length; i += 1) {
