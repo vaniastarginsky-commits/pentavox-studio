@@ -14,6 +14,26 @@ export function flashWarning(backup = lastBackupInfo()) {
   return `This replaces the current firmware.\n\n${state}\n\nIs the module already in DFU mode?`;
 }
 
+/**
+ * A confirm that is not the native one. The device chooser of WebUSB opens only shortly after a click, and the time spent reading a native
+ * confirm used it up ("Must be handling a user gesture"); the click on this dialog's button is the gesture that follows.
+ */
+export function confirmDialog(text, okLabel = 'OK') {
+  return new Promise((resolve) => {
+    const dialog = el('dialog', 'confirm-dialog');
+    const cancel = button('Cancel'); const ok = button(okLabel, 'primary');
+    const actions = el('div', 'confirm-actions'); actions.append(cancel, ok);
+    dialog.append(el('pre', 'confirm-text', text), actions);
+    const finish = (value) => { dialog.close(); dialog.remove(); resolve(value); };
+    cancel.addEventListener('click', () => finish(false));
+    ok.addEventListener('click', () => finish(true));
+    dialog.addEventListener('cancel', (event) => { event.preventDefault(); finish(false); });   // Esc
+    document.body.append(dialog);
+    dialog.showModal();
+    ok.focus();
+  });
+}
+
 function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -312,11 +332,13 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     } catch (error) { onError(error); }
   });
   flash.addEventListener('click', async () => {
-    if (!confirm((cloudResult?.meta ? `${describeBuild(cloudResult.meta, model.recipe())}\n\n` : '') + flashWarning())) return;
     if (cloudResult) {
+      const about = cloudResult.meta ? `${describeBuild(cloudResult.meta, model.recipe())}\n\n` : '';
+      if (!(await confirmDialog(about + flashWarning(), 'Flash'))) return;
       try { await runWebFlash({ image: cloudResult.image, onStatus: renderBuild, onFlashState: (flashState) => globalThis.dispatchEvent?.(new CustomEvent('pentavox-flash', { detail: flashState })) }); } catch (error) { onError(error); }
       return;
     }
+    if (!confirm(flashWarning())) return;
     try { const response = await apiFetch('/api/flash', { method: 'POST', body: '{}' }); const result = await response.json(); if (result.error) throw new Error(result.error); startPolling(); } catch (error) { onError(error); }
   });
   dfu.addEventListener('click', async () => { try { const client = getClient(); if (!client) throw new Error('Connect the module first'); await client.reboot(1); startPolling(); } catch (error) { onError(error); } });
