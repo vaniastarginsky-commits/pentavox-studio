@@ -57,12 +57,19 @@ export function planErase(layout, address, length) {
 }
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** The promise's result, or undefined when it does not settle within ms: a device that has reset never answers a pending transfer. */
+function within(promise, ms) {
+  let timer;
+  return Promise.race([promise, new Promise((resolve) => { timer = setTimeout(resolve, ms); })]).finally(() => clearTimeout(timer));
+}
 const le32 = (value) => [value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >>> 24) & 0xff];
 
 export class DfuDevice {
-  constructor(usbDevice, { sleep = wait } = {}) {
+  constructor(usbDevice, { sleep = wait, leaveTimeoutMs = 3000 } = {}) {
     this.device = usbDevice;
     this.sleep = sleep;
+    this.leaveTimeoutMs = leaveTimeoutMs;
     this.interfaceNumber = 0;
     this.alternate = 0;
     this.transferSize = 1024;
@@ -111,7 +118,7 @@ export class DfuDevice {
     return new TextDecoder('utf-16le').decode(text.subarray(2, Math.min(text[0], text.length)));
   }
 
-  async close() { try { await this.device.close(); } catch { /* already gone */ } }
+  async close() { try { await within(this.device.close(), this.leaveTimeoutMs); } catch { /* already gone */ } }
 
   controlOut(request, value, data) {
     return this.device.controlTransferOut({ requestType: 'class', recipient: 'interface', request, value, index: this.interfaceNumber }, data);
@@ -172,8 +179,10 @@ export class DfuDevice {
     // GETSTATUS afterwards is the expected end).
     onProgress({ phase: 'leave', done: 0, total: 1 });
     await this.command(CMD.SET_ADDRESS, address, 'set leave address');
-    await this.controlOut(REQ.DNLOAD, 0, new Uint8Array(0));
-    try { await this.status(); } catch { /* the device reset */ }
+    // The device resets while this goes on: the transfers may fail with "device gone" or never answer; neither is a failed flash (every block
+    // was accepted above).
+    try { await within(this.controlOut(REQ.DNLOAD, 0, new Uint8Array(0)), this.leaveTimeoutMs); } catch (error) { if (!['NetworkError', 'NotFoundError'].includes(error?.name)) throw error; }
+    try { await within(this.status(), this.leaveTimeoutMs); } catch { /* the device reset */ }
     onProgress({ phase: 'leave', done: 1, total: 1 });
   }
 }
