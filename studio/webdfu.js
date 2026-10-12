@@ -80,6 +80,7 @@ export class DfuDevice {
     const alt = found.alternates.find((a) => a.alternateSetting === this.alternate) ?? found.alternates[0];
     await device.selectAlternateInterface(this.interfaceNumber, alt.alternateSetting);
     this.layout = parseMemoryLayout(alt.interfaceName);
+    this.layoutSource = `alt ${alt.alternateSetting} of ${found.alternates.length}, name ${JSON.stringify(alt.interfaceName ?? null)}`;   // shown when the layout cannot be read
     return this;
   }
 
@@ -123,6 +124,7 @@ export class DfuDevice {
    * onProgress({ phase: 'erase' | 'write' | 'leave', done, total }).
    */
   async flash(image, address = FIRMWARE_ADDRESS, onProgress = () => {}) {
+    if (!this.layout) throw new Error(`The DFU device did not describe its memory layout; refusing to write (${this.layoutSource})`);
     const sectors = planErase(this.layout, address, image.byteLength);   // throws before anything is touched
     await this.clearError();
     for (let i = 0; i < sectors.length; i += 1) {
