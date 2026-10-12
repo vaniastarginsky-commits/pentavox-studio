@@ -16,6 +16,7 @@ import { mountVoice } from './ui/voices.js';
 import { mountSampler } from './ui/sampler.js';
 import { mountSdCard } from './ui/sdcard.js';
 import { mountKnobLocks } from './ui/knob_locks.js';
+import { mountManual } from './ui/manual.js';
 import { apiFetch, siteUrl } from './site.js';
 import { pairedDfuDevices } from './webdfu.js';
 
@@ -205,6 +206,18 @@ const sdcardMount = mountSdCard(document.querySelector('#sdcard-root'), {
   getSampleSlotCount: () => session?.sampleSlotCount ?? 4,
 });
 
+const manualMount = mountManual(document.querySelector('#manual-root'), {
+  getDescriptor: () => session?.descriptor ?? null,
+  getSettings: () => session?.settings ?? null,
+  // Nothing connected: the demo module's descriptor shows the pages, the buttons and the jacks.
+  loadSnapshot: () => fetchJson('./tests/fixtures/descriptor.json'),
+  loadStatic: async () => {
+    const response = await fetch('./manual.html', { cache: 'no-cache' });
+    if (!response.ok) throw new Error('manual.html is missing');
+    return new DOMParser().parseFromString(await response.text(), 'text/html');
+  },
+});
+
 async function fetchBytes(url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Could not load ${url}`);
@@ -296,6 +309,7 @@ async function connect({ demo = false } = {}) {
     samplerMount.refreshConnection();
     sdcardMount.refreshConnection();
     locksMount.refreshConnection();
+    manualMount.refreshConnection(); if (activeTab === 'manual') manualMount.show();
   } catch (error) {
     demoBanner.hidden = true;
     document.body.classList.remove('demo-mode');
@@ -332,6 +346,7 @@ for (const tab of document.querySelectorAll('[data-tab]')) {
     syncFooter();
     if (activeTab === 'sampler') samplerMount.show();
     if (activeTab === 'locks') locksMount.show(); else locksMount.hide();
+    if (activeTab === 'manual') manualMount.show();
   });
 }
 

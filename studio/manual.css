@@ -1,0 +1,82 @@
+/* The Manual tab: one calm column, an interactive drawing of the panel on top, reference tables below.
+   Colours come from the Studio tokens, so both themes follow. */
+
+.manual { max-width: 1040px; margin: 0 auto; padding: 0 0 56px; }
+.manual-hero h1 { margin: 6px 0 8px; font-size: 1.9rem; letter-spacing: -.03em; }
+.manual-lead { margin: 0 0 14px; max-width: 68ch; color: var(--muted); font-size: 1.02rem; line-height: 1.55; }
+.manual-muted { color: var(--muted); font-size: .88rem; line-height: 1.5; }
+.manual-error { color: var(--accent); }
+
+.manual-nav { position: sticky; top: 0; z-index: 3; display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 22px; padding: 8px 0; background: color-mix(in srgb, var(--bg, var(--surface)) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.manual-nav a { padding: .35rem .8rem; border-radius: 999px; color: var(--muted); font-size: .85rem; font-weight: 600; text-decoration: none; }
+.manual-nav a:hover, .manual-nav a:focus-visible { background: var(--surface-2); color: var(--text); }
+
+.manual-section { padding: 6px 0 26px; scroll-margin-top: 60px; }
+.manual-section > h2 { margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); font-size: 1.3rem; letter-spacing: -.02em; }
+.manual-section h3 { margin: 24px 0 8px; font-size: 1.02rem; }
+.manual-section p { max-width: 74ch; line-height: 1.55; }
+.manual-section code { padding: .08em .35em; border-radius: 5px; background: var(--surface-2); font-size: .88em; }
+
+.manual-steps { max-width: 74ch; margin: 0; padding-left: 1.3rem; line-height: 1.55; }
+.manual-steps li { margin: 0 0 8px; padding-left: 4px; }
+.manual-defs, .manual-facts { margin: 0; }
+.manual-defs { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 10px 22px; max-width: 900px; }
+.manual-defs dt { font-weight: 700; }
+.manual-defs dd { margin: 0; color: var(--muted); line-height: 1.55; }
+.manual-defs dd strong, .manual-defs dd em { color: var(--text); font-style: normal; }
+
+/* The drawing and its readout */
+.manual-stage { display: grid; grid-template-columns: minmax(250px, 340px) minmax(0, 1fr); gap: 28px; align-items: start; }
+.manual-figure { margin: 0; }
+.mp-svg { display: block; width: 100%; height: auto; }
+.mp-plate { fill: var(--surface-2); stroke: var(--line); stroke-width: .4; }
+.mp-mount { fill: var(--bg, var(--surface)); stroke: var(--line); stroke-width: .3; }
+.mp-control { cursor: pointer; outline: none; }
+.mp-ring { fill: none; stroke: var(--muted); stroke-width: 1.25; stroke-dasharray: 2.7 1.2; transition: stroke .15s; }
+.mp-knob { fill: var(--surface); stroke: var(--text); stroke-width: .5; }
+.mp-tick { stroke: var(--text); stroke-width: .7; stroke-linecap: round; }
+.mp-label { fill: var(--muted); font-size: 2.5px; font-weight: 600; pointer-events: none; }
+.mp-pot.shifted .mp-label { fill: var(--accent); }
+.mp-pot.muted { opacity: .45; }
+.mp-cap { fill: var(--surface); stroke: var(--text); stroke-width: .5; }
+.mp-cap-text { fill: var(--text); font-size: 2.6px; font-weight: 800; pointer-events: none; }
+.mp-usb-slot { fill: var(--bg, var(--surface)); stroke: var(--text); stroke-width: .45; }
+.mp-nut { fill: var(--surface); stroke: var(--line); stroke-width: .4; }
+.mp-hole { fill: var(--bg, var(--surface)); stroke: var(--text); stroke-width: .35; }
+.mp-control:hover .mp-knob, .mp-control:focus-visible .mp-knob, .mp-control:hover .mp-cap, .mp-control:focus-visible .mp-cap,
+.mp-control:hover .mp-nut, .mp-control:focus-visible .mp-nut, .mp-control:hover .mp-usb-slot, .mp-control:focus-visible .mp-usb-slot { stroke: var(--accent); stroke-width: .9; }
+
+.manual-side { display: grid; gap: 14px; }
+.manual-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.manual-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.manual-tab { display: inline-flex; align-items: center; gap: 6px; padding: .35rem .7rem; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: .82rem; font-weight: 600; }
+.manual-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, .14); }
+.manual-dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25); }
+.manual-shift { padding: .4rem .85rem; border-radius: 999px; font-size: .82rem; }
+.manual-shift[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.manual-readout { min-height: 11rem; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.manual-readout h3 { margin: 0 0 8px; font-size: 1rem; }
+.manual-readout p { margin: 0 0 8px; }
+.manual-facts { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 6px 14px; font-size: .88rem; line-height: 1.5; }
+.manual-facts dt { color: var(--muted); font-weight: 600; }
+.manual-facts dd { margin: 0; }
+
+.manual-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px; }
+.manual-card { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.manual-card h4 { margin: 0 0 10px; font-size: .98rem; }
+
+.manual-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.manual-table th, .manual-table td { padding: 8px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; line-height: 1.5; }
+.manual-table thead th { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+.manual-table tbody th { width: 3.5rem; white-space: nowrap; }
+.manual-source { margin-top: 18px; }
+
+@media (max-width: 760px) {
+  .manual-hero h1 { font-size: 1.5rem; }
+  .manual-stage { grid-template-columns: 1fr; }
+  .mp-svg { max-width: 330px; margin: 0 auto; }
+  .manual-defs { grid-template-columns: 1fr; gap: 2px; }
+  .manual-defs dd { margin-bottom: 10px; }
+  .manual-nav { top: 0; }
+  .manual-table th, .manual-table td { padding: 7px 6px; }
+}

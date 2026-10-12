@@ -26,6 +26,7 @@ export class StudioSession {
     this.info = undefined;
     this.index = undefined;
     this.lockComponent = undefined;
+    this.descriptor = undefined;
     this.base = undefined;
     this.dirty = false;
     this.readOnly = false;
@@ -75,6 +76,7 @@ export class StudioSession {
     this.info = info;
     this.index = index;
     this.lockComponent = findLockComponent(descriptor.components);
+    this.descriptor = descriptor;   // the Manual tab reads the firmware's own pages, buttons and jacks from it
     this.base = Uint8Array.from(live);
     this.table = table;
     this.voices = voices;
