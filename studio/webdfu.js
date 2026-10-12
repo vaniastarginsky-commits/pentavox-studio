@@ -79,9 +79,36 @@ export class DfuDevice {
     await device.claimInterface(this.interfaceNumber);
     const alt = found.alternates.find((a) => a.alternateSetting === this.alternate) ?? found.alternates[0];
     await device.selectAlternateInterface(this.interfaceNumber, alt.alternateSetting);
-    this.layout = parseMemoryLayout(alt.interfaceName);
-    this.layoutSource = `alt ${alt.alternateSetting} of ${found.alternates.length}, name ${JSON.stringify(alt.interfaceName ?? null)}`;   // shown when the layout cannot be read
+    let name = alt.interfaceName;
+    let fallback = '';
+    if (!name) {      // Chrome leaves interfaceName empty for some devices that dfu-util reads fine: read the string descriptor ourselves
+      try { name = await this.readInterfaceName(this.interfaceNumber, alt.alternateSetting); fallback = ', read from the descriptors'; } catch (error) { fallback = `, descriptor read failed: ${error.message ?? error}`; }
+    }
+    this.layout = parseMemoryLayout(name);
+    this.layoutSource = `alt ${alt.alternateSetting} of ${found.alternates.length}, name ${JSON.stringify(name ?? null)}${fallback}`;   // shown when the layout cannot be read
     return this;
+  }
+
+  async getDescriptor(type, index, langId, length) {
+    const result = await this.device.controlTransferIn({ requestType: 'standard', recipient: 'device', request: 6, value: (type << 8) | index, index: langId }, length);
+    if (result.status !== 'ok' || !result.data || result.data.byteLength < 2) throw new Error(`GET_DESCRIPTOR ${type}/${index} failed`);
+    return new Uint8Array(result.data.buffer, result.data.byteOffset, result.data.byteLength);
+  }
+
+  /** The name string of an interface/alt setting, found through the configuration descriptor (iInterface) and the string descriptor. */
+  async readInterfaceName(interfaceNumber, alternate) {
+    const head = await this.getDescriptor(2, 0, 0, 4);
+    const total = head[2] | (head[3] << 8);
+    const config = await this.getDescriptor(2, 0, 0, total);
+    let iInterface = 0;
+    for (let i = 0; i + 9 <= config.length && config[i] > 0; i += config[i]) {
+      if (config[i + 1] === 4 && config[i + 2] === interfaceNumber && config[i + 3] === alternate) { iInterface = config[i + 8]; break; }
+    }
+    if (!iInterface) throw new Error('the interface has no name string');
+    const languages = await this.getDescriptor(3, 0, 0, 255);
+    const langId = languages.length >= 4 ? languages[2] | (languages[3] << 8) : 0x0409;
+    const text = await this.getDescriptor(3, iInterface, langId, 255);
+    return new TextDecoder('utf-16le').decode(text.subarray(2, Math.min(text[0], text.length)));
   }
 
   async close() { try { await this.device.close(); } catch { /* already gone */ } }
