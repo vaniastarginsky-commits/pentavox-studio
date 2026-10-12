@@ -5,8 +5,7 @@
      descriptor by ui/manual.js; the sections below are slotted around them by id. -->
 
 <section id="manual-studio" class="manual-section">
-  <h2>Using Studio</h2>
-  <p class="manual-lead">Studio is the module's settings window in a browser. Everything you change is heard on the module at once; <strong>Save to slot</strong> makes it permanent.</p>
+  <header class="manual-head"><h2>Using Studio</h2><p class="manual-sub">The module’s settings window in a browser. Changes are heard at once; Save to slot makes them permanent.</p></header>
 
   <h3>In two minutes</h3>
   <ol class="manual-steps">
@@ -36,8 +35,7 @@
 </section>
 
 <section id="manual-flash" class="manual-section">
-  <h2>Flashing new firmware</h2>
-  <p>Choosing different engines changes the firmware itself, so they take effect only after a build and a flash. You need Chrome or Edge on a computer.</p>
+  <header class="manual-head"><h2>Flashing new firmware</h2><p class="manual-sub">Different engines mean different firmware, so a set takes effect only after a build and a flash. Chrome or Edge on a computer.</p></header>
   <ol class="manual-steps">
     <li><strong>Back up your presets.</strong> In <em>Presets</em>, press <strong>Export backup</strong>. A new firmware can change the preset layout, and then every stored preset is reset. Studio asks about this before flashing.</li>
     <li><strong>Engines → Build.</strong> On the hosted Studio the firmware is built in the cloud with GitHub Actions. That needs a GitHub token (fine-grained, with Actions: write and Contents: read on the firmware repository); Studio asks for it once and keeps it in this browser only. Run from your own computer with <code>./studio/serve.sh</code>, Build runs locally instead.</li>
@@ -49,7 +47,7 @@
 </section>
 
 <section id="manual-help" class="manual-section">
-  <h2>Troubleshooting</h2>
+  <header class="manual-head"><h2>Troubleshooting</h2><p class="manual-sub">The things that go wrong most often, and the fix.</p></header>
   <dl class="manual-defs">
     <dt>“Port busy”</dt>
     <dd>Another program holds the serial port. Close the official programmer and any other Studio tab, then press <strong>Reconnect</strong>.</dd>

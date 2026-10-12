@@ -207,10 +207,10 @@ const sdcardMount = mountSdCard(document.querySelector('#sdcard-root'), {
 });
 
 const manualMount = mountManual(document.querySelector('#manual-root'), {
-  getDescriptor: () => session?.descriptor ?? null,
+  getDescriptor: () => (demoMode ? null : session?.descriptor ?? null),   // the demo module is a different build; the manual describes the real one
   getSettings: () => session?.settings ?? null,
-  // Nothing connected: the demo module's descriptor shows the pages, the buttons and the jacks.
-  loadSnapshot: () => fetchJson('./tests/fixtures/descriptor.json'),
+  // Nothing real connected: the compact firmware's pages, buttons and jacks (studio/gen_manual_snapshot.py).
+  loadSnapshot: () => fetchJson('./manual_module.json'),
   loadStatic: async () => {
     const response = await fetch('./manual.html', { cache: 'no-cache' });
     if (!response.ok) throw new Error('manual.html is missing');

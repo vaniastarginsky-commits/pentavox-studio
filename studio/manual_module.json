@@ -1,0 +1,390 @@
+{
+ "module": {
+  "id": "pentavox",
+  "name": "Pentavox",
+  "fw": "0.1.0",
+  "git": "d2d4b9",
+  "sdk": "0.12.0",
+  "board": "v2",
+  "tagline": "2 Plaits voices + 1 sampler, FX chain with stutter/tape/reverb/granular/phaser"
+ },
+ "components": [
+  {
+   "id": "perf",
+   "kind": "pager",
+   "pots": 6,
+   "pages": 4,
+   "pageNames": [
+    "Voice 1",
+    "Voice 2",
+    "Sampler 1",
+    "FX Live"
+   ],
+   "pageColors": [
+    "#372D00",
+    "#003C00",
+    "#0000FF",
+    "#1E90FF"
+   ],
+   "fields": [
+    {
+     "name": "Freq",
+     "page": 0,
+     "pot": 0,
+     "help": "B1:- B2:engine/bank",
+     "def": 0.5
+    },
+    {
+     "name": "Harmonics",
+     "page": 0,
+     "pot": 1,
+     "help": "B1:- B2:engine/bank",
+     "def": 0.5
+    },
+    {
+     "name": "Timbre",
+     "page": 0,
+     "pot": 2,
+     "help": "B1:- B2:engine/bank",
+     "def": 0.5
+    },
+    {
+     "name": "Morph",
+     "page": 0,
+     "pot": 3,
+     "help": "B1:- B2:engine/bank",
+     "def": 0.5
+    },
+    {
+     "name": "Decay",
+     "page": 0,
+     "pot": 4,
+     "help": "B1:Attack B2:engine/bank",
+     "def": 0.5
+    },
+    {
+     "name": "Level",
+     "page": 0,
+     "pot": 5,
+     "help": "B1:Aux B2:engine/bank",
+     "def": 0.8
+    },
+    {
+     "name": "Freq",
+     "page": 1,
+     "pot": 0,
+     "help": "B1:- B2:engine/bank",
+     "def": 0.5
+    },
+    {
+     "name": "Harmonics",
+     "page": 1,
+     "pot": 1,
+     "help": "B1:- B2:engine/bank",
+     "def": 0.5
+    },
+    {
+     "name": "Timbre",
+     "page": 1,
+     "pot": 2,
+     "help": "B1:- B2:engine/bank",
+     "def": 0.5
+    },
+    {
+     "name": "Morph",
+     "page": 1,
+     "pot": 3,
+     "help": "B1:- B2:engine/bank",
+     "def": 0.5
+    },
+    {
+     "name": "Decay",
+     "page": 1,
+     "pot": 4,
+     "help": "B1:Attack B2:engine/bank",
+     "def": 0.5
+    },
+    {
+     "name": "Level",
+     "page": 1,
+     "pot": 5,
+     "help": "B1:Aux B2:engine/bank",
+     "def": 0.8
+    },
+    {
+     "name": "Tune",
+     "page": 2,
+     "pot": 0,
+     "help": "B1:semitone B2:slot/record",
+     "def": 0.5
+    },
+    {
+     "name": "Start",
+     "page": 2,
+     "pot": 1,
+     "help": "B1:- B2:slot/record",
+     "def": 0
+    },
+    {
+     "name": "End",
+     "page": 2,
+     "pot": 2,
+     "help": "B1:Loop Bars B2:slot/record",
+     "def": 1
+    },
+    {
+     "name": "Loop Mode",
+     "page": 2,
+     "pot": 3,
+     "help": "B1:- B2:slot/record",
+     "def": 0.8333
+    },
+    {
+     "name": "Decay",
+     "page": 2,
+     "pot": 4,
+     "help": "B1:Attack B2:slot/record",
+     "def": 0.5
+    },
+    {
+     "name": "Level",
+     "page": 2,
+     "pot": 5,
+     "help": "B1:Aux B2:slot/record",
+     "def": 0.8
+    },
+    {
+     "name": "Stutter Time",
+     "page": 3,
+     "pot": 0,
+     "help": "B1:Delay Time B2:stutter",
+     "def": 0.55
+    },
+    {
+     "name": "Filter",
+     "page": 3,
+     "pot": 1,
+     "help": "B1:Resonance B2:stutter",
+     "def": 0.5
+    },
+    {
+     "name": "Phaser Mix",
+     "page": 3,
+     "pot": 2,
+     "help": "B1:Depth B2:stutter",
+     "def": 0
+    },
+    {
+     "name": "Phaser Rate",
+     "page": 3,
+     "pot": 3,
+     "help": "B1:Feedback B2:stutter",
+     "def": 0.452
+    },
+    {
+     "name": "Delay Mix",
+     "page": 3,
+     "pot": 4,
+     "help": "B1:Feedback B2:stutter",
+     "def": 0
+    },
+    {
+     "name": "Reverb Mix",
+     "page": 3,
+     "pot": 5,
+     "help": "B1:Size B2:stutter",
+     "def": 0
+    }
+   ]
+  }
+ ],
+ "buttons": [
+  {
+   "id": "b1",
+   "name": "B1 Voice / Shift",
+   "role": "modal",
+   "actions": [
+    {
+     "gesture": "tap",
+     "label": "Next voice page",
+     "help": "Steps voice pages; from FX returns to the last voice page."
+    },
+    {
+     "gesture": "hold",
+     "label": "Shift layer",
+     "help": "While held: Plaits Attack and Aux send; all sampler shifts; Live Delay Time/Resonance/Phaser Depth/Phaser Feedback/Delay Feedback/Size; Granular Scatter/Spread/Reverse; Tone Center/CV amount."
+    }
+   ],
+   "see": [
+    "b3"
+   ]
+  },
+  {
+   "id": "b2",
+   "name": "B2 Engine / Record / Stutter",
+   "role": "modal",
+   "actions": [
+    {
+     "gesture": "tap",
+     "label": "Next engine / file",
+     "help": "Plaits: next engine. Sampler: next file of the slot's SD library (B1-hold + B2: next slot), start when armed, or stop recording."
+    },
+    {
+     "gesture": "hold",
+     "label": "Next bank / Arm",
+     "help": "Plaits: next bank. Sampler: arm or disarm recording."
+    },
+    {
+     "gesture": "press",
+     "label": "Stutter (FX Live)",
+     "help": "Momentary stutter while held, on the clock grid. FX Live only."
+    },
+    {
+     "gesture": "hold+b3",
+     "label": "Settings",
+     "help": "Hold B2+B3 about two seconds to open Settings."
+    }
+   ],
+   "see": [
+    "b1",
+    "cv6"
+   ]
+  },
+  {
+   "id": "b3",
+   "name": "B3 FX / Bypass",
+   "role": "modal",
+   "actions": [
+    {
+     "gesture": "tap",
+     "label": "FX pages",
+     "help": "Enters FX Live; on FX pages steps Live, Granular, Tone."
+    },
+    {
+     "gesture": "hold",
+     "label": "Bypass",
+     "help": "Release without knob movement to toggle bypass; FX tails freeze."
+    },
+    {
+     "gesture": "hold+knob",
+     "label": "Record knob motion",
+     "help": "Move a knob while holding; its motion records and loops."
+    },
+    {
+     "gesture": "hold+b2",
+     "label": "Settings",
+     "help": "Hold B2+B3 about two seconds to open Settings."
+    }
+   ],
+   "see": [
+    "b1",
+    "b2"
+   ]
+  }
+ ],
+ "jacks": [
+  {
+   "id": "in_l",
+   "name": "Audio In L",
+   "sig": "audio-in",
+   "help": "Left input to FX and sampler recording."
+  },
+  {
+   "id": "in_r",
+   "name": "Audio In R",
+   "sig": "audio-in",
+   "help": "Right input to FX and sampler recording; level is in Settings."
+  },
+  {
+   "id": "cv1",
+   "name": "CV1",
+   "sig": "gate",
+   "help": "J3: assignable in Studio (for example FX freeze); unassigned by default."
+  },
+  {
+   "id": "cv2",
+   "name": "CV2",
+   "sig": "cv-bi",
+   "help": "J4: assignable in Studio (for example phaser CV); unassigned by default."
+  },
+  {
+   "id": "cv3",
+   "name": "CV3",
+   "sig": "cv-bi",
+   "help": "J5: assignable modulation source."
+  },
+  {
+   "id": "cv4",
+   "name": "CV4",
+   "sig": "cv-bi",
+   "help": "J6: assignable modulation source."
+  },
+  {
+   "id": "cv5",
+   "name": "CV5",
+   "sig": "trig",
+   "help": "J7: assignable in Studio (for example bar reset); unassigned by default."
+  },
+  {
+   "id": "cv6",
+   "name": "CV6",
+   "sig": "trig",
+   "help": "J8: assignable in Studio; default is clock input."
+  },
+  {
+   "id": "out_l",
+   "name": "Audio Out L",
+   "sig": "audio-out",
+   "help": "Left output after voice mix and FX."
+  },
+  {
+   "id": "out_r",
+   "name": "Audio Out R",
+   "sig": "audio-out",
+   "help": "Right output after voice mix and FX."
+  }
+ ],
+ "manual": {
+  "preamble": "Two Plaits voices and one sampler share six knobs and stutter, tape, filter, drive, phaser, granular and reverb FX.",
+  "sections": [
+   {
+    "id": "pages",
+    "title": "Pages and buttons",
+    "body": "**B1** cycles Plaits 1-2 and Sampler 1, returning from FX to the last voice. **B3** enters FX Live, then cycles Live/Granular/Tone. Hold **B1** for shift and **B2+B3** for Settings. After changing pages, catch each knob's stored value."
+   },
+   {
+    "id": "fx-live",
+    "title": "FX Live",
+    "body": "Pots 0-5: Stutter Time (B1: Delay Time, 1-4000 ms exponential), Filter (centre bypass; B1: Resonance), Phaser Mix (B1: Depth), Phaser Rate (B1: Feedback), Delay Mix (B1: Feedback), Reverb Mix (B1: Size). Hold **B2** to stutter."
+   },
+   {
+    "id": "midi-clock",
+    "title": "MIDI and clock",
+    "body": "Each voice's MIDI channel is set in CV routing > Notes; Omni accepts every channel. Poly/Unison pool matching Plaits channels, while samplers remain independent. J3-J8 functions are assigned in Studio; by default only J8 is used, as the clock input."
+   },
+   {
+    "id": "knob-record",
+    "title": "Knob record",
+    "body": "Hold **B3** and move a knob: the motion is recorded and loops after release."
+   },
+   {
+    "id": "sampler",
+    "title": "Sampler recording",
+    "body": "On a sampler page hold **B2** to arm. The take starts at the Settings Record Threshold, on the first clock (MIDI clock, MIDI Start or CV clock) when it is set to Clock, on MIDI Start or a reset pulse when it is set to Start or Reset, or with a **B2** tap; Reset+Stop ends on the next reset. Clock Loop waits for a clocked downbeat established by J7 Reset/MIDI Start and records the Settings Record Length (1-16 bars; a slot holds 30 s, so 16 bars need 128 BPM or more). Tap from any page to stop. Both samplers share four slots."
+   },
+   {
+    "id": "sd-library",
+    "title": "SD library",
+    "body": "Settings > Input & Library selects each slot's WAV: zone 0 loads nothing; later zones pick scanned files. On a sampler page a B2 tap steps to the next file. New takes stay in SDRAM and write to SD when available."
+   },
+   {
+    "id": "route-destinations",
+    "title": "Route destinations by zone",
+    "body": "1. None\n2. Voice 1 Harmonics\n3. Voice 1 Timbre\n4. Voice 1 Morph\n5. Voice 1 Decay\n6. Voice 1 Level\n7. Voice 1 Aux\n8. Voice 1 Attack\n9. Voice 2 Harmonics\n10. Voice 2 Timbre\n11. Voice 2 Morph\n12. Voice 2 Decay\n13. Voice 2 Level\n14. Voice 2 Aux\n15. Voice 2 Attack\n16. Voice 3 Harmonics\n17. Voice 3 Timbre\n18. Voice 3 Morph\n19. Voice 3 Decay\n20. Voice 3 Level\n21. Voice 3 Aux\n22. Voice 3 Attack\n23. Sampler 1 Start\n24. Sampler 1 End\n25. Sampler 1 Cutoff\n26. Sampler 1 Resonance\n27. Sampler 1 Attack\n28. Sampler 1 Decay\n29. Sampler 1 Level\n30. Sampler 1 Aux\n31. Sampler 1 Transpose\n32. Sampler 2 Start\n33. Sampler 2 End\n34. Sampler 2 Cutoff\n35. Sampler 2 Resonance\n36. Sampler 2 Attack\n37. Sampler 2 Decay\n38. Sampler 2 Level\n39. Sampler 2 Aux\n40. Sampler 2 Transpose\n41. FX Stutter Ratchet\n42. FX Stutter Decay\n43. FX Stutter Chance\n44. FX Tape Rate\n45. FX Tape Mix\n46. FX Filter Position\n47. FX Reverb Size\n48. FX Reverb Damp\n49. FX Reverb Mix\n50. FX Granular Density\n51. FX Granular Size\n52. FX Granular Position\n53. FX Granular Scatter\n54. FX Granular Pitch\n55. FX Granular Pitch Spread\n56. FX Granular Feedback\n57. FX Granular Mix\n58. FX Granular Reverse\n59. FX Chebyshev Amount\n60. FX Fold Amount\n61. FX Filter Resonance\n62. FX Phaser Rate\n63. FX Phaser Depth\n64. FX Phaser Center\n65. FX Phaser Feedback\n66. FX Phaser Mix\n67. FX Phaser CV Amount\n68. Global Input Level\n69. Voice 1 Model\n70. Voice 2 Model\n71. Voice 3 Model\n72. Sampler 1 Slot\n73. Sampler 2 Slot\n74. FX Stutter Trigger\n75. FX Stutter Hold\n76. FX Delay Time\n77. FX Delay Feedback\n78. FX Delay Mix\n79. Voice 1 Filter\n80. Voice 2 Filter\n81. Voice 1 Filter Resonance\n82. Voice 2 Filter Resonance\n83. Global Output Level\n"
+   }
+  ],
+  "presets": {
+   "help": "Preset slots store the complete state of the module — every page, every setting marked as preset material, and everything else the firmware manages. Slot 0 is the boot slot: it loads automatically at power-up. Presets are saved and named from the web programmer, or from the panel using the module's preset gestures. Slots written by a different firmware version are flagged in the programmer and can be migrated with **Back up all**."
+  }
+ }
+}

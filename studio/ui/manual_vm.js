@@ -15,12 +15,16 @@ export const PANEL = Object.freeze({
   jackRows: Object.freeze([132.2, 145.15]),
 });
 
-/** The jacks by group, left to right: audio in (J1, J2), the six CV jacks (J3-J8), audio out (J9, J10). */
-export const JACK_GROUPS = Object.freeze([
-  { id: 'in', label: 'Audio in', columns: [0], from: 0, to: 2 },
-  { id: 'cv', label: 'CV jacks', columns: [1, 2, 3], from: 2, to: 8 },
-  { id: 'out', label: 'Audio out', columns: [4], from: 8, to: 10 },
-]);
+/**
+ * The ten jacks as a 2 x 5 grid of jack numbers: audio in on the left, audio out on the right, the six CV jacks between. The SDK
+ * template gives the hole positions but not which hole carries which number, so the CV jacks are numbered in reading order.
+ */
+export const JACK_GRID = Object.freeze([[1, 3, 4, 5, 9], [2, 6, 7, 8, 10]]);
+
+/** The short name printed under a jack in the drawing. */
+export const jackLabel = (number) => ({ 1: 'IN L', 2: 'IN R', 9: 'OUT L', 10: 'OUT R' })[number] ?? `J${number}`;
+
+export const POT_POSITIONS = Object.freeze(['top left', 'top right', 'middle left', 'middle right', 'bottom left', 'bottom right']);
 
 /** An LED colour as the firmware stores it is a dim value (#372D00): scale it so its brightest channel is full. */
 export function ringColour(hex) {
@@ -39,6 +43,10 @@ export function shiftOf(help) {
   return text === '-' ? '' : text;
 }
 
+const SHIFT_NAMES = Object.freeze({ Aux: 'Aux send', semitone: 'Semitone steps', 'Loop Bars': 'Loop length' });
+/** The firmware's short shift word as the manual spells it. */
+export const shiftName = (text) => SHIFT_NAMES[text] ?? text;
+
 /** B2's meaning on that page, from the same help string. */
 export function b2Of(help) {
   const text = /B2:(.*)$/.exec(String(help ?? ''))?.[1]?.trim() ?? '';
@@ -55,7 +63,7 @@ export function panelPages(descriptor) {
     colour: ringColour(pager.pageColors?.[index]),
     pots: Array.from({ length: 6 }, (_, id) => {
       const field = pager.fields?.find((f) => f.page === index && f.pot === id);
-      return { id, name: field?.name ?? '', shift: shiftOf(field?.help), b2: b2Of(field?.help) };
+      return { id, name: field?.name ?? '', shift: shiftName(shiftOf(field?.help)), b2: b2Of(field?.help), def: typeof field?.def === 'number' ? field.def : 0.5 };
     }),
   }));
 }
@@ -92,3 +100,13 @@ const GESTURE_LABELS = Object.freeze({
   tap: 'Tap', hold: 'Hold', press: 'Press', 'hold+knob': 'Hold + knob', 'hold+b2': 'Hold + B2', 'hold+b3': 'Hold + B3', 'b1+b3': 'B1 + B3',
 });
 export const gestureLabel = (gesture) => GESTURE_LABELS[gesture] ?? gesture;
+
+/** "2 Plaits voices · 1 sampler" from the page names, so it follows the firmware that is described. */
+export function voiceSummary(pages) {
+  const plaits = pages.filter((page) => /^Voice \d+$/.test(page.name)).length;
+  const samplers = pages.filter((page) => /^Sampler \d+$/.test(page.name)).length;
+  const parts = [];
+  if (plaits) parts.push(`${plaits} Plaits voice${plaits === 1 ? '' : 's'}`);
+  if (samplers) parts.push(`${samplers} sampler${samplers === 1 ? '' : 's'}`);
+  return parts.join(' · ');
+}

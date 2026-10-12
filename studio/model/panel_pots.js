@@ -47,7 +47,7 @@ export function builtInSummary(items) {
 // Built-in functions of the shift layer (B1 held), by page then pot. A pot not listed keeps its
 // normal function while B1 is held. Mirrors ShiftTargetFor() in fw/include/pentavox/panel_shift.h.
 const SHIFT_BUILT_IN = Object.freeze({
-  'Plaits 1': { 4: 'Attack' }, 'Plaits 2': { 4: 'Attack' }, 'Plaits 3': { 4: 'Attack' },
+  'Plaits 1': { 4: 'Attack', 5: 'Aux send' }, 'Plaits 2': { 4: 'Attack', 5: 'Aux send' }, 'Plaits 3': { 4: 'Attack', 5: 'Aux send' },
   'Sampler 1': { 0: 'Tune (steps)', 1: 'Loop mode', 2: 'Loop length', 3: 'Resonance', 4: 'Attack', 5: 'Balance' },
   'Sampler 2': { 0: 'Tune (steps)', 1: 'Loop mode', 2: 'Loop length', 3: 'Resonance', 4: 'Attack', 5: 'Balance' },
   'FX live': { 1: 'Filter resonance', 2: 'Phaser depth', 3: 'Phaser feedback', 4: 'Delay feedback', 5: 'Reverb size' },
