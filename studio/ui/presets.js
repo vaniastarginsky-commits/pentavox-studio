@@ -63,7 +63,7 @@ export function mountPresets(root, controller, { onError = () => {}, onSuccess =
     name.placeholder = slot.autosave ? 'Autosave' : 'Unnamed';
     name.setAttribute('aria-label', `Name of slot ${slot.number}`);
     name.addEventListener('change', () => { const value = name.value.trim(); if (value) names[slot.number] = value; else delete names[slot.number]; savePresetNames(uid, names, storage); });
-    const load = element('button', 'primary', 'Load'); load.type = 'button'; load.disabled = busy;
+    const load = element('button', 'solid', 'Load'); load.type = 'button'; load.disabled = busy;
     load.addEventListener('click', () => {
       if (controller.session.dirty && !confirmAction?.('Loading replaces the changes that are not saved on the module. Continue?')) return;
       run(`Loaded slot ${slot.number}`, () => controller.load(slot.number), `Loading slot ${slot.number}…`);

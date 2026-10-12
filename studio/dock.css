@@ -1,0 +1,48 @@
+/* The front-panel dock: the to-scale panel from the Manual, beside the tabs that configure its knobs and jacks.
+   Loaded after manual.css, which owns the drawing itself (.mp-*). On narrow windows the dock slides over the page; from 1560px it
+   sits beside it and the page gives up the space. Colour here is information only: the ring hue is the page's LED colour. */
+
+.panel-dock { position: fixed; z-index: 6; top: var(--header-h, 64px); right: 0; bottom: 0; width: min(390px, 100vw); padding: 18px 20px 28px; overflow-y: auto; background: var(--surface); border-left: 1px solid var(--line); box-shadow: -18px 0 36px -26px rgba(0, 0, 0, .5); }
+.panel-dock[hidden] { display: none; }
+.dock-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.dock-head h2 { margin: 0; font-family: var(--serif-display); font-size: 1.55rem; font-weight: 500; letter-spacing: -.025em; line-height: 1.1; }
+.dock-close { padding: .35rem .8rem; border-radius: 999px; color: var(--muted); font-size: .8rem; }
+.dock-close:hover { color: var(--text); border-color: var(--text); }
+
+.dock-figure { margin: 0; padding: 10px; border-radius: 16px; background: var(--surface-2); }
+.dock-body { display: grid; grid-template-columns: minmax(110px, 160px) minmax(0, 1fr); gap: 14px 16px; align-items: start; }
+.dock-body > .dock-figure { grid-column: 1; grid-row: 1 / span 4; }
+.dock-body > :not(.dock-figure) { grid-column: 2; }
+.dock-body > .dock-note { grid-column: 1 / -1; }
+.dock-pagebar { display: flex; align-items: baseline; justify-content: space-between; min-height: 1.4rem; }
+.dock-pagename { font-family: var(--serif-display); font-size: 1.15rem; font-weight: 500; letter-spacing: -.01em; }
+.dock-controls { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; justify-content: space-between; }
+.dock-pages { display: flex; flex-wrap: wrap; gap: 2px; }
+.dock-page { width: 34px; height: 34px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; }
+.dock-page::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--ring, var(--muted)); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25); transition: transform .12s cubic-bezier(.22, 1, .36, 1); }
+.dock-page:hover::before { transform: scale(1.18); }
+.dock-page.active { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--text); }
+.dock-page.active::before { transform: scale(1.1); }
+.dock-shift { padding: .4rem .9rem; border-radius: 999px; font-size: .82rem; }
+.dock-shift[aria-pressed="true"] { background: var(--accent-strong, var(--accent)); border-color: var(--accent-strong, var(--accent)); color: var(--accent-ink); }
+
+.dock-readout { min-height: 11.5rem; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.dock-readout h3 { margin: 2px 0 10px; font-family: var(--serif-display); font-size: 1.2rem; font-weight: 500; letter-spacing: -.02em; line-height: 1.15; }
+.dock-context { margin: 0; color: var(--muted); font-size: .8rem; }
+.dock-note { margin: 0 0 12px; color: var(--muted); font-size: .88rem; line-height: 1.5; }
+.dock-facts { display: grid; grid-template-columns: 3.8rem minmax(0, 1fr); gap: 6px 12px; margin: 0 0 12px; font-size: .88rem; line-height: 1.45; }
+.dock-facts dt { color: var(--muted); font-weight: 600; }
+.dock-facts dd { margin: 0; overflow-wrap: anywhere; }
+.dock-link { padding: .4rem .85rem; border-radius: 999px; font-size: .82rem; font-weight: 600; }
+.dock-link:hover { border-color: var(--text); }
+
+.dock-toggle[aria-expanded="true"]::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--led-on, #3f9a5a); vertical-align: 1px; }
+body[data-tab="manual"] .panel-dock, body[data-tab="manual"] .dock-toggle { display: none; }
+
+@media (min-width: 1560px) {
+  body.dock-open:not([data-tab="manual"]) main { padding-right: 390px; }
+  .panel-dock { box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock-page::before { transition: none; }
+}

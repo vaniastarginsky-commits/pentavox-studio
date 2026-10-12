@@ -1,11 +1,9 @@
 import { baseCvFunction } from '../model/panel_pots.js';
-import { JACK_GRID, PANEL, POT_POSITIONS, buttonCards, gestureLabel, jackLabel, jackList, manualSections, panelPages, richText, voiceSummary } from './manual_vm.js';
+import { POT_POSITIONS, buttonCards, gestureLabel, jackLabel, jackList, manualSections, panelPages, richText, voiceSummary } from './manual_vm.js';
+import { drawPanel, paintPots } from './panel_drawing.js';
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
 const SIG_LABELS = Object.freeze({ 'audio-in': 'Audio in', 'audio-out': 'Audio out', gate: 'Gate / CV', 'cv-bi': 'CV ±5 V', trig: 'Trigger' });
 const ANCHORS = Object.freeze([['manual-panel', 'Panel'], ['manual-studio', 'Studio'], ['manual-module', 'Module'], ['manual-flash', 'Flashing'], ['manual-help', 'Help']]);
-const RING_DOTS = 13;            // the LEDs of a knob ring that sweep the arc (the other three sit at the bottom, unused here)
-const RING_START = -135;         // degrees clockwise from twelve o'clock: half past seven
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -13,16 +11,6 @@ function el(tag, className, text) {
   if (text !== undefined) node.textContent = text;
   return node;
 }
-
-function svg(tag, attributes = {}, text) {
-  const node = document.createElementNS(SVG_NS, tag);
-  for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, String(value));
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-const clip = (text, max = 16) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
-const polar = (cx, cy, radius, degrees) => [cx + radius * Math.sin((degrees * Math.PI) / 180), cy - radius * Math.cos((degrees * Math.PI) / 180)];
 
 function table(head, rows, className = '') {
   const wrap = el('div', `manual-tablewrap ${className}`.trim());
@@ -92,63 +80,10 @@ export function mountManual(root, { getDescriptor, getSettings = () => null, loa
 
   // ------------------------------------------------------------------ the drawing
 
-  function drawPanel(pages) {
-    const { x, y, width, height } = PANEL;
-    const drawing = svg('svg', { viewBox: `${x} ${y} ${width} ${height}`, class: 'mp-svg', role: 'group', 'aria-label': 'Front panel of the module, drawn to scale' });
-    drawing.append(svg('rect', { x, y, width, height, rx: 1.4, class: 'mp-plate' }));
-    drawing.append(svg('rect', { x: x + 1.6, y: y + 1.6, width: width - 3.2, height: height - 3.2, rx: 0.8, class: 'mp-inset' }));
-    for (const [px, py] of [[63.49, 35.09], [111.13, 35.09], [63.49, 157.6], [111.13, 157.6]]) drawing.append(svg('rect', { x: px - 2.3, y: py - 1.2, width: 4.6, height: 2.4, rx: 1.2, class: 'mp-mount' }));
-
-    const potNodes = PANEL.pots.map((pot) => {
-      const group = svg('g', { class: 'mp-pot mp-control', tabindex: 0, role: 'button', 'data-control': `pot${pot.id}`, 'aria-label': `Knob ${pot.id + 1}, ${POT_POSITIONS[pot.id]}` });
-      const dots = Array.from({ length: RING_DOTS }, (_, i) => {
-        const [dx, dy] = polar(pot.x, pot.y, 9.9, RING_START + i * (270 / (RING_DOTS - 1)));
-        const dot = svg('circle', { cx: dx.toFixed(2), cy: dy.toFixed(2), r: 0.82, class: 'mp-dot' });
-        group.append(dot);
-        return dot;
-      });
-      const knob = svg('circle', { cx: pot.x, cy: pot.y, r: 6.5, class: 'mp-knob' });
-      const needle = svg('line', { x1: pot.x, y1: pot.y - 2.2, x2: pot.x, y2: pot.y - 5.6, class: 'mp-needle' });
-      const label = svg('text', { x: pot.x, y: pot.y + 14.4, class: 'mp-label', 'text-anchor': 'middle' });
-      group.append(knob, needle, label);
-      drawing.append(group);
-      return { pot, group, dots, needle, label };
-    });
-
-    for (const button of PANEL.buttons) {
-      const group = svg('g', { class: 'mp-button mp-control', tabindex: 0, role: 'button', 'data-control': button.id, 'aria-label': `Button ${button.id.toUpperCase()}` });
-      group.append(svg('circle', { cx: button.x, cy: button.y, r: 4, class: 'mp-cap' }), svg('text', { x: button.x, y: button.y + 0.95, class: 'mp-cap-text', 'text-anchor': 'middle' }, button.id.toUpperCase()));
-      drawing.append(group);
-    }
-
-    const usb = svg('g', { class: 'mp-usb mp-control', tabindex: 0, role: 'button', 'data-control': 'usb', 'aria-label': 'USB-C port' });
-    usb.append(svg('rect', { x: PANEL.usb.x - PANEL.usb.width / 2, y: PANEL.usb.y - PANEL.usb.height / 2, width: PANEL.usb.width, height: PANEL.usb.height, rx: 1.6, class: 'mp-usb-slot' }), svg('text', { x: PANEL.usb.x, y: PANEL.usb.y + 5.6, class: 'mp-label mp-small', 'text-anchor': 'middle' }, 'USB-C'));
-    drawing.append(usb);
-
-    JACK_GRID.forEach((row, rowIndex) => row.forEach((number, column) => {
-      const cx = PANEL.jackColumns[column];
-      const cy = PANEL.jackRows[rowIndex];
-      const group = svg('g', { class: 'mp-jack mp-control', tabindex: 0, role: 'button', 'data-control': `jack${number}`, 'aria-label': `Jack ${jackLabel(number)}` });
-      group.append(svg('circle', { cx, cy, r: 4.5, class: 'mp-nut' }), svg('circle', { cx, cy, r: 2.5, class: 'mp-hole' }), svg('text', { x: cx, y: cy + 7.2, class: 'mp-label mp-small mp-mono', 'text-anchor': 'middle' }, jackLabel(number)));
-      drawing.append(group);
-    }));
-    return { drawing, potNodes };
-  }
-
   function paintPanel() {
     const page = currentPage();
     if (!page) return;
-    for (const { pot, group, dots, needle, label } of refs.potNodes) {
-      const entry = page.pots[pot.id];
-      const shifted = state.shift && entry.shift;
-      group.style.setProperty('--ring', entry.colour ?? page.colour);
-      const lit = Math.max(1, Math.round(entry.def * (RING_DOTS - 1)) + 1);
-      dots.forEach((dot, i) => dot.classList.toggle('lit', i < lit));
-      needle.setAttribute('transform', `rotate(${(RING_START + entry.def * 270).toFixed(1)} ${pot.x} ${pot.y})`);
-      label.textContent = clip((state.shift && entry.shift ? entry.shift : entry.name) || '·');
-      group.classList.toggle('shifted', Boolean(shifted));
-      group.classList.toggle('muted', state.shift && !shifted);
-    }
+    paintPots(refs.potNodes, page, state.shift);
     for (const tab of refs.tabs.querySelectorAll('[data-page]')) {
       const active = Number(tab.dataset.page) === state.page;
       tab.setAttribute('aria-selected', String(active));
@@ -232,7 +167,7 @@ export function mountManual(root, { getDescriptor, getSettings = () => null, loa
   function buildPanelSection(pages) {
     const section = heading('manual-panel', 'The panel', 'Drawn to scale from the SDK’s KiCad template. The rings show each knob’s factory position.');
     const stage = el('div', 'manual-stage');
-    const { drawing, potNodes } = drawPanel(pages);
+    const { drawing, potNodes } = drawPanel();
     const figure = el('figure', 'manual-figure');
     figure.append(drawing);
 

@@ -17,6 +17,7 @@ import { mountSampler } from './ui/sampler.js';
 import { mountSdCard } from './ui/sdcard.js';
 import { mountKnobLocks } from './ui/knob_locks.js';
 import { mountManual } from './ui/manual.js';
+import { mountPanelDock } from './ui/panel_dock.js';
 import { apiFetch, siteUrl } from './site.js';
 import { pairedDfuDevices } from './webdfu.js';
 
@@ -218,6 +219,39 @@ const manualMount = mountManual(document.querySelector('#manual-root'), {
   },
 });
 
+// The dock hangs under the sticky header, whose height changes with the window width and the session controls.
+{
+  const header = document.querySelector('.app-header');
+  const fit = () => document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
+  new ResizeObserver(fit).observe(header); fit();
+}
+
+// The front-panel dock reads the same descriptor as the manual and points from a control to the tab that sets it.
+const dock = document.getElementById('panel-dock');
+const dockToggle = document.getElementById('dock-toggle');
+const dockMount = mountPanelDock(dock, {
+  getDescriptor: () => (demoMode ? null : session?.descriptor ?? null),
+  getSettings: () => session?.settings ?? null,
+  loadSnapshot: () => fetchJson('./manual_module.json'),
+  onNavigate: (tab) => document.querySelector(`[data-tab="${tab}"]`)?.click(),
+});
+function setDock(open, remember = true) {
+  dock.hidden = !open;
+  dockToggle.setAttribute('aria-expanded', String(open));
+  document.body.classList.toggle('dock-open', open);
+  if (open) dockMount.show();
+  if (remember) try { localStorage.setItem('pentavox.studio.dock', open ? '1' : '0'); } catch { /* optional */ }
+}
+dockToggle.addEventListener('click', () => setDock(dock.hidden));
+dock.querySelector('.dock-close').addEventListener('click', () => { setDock(false); dockToggle.focus(); });
+dock.addEventListener('keydown', (event) => { if (event.key === 'Escape') { setDock(false); dockToggle.focus(); } });
+{
+  let saved = null;
+  try { saved = localStorage.getItem('pentavox.studio.dock'); } catch { /* optional */ }
+  // Wide windows have room for the panel beside the page, so it starts open there unless it was closed on purpose.
+  setDock(saved === null ? matchMedia('(min-width: 1560px)').matches : saved === '1', false);
+}
+
 async function fetchBytes(url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Could not load ${url}`);
@@ -310,6 +344,7 @@ async function connect({ demo = false } = {}) {
     sdcardMount.refreshConnection();
     locksMount.refreshConnection();
     manualMount.refreshConnection(); if (activeTab === 'manual') manualMount.show();
+    dockMount.refreshConnection(); if (!dock.hidden) dockMount.show();
   } catch (error) {
     demoBanner.hidden = true;
     document.body.classList.remove('demo-mode');
@@ -344,12 +379,14 @@ for (const tab of document.querySelectorAll('[data-tab]')) {
     }
     for (const panel of document.querySelectorAll('.tab-panel')) panel.hidden = panel.id !== `${activeTab}-tab`;
     syncFooter();
+    document.body.dataset.tab = activeTab;
     if (activeTab === 'sampler') samplerMount.show();
     if (activeTab === 'locks') locksMount.show(); else locksMount.hide();
     if (activeTab === 'manual') manualMount.show();
   });
 }
 
+document.body.dataset.tab = activeTab;
 if (demoMode) connect({ demo: true });
 
 

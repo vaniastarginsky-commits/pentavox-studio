@@ -93,7 +93,7 @@
 }
 @media (max-width: 760px) {
   /* Phone: the tabs wrap into a grid instead of a sideways scroll. */
-  .app-header .tabs { display: grid; grid-template-columns: repeat(4, 1fr); overflow: visible; margin: 0 -18px; padding: 0 6px; }
+  .app-header .tabs { display: grid; grid-template-columns: repeat(5, 1fr); overflow: visible; margin: 0 -18px; padding: 0 6px; }
   .app-header .tabs button { padding: 10px 2px; font-size: .8rem; text-align: center; white-space: nowrap; }
   .app-header .tabs button::after { left: 8px; right: 8px; }
   .tab-divider { display: none; }
@@ -638,3 +638,43 @@
 
 /* A backup export/import owns the module's live state: the other tabs cannot be edited until it ends. */
 body.studio-busy .tab-panel:not(#presets-tab) { pointer-events: none; opacity: .55; }
+
+/* ---- critique pass (2026-10-12): quieter Engines, one red action, honest banners ---- */
+
+/* Sets, Braids and recipe files are rare next to picking engines: one menu instead of ten controls in the build bar. */
+.sets-menu { position: relative; justify-self: end; }
+.sets-menu > summary { display: inline-flex; align-items: center; gap: 8px; padding: .4rem .9rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font-size: .8rem; font-weight: 650; cursor: pointer; list-style: none; user-select: none; }
+.sets-menu > summary::-webkit-details-marker { display: none; }
+.sets-menu > summary::after { content: ""; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(-135deg); transition: transform .15s cubic-bezier(.22, 1, .36, 1); }
+.sets-menu[open] > summary::after { transform: translateY(1px) rotate(45deg); }
+.sets-menu > summary:hover { border-color: var(--text); }
+.sets-menu > summary:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 2px; }
+.sets-menu .palette-presets { position: absolute; z-index: 5; right: 0; bottom: calc(100% + 8px); width: max-content; max-width: min(460px, calc(100vw - 32px)); padding: 10px; flex-wrap: wrap; justify-content: flex-start; gap: 4px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 -10px 30px -14px rgba(0, 0, 0, .4); }
+.sets-menu .palette-presets .pill-button { margin: 0; }
+.sets-menu .palette-presets .pill-button:nth-child(-n+4) { margin: 0; border-radius: 999px; }
+.sets-menu .palette-presets .pill-button:nth-child(-n+4) ~ .pill-button { border: 1px solid var(--line); }
+.sets-menu .preset-all { flex: 1 0 100%; margin: 6px 4px 0; padding-top: 8px; border-top: 1px solid var(--line); }
+
+/* Engine tiles: a switch the engine cannot take is not shown, so what is left on a tile is what can be changed. */
+.palette-slot .stereo-pill:disabled { visibility: hidden; }
+.stereo-pill { font-size: .66rem; }
+.stereo-pill.on { color: color-mix(in srgb, var(--bank-green) 62%, var(--text)); }
+
+/* Status strips: demo and disconnect notes are boxed, with the same LED as the header status. */
+.banner { display: flex; align-items: center; gap: 10px; min-height: 42px; margin-bottom: 14px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--text); font-size: .86rem; line-height: 1.4; }
+.banner[hidden] { display: none; }
+.banner::before { content: ""; flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; background: var(--led-dfu, #d99a2b); box-shadow: 0 0 0 3px color-mix(in srgb, var(--led-dfu, #d99a2b) 24%, transparent); }
+.banner.warning { border-color: color-mix(in srgb, var(--led-dfu, #d99a2b) 45%, var(--line)); background: var(--warning); }
+.banner button { margin-left: auto; padding: .35rem .85rem; border-radius: 999px; font-size: .82rem; }
+main > .banner { margin: 14px 24px 0; }
+
+/* One voice for page titles on every tab, the serif of the Manual and the Engines heading. */
+.page-title, .lock-head h2 { margin: 0 0 18px; font-family: var(--serif-display); font-size: clamp(1.9rem, 2.6vw, 2.7rem); font-weight: 500; letter-spacing: -.03em; line-height: 1; text-wrap: balance; }
+#settings-tab .page-title { max-width: 980px; margin-inline: auto; }
+.lock-head h2 { margin-bottom: 0; }
+
+/* Engine tiles: the columns of the chip row (identity, size, Stereo, Sync In, preview) summed to more than a tile at 1400px and pushed the
+   preview button out of the bank. Same layout, slimmer gaps and chips, so it fits from ~1300px up. */
+.palette-bank .palette-slot { margin: 5px 6px 0; column-gap: 4px; grid-template-columns: 78px max-content max-content max-content minmax(0, 1fr) 34px; }
+.palette-bank .palette-slot > .slot-size { width: 54px; }
+.palette-slot .stereo-pill { padding: 3px 5px; }

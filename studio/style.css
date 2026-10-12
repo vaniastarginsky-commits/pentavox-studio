@@ -7,6 +7,7 @@
   --muted: #6c6962;
   --line: #d7d0c5;
   --accent: #df4f2f;
+  --accent-strong: #c2401f;   /* the accent as a button fill: white text on it is 5:1, on --accent only 4:1 */
   --accent-ink: #fff;
   --warning: #fff0be;
   --shadow: 0 12px 35px rgba(42, 34, 24, .09);
@@ -18,7 +19,8 @@ button, select, input { font: inherit; }
 button, select, input[type="number"] { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); }
 button { padding: .6rem .85rem; cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .45; }
-.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-ink); font-weight: 700; }
+.solid { background: var(--text); border-color: var(--text); color: var(--surface); font-weight: 700; }
 .app-header { min-height: 76px; padding: 12px 22px; display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 28px; background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
 .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; letter-spacing: -.02em; }
 .brand-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--text); color: var(--surface); font-weight: 900; }

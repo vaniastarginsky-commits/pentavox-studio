@@ -104,7 +104,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   root.innerHTML = `
     <div class="voice-header"></div>
     <div class="palette-workspace"><div class="palette-banks"></div><aside class="model-library"><div class="library-tools"></div><div class="library-list"></div><div class="library-foot"><span class="library-count"></span></div></aside></div>
-    <div class="palette-build"><div class="build-summary"></div><div class="palette-presets" aria-label="Preset sets"></div><div class="suggest-panel" hidden></div></div>`;
+    <div class="palette-build"><div class="build-summary"></div><details class="sets-menu"><summary>Sets &amp; recipe</summary><div class="palette-presets" aria-label="Preset sets"></div></details><div class="suggest-panel" hidden></div></div>`;
   const actions = el('div', 'build-actions');
   const presets = root.querySelector('.palette-presets');
   for (const [key, label] of [['stock', 'Plaits 1.2'], ['braids1', 'Braids 1'], ['braids2', 'Braids 2'], ['set1', 'Set 1'], ['set2', 'Set 2'], ['set3', 'Set 3']]) {
@@ -298,7 +298,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     }
   }
 
-  const build = button('Build', 'primary'); const flash = button('Flash'); const dfu = button('Reboot to DFU'); const copyLog = button('Copy log', 'pill-button'); const suggestButton = button('Suggest replacements', 'pill-button'); suggestButton.hidden = true;
+  const build = button('Build', 'solid'); const flash = button('Flash', 'primary'); const dfu = button('Reboot to DFU'); const copyLog = button('Copy log', 'pill-button'); const suggestButton = button('Suggest replacements', 'pill-button'); suggestButton.hidden = true;
   flash.disabled = true;
   suggestButton.addEventListener('click', () => { state.suggest = !state.suggest; renderSuggestions(model.summary().overBudget); });
   const progress = el('div', 'build-progress'); progress.hidden = true;

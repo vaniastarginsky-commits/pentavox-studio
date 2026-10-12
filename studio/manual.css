@@ -71,7 +71,7 @@
 .manual-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .16); }
 .manual-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .22); }
 .manual-shift { padding: .45rem .95rem; border-radius: 999px; font-size: .85rem; }
-.manual-shift[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.manual-shift[aria-pressed="true"] { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
 .manual-tab:focus-visible, .manual-shift:focus-visible, .mp-control:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 9px; }
 
 .manual-readout { min-height: 13rem; padding: 22px 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
