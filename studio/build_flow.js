@@ -33,6 +33,41 @@ export async function runCloudBuild({ recipe, compact, onStatus, token = githubT
   }
 }
 
+/** The build the workflow published last, when a token is already saved in this browser (never asks for one); null when there is none. */
+export async function loadLatestCloudBuild({ token = githubToken(() => ''), settings = cloudSettings(), makeBuilder = (options) => new CloudBuild(options) } = {}) {
+  if (!token) return null;
+  try { return await makeBuilder({ token, ...settings, onUnauthorized: forgetGithubToken }).latest(); } catch { return null; }
+}
+
+/** When a published build was made: meta.built_at, or the time Studio put in the request id (base 36) for builds from before that field. */
+export function builtAt(meta) {
+  const stamp = Date.parse(meta?.built_at ?? '');
+  if (Number.isFinite(stamp)) return stamp;
+  const fromRequest = Number.parseInt(String(meta?.request ?? '').split('-')[0], 36);
+  return fromRequest > Date.UTC(2024, 0, 1) && fromRequest < Date.UTC(2100, 0, 1) ? fromRequest : null;
+}
+
+function ago(ms) {
+  const minutes = Math.max(0, Math.round(ms / 60000));
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  return hours < 48 ? `${hours} h ago` : `${Math.round(hours / 24)} days ago`;
+}
+
+/** The text that says which firmware is about to be flashed (shown in the confirm before Flash). */
+export function describeBuild(meta, currentRecipe, { now = Date.now(), locale } = {}) {
+  const at = builtAt(meta);
+  const lines = ['Firmware to flash (the last cloud build):'];
+  lines.push(`Built: ${at === null ? 'unknown time' : `${new Date(at).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })} (${ago(now - at)})`}`);
+  lines.push(`Size: ${((meta.size ?? 0) / 1024).toFixed(0)} KB · commit ${(meta.commit ?? '').slice(0, 7) || 'unknown'}`);
+  if (meta.margins) lines.push(String(meta.margins));
+  if (meta.recipe === undefined) lines.push('Settings: not recorded for this build');
+  else if (JSON.stringify(meta.recipe) === JSON.stringify(currentRecipe)) lines.push('Settings: the same as the engines chosen now in Studio');
+  else lines.push('Settings: DIFFERENT from the engines chosen now in Studio (it was built from other ones; press Build to get the current ones)');
+  return lines.join('\n');
+}
+
 /** Flash an image over WebUSB DFU. Must be called from a click (the device chooser needs a user gesture). */
 export async function runWebFlash({ image, onStatus, requestDevice = requestDfuDevice, address = FIRMWARE_ADDRESS, onFlashState = () => {} }) {
   let device = null;

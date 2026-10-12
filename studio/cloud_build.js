@@ -107,6 +107,13 @@ export class CloudBuild {
     return response;
   }
 
+  /** The published full.bin of a successful build, size-checked against its meta. */
+  async image(meta) {
+    const image = new Uint8Array(await (await this.resultText('full.bin')).arrayBuffer());
+    if (meta.size && image.byteLength !== meta.size) throw new CloudBuildError(`The downloaded image is ${image.byteLength} bytes, expected ${meta.size}`);
+    return image;
+  }
+
   /** meta.json (+ full.bin when the build succeeded) published by the workflow for this request. */
   async result(request) {
     const meta = JSON.parse(await (await this.resultText('meta.json')).text());
@@ -114,9 +121,18 @@ export class CloudBuild {
     let log = '';
     try { log = await (await this.resultText('build.log')).text(); } catch { /* the log is a convenience */ }
     if (!meta.ok) return { meta, log, image: null };
-    const image = new Uint8Array(await (await this.resultText('full.bin')).arrayBuffer());
-    if (meta.size && image.byteLength !== meta.size) throw new CloudBuildError(`The downloaded image is ${image.byteLength} bytes, expected ${meta.size}`);
-    return { meta, log, image };
+    return { meta, log, image: await this.image(meta) };
+  }
+
+  /** The build the workflow published last (whatever its request), to flash without building again; null when there is none. */
+  async latest() {
+    let meta;
+    try { meta = JSON.parse(await (await this.resultText('meta.json')).text()); } catch (error) {
+      if (error instanceof CloudBuildError && error.status === 404) return null;
+      throw error;
+    }
+    if (!meta.ok) return null;
+    return { meta, image: await this.image(meta) };
   }
 
   /**

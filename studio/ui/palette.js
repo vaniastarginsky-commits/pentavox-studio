@@ -4,7 +4,7 @@ import { bankCardsView, categoriesView, libraryRowsView, memoryView } from './pa
 import { lcdLabel, lcdSvg } from './lcd.js';
 import { lastBackupInfo } from '../model/preset_backup.js';
 import { apiFetch, servedLocally } from '../site.js';
-import { localServerUp, runCloudBuild, runWebFlash } from '../build_flow.js';
+import { describeBuild, loadLatestCloudBuild, localServerUp, runCloudBuild, runWebFlash } from '../build_flow.js';
 
 /** The confirm text before flashing: a new firmware can change the preset layout, which resets every stored slot. */
 export function flashWarning(backup = lastBackupInfo()) {
@@ -312,7 +312,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     } catch (error) { onError(error); }
   });
   flash.addEventListener('click', async () => {
-    if (!confirm(flashWarning())) return;
+    if (!confirm((cloudResult?.meta ? `${describeBuild(cloudResult.meta, model.recipe())}\n\n` : '') + flashWarning())) return;
     if (cloudResult) {
       try { await runWebFlash({ image: cloudResult.image, onStatus: renderBuild, onFlashState: (flashState) => globalThis.dispatchEvent?.(new CustomEvent('pentavox-flash', { detail: flashState })) }); } catch (error) { onError(error); }
       return;
@@ -321,6 +321,16 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   });
   dfu.addEventListener('click', async () => { try { const client = getClient(); if (!client) throw new Error('Connect the module first'); await client.reboot(1); startPolling(); } catch (error) { onError(error); } });
   poll();
+  // A hosted page with no build server: the last cloud build is already published, so Flash is ready without building again.
+  if (!servedLocally()) {
+    localServerUp(apiFetch).then(async (up) => {
+      if (up || cloudResult || state.busy) return;
+      const latest = await loadLatestCloudBuild();
+      if (!latest || cloudResult || state.busy) return;
+      cloudResult = latest; state.touched = true;
+      renderBuild({ state: 'built', image: 'cloud', stage: `last cloud build: ${(latest.meta.commit ?? '').slice(0, 7)} · ${(latest.image.byteLength / 1024).toFixed(0)} KB, ready to flash`, margins: latest.meta.margins ?? '', log: [] });
+    });
+  }
 
   // The library's bottom (with the search) must stay above the sticky build bar: size it to the space left.
   let fitFrame = 0;
