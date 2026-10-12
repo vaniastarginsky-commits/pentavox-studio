@@ -26,6 +26,8 @@
 .connection-status[data-state="on"]::before { background: var(--led-on); box-shadow: 0 0 0 3px color-mix(in srgb, var(--led-on) 24%, transparent), 0 0 10px var(--led-on); }
 .connection-status[data-state="err"]::before { background: var(--led-err); box-shadow: 0 0 0 3px color-mix(in srgb, var(--led-err) 22%, transparent); }
 .connection-status[data-state="dfu"] { color: var(--text); }
+/* Demo is the way in when nothing is connected; once a module (real or simulated) is on, the status says so and the room goes to the session controls. */
+.connection-status[data-state="on"] ~ #demo-button { display: none; }
 .connection-status[data-state="dfu"]::before { background: var(--led-dfu, #d99a2b); box-shadow: 0 0 0 3px color-mix(in srgb, var(--led-dfu, #d99a2b) 26%, transparent); }
 #connect-button { padding: .5rem 1.05rem; border-radius: 999px; font-size: .85rem; }
 #connect-button:disabled { opacity: 1; background: transparent; color: var(--muted); border-color: var(--line); }
@@ -60,7 +62,7 @@
    scrolling row so nothing overlaps or runs off the right edge. */
 .app-header .tabs { min-width: 0; }
 .connection-bar { min-width: 0; justify-content: flex-end; }
-@media (max-width: 1620px) {
+@media (max-width: 1740px) {
   .app-header { grid-template-columns: minmax(0, 1fr) auto; gap: 0 16px; padding: 0 18px; }
   .brand { grid-column: 1; grid-row: 1; padding: 11px 0; }
   .connection-bar { grid-column: 2; grid-row: 1; padding: 8px 0; }

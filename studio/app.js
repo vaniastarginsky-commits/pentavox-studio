@@ -290,7 +290,7 @@ async function connect({ demo = false } = {}) {
     unsubscribePaletteLive = controller.subscribe(() => paletteMount?.refreshLive());
     unsubscribeDraft = controller.subscribe(persistDraft);
     paletteMount?.refreshLive();
-    connectionStatus.textContent = `${result.info.moduleName} · ${result.info.fwVersion}${demoMode ? ' · demo' : ''}`;
+    connectionStatus.textContent = demoMode ? 'Demo module' : `${result.info.moduleName} · ${result.info.fwVersion}`;
     connectButton.textContent = 'Reconnect'; connectButton.disabled = false; connectionStatus.dataset.state = 'on'; disconnectBanner.hidden = true; syncFooter();
     persistDraft();
     samplerMount.refreshConnection();
