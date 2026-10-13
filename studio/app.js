@@ -59,11 +59,6 @@ function bytesToBase64(bytes) {
   return btoa(binary);
 }
 
-function base64ToBytes(text) {
-  const binary = atob(text);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-}
-
 function draftKey(info = session?.info) {
   return info ? `pentavox.studio.draft.${info.mcuUid}.${info.schemaHash}` : '';
 }
@@ -77,15 +72,6 @@ function persistDraft() {
     if (!draft) localStorage.removeItem(key);
     else localStorage.setItem(key, JSON.stringify({ bytes: bytesToBase64(draft.bytes), owned: draft.owned }));
   } catch { /* Storage is a convenience; the module remains authoritative. */ }
-}
-
-function restoreDraft(target) {
-  try {
-    const raw = localStorage.getItem(draftKey(target.info));
-    if (!raw) return false;
-    const draft = JSON.parse(raw);
-    return target.restoreDraft(base64ToBytes(draft.bytes), draft.owned);
-  } catch { return false; }
 }
 
 const disconnectBanner = document.getElementById('disconnect-banner');
@@ -320,8 +306,8 @@ async function connect({ demo = false } = {}) {
     client = new HostLinkClient(await transport);
     session = new StudioSession(client, load(assets.destinations), { paletteCatalog: assets.paletteCatalog, composerCatalog: assets.composerCatalog });
     const result = await session.connect();
-    const restoredDraft = demoMode ? false : restoreDraft(session);
-    if (restoredDraft && session.pending) await session.flushLive();
+    // Connecting never writes to the module: an old draft would overwrite what the module holds now (a voice engine changed on the panel,
+    // a loaded preset), so it is dropped (persistDraft below clears it) instead of being restored and flushed.
     if (!session.table || !session.voices) throw new Error(result.reason ?? 'This firmware has no live fields');
     client.onDisconnect(markDisconnected);
     session.onBusy = (busy) => document.body.classList.toggle('studio-busy', busy);
