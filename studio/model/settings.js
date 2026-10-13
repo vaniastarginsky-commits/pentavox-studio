@@ -9,9 +9,14 @@ const BUTTONS = 2;
 const JACKS = 6;
 const MIDI_ROUTES = 32;
 
+const OPTIONAL_SETTING_NAMES = Object.freeze({
+  's2.2': 'Tempo Change Mode',
+  's2.3': 'Tempo Change Time',
+});
+
 export const SETTING_IDS = Object.freeze([
   's0.0', 's0.1', 's0.2', 's0.3', 's0.4', 's0.5', 's1.0', 's1.5', 's2.0',
-  's2.1', 's2.4', 's2.5',
+  's2.1', 's2.2', 's2.3', 's2.4', 's2.5',
   ...Array.from({ length: VOICES }, (_, v) => [
     `voice.${v}.pitch_source`, `voice.${v}.gate_source`, `voice.${v}.midi_channel`,
   ]).flat(),
@@ -34,6 +39,7 @@ export class SettingsTable {
     for (const id of SETTING_IDS) {
       const field = settingsField(index, id);
       if (!field) continue;
+      if (OPTIONAL_SETTING_NAMES[id] && field.name !== OPTIONAL_SETTING_NAMES[id]) continue;
       fields.set(id, field);
       values.set(id, readField(bytes, field));
     }

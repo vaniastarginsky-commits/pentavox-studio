@@ -1,6 +1,6 @@
 {
   "schemaHash": 639964394,
-  "count": 83,
+  "count": 85,
   "entries": [
     {
       "id": 0,
@@ -499,6 +499,18 @@
       "symbol": "GlobalOutputLevel",
       "group": "Global",
       "name": "Output level"
+    },
+    {
+      "id": 83,
+      "symbol": "GlobalInputAux",
+      "group": "Global",
+      "name": "Input to aux"
+    },
+    {
+      "id": 84,
+      "symbol": "FxDrive",
+      "group": "FX",
+      "name": "Drive (Chebyshev, then fold)"
     }
   ]
 }

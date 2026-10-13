@@ -38,6 +38,8 @@ const SIMPLE_ITEMS = Object.freeze([
   { id: 's0.1', short: 'PPQ', group: 'clock', control: 'segmented', label: 'Clock pulses per quarter note', hint: 'How many pulses on jack J8 make up one quarter note.', labels: ['1', '2', '4'] },
   { id: 's0.3', group: 'clock', control: 'segmented', label: 'Tempo multiplier', hint: 'Module tempo relative to the incoming clock: ÷ is slower, × is faster.', labels: ['÷4', '÷3', '÷2', '×1', '×2', '×3', '×4'] },
   { id: 's2.0', short: 'grid', group: 'clock', control: 'segmented', label: 'Trigger quantize', hint: 'Grid used to quantize live slice jumps, stutter and freeze.', labels: ['Off', '1/16', '1/8', '1/4', '1 bar'] },
+  { id: 's2.2', short: 'change', group: 'clock', control: 'segmented', label: 'Tempo change mode', hint: 'Glide bends smoothly to the new clocked delay time. Crossfade blends from the old delay tap to the new one without a pitch bend.', labels: ['Glide', 'Crossfade'] },
+  { id: 's2.3', short: 'change time', group: 'clock', control: 'slider', label: 'Tempo change time', hint: 'How long a real clock-tempo or Rate change takes. Small clock wobble is ignored; a real change is followed after a few clock pulses.', tempoTime: true },
   { id: 's0.2', group: 'voices', control: 'segmented', label: 'Voice mode', hint: 'Split: each Plaits voice plays independently; set its MIDI channel in CV routing > Notes. Poly: the three voices share the notes. Unison: one note plays all three.', labels: ['Split', 'Poly', 'Unison'] },
   { id: 's0.4', short: 'mute other', group: 'sampler', control: 'switch', label: 'Mute the other sampler', hint: 'While one sampler plays, the other is silenced.' },
   { id: 's0.5', short: 'threshold', group: 'sampler', control: 'segmented', twoRows: true, label: 'Auto-record threshold', hint: 'What starts a recording after you arm it with B2: input level, the first clock, MIDI Start, reset, or Clock Loop. Clock Loop waits for a clocked downbeat established by J7 Reset/MIDI Start and then stops automatically after Record length.', labels: ['Off', '−40 dB', '−30 dB', '−20 dB', 'Clock', 'Start', 'Reset', 'Reset+Stop', 'Clock Loop'] },
@@ -53,15 +55,22 @@ function scaleOf(field) {
   return { lo, hi };
 }
 
+const tempoTimeMsFromRaw = (raw) => Math.round(5 * (200 ** raw));
+const tempoTimeRawFromMs = (ms) => Math.log(ms / 5) / Math.log(200);
+
 export function displayFromRaw(field, raw) {
+  if (field.id === 's2.3') return tempoTimeMsFromRaw(raw);
   const { lo, hi } = scaleOf(field);
   return Math.round((lo + raw * (hi - lo)) * 100);
 }
 
-export function rawFromDisplay(field, percent) {
-  const { lo, hi } = scaleOf(field);
-  const number = Number(percent);
+export function rawFromDisplay(field, value) {
+  const number = Number(value);
   if (!Number.isFinite(number)) throw new TypeError('setting must be a number');
+  if (field.id === 's2.3') {
+    return Math.max(0, Math.min(1, tempoTimeRawFromMs(number)));
+  }
+  const { lo, hi } = scaleOf(field);
   return Math.max(0, Math.min(1, (number / 100 - lo) / (hi - lo)));
 }
 
@@ -101,8 +110,24 @@ export function settingsView(table) {
     const raw = table.get(spec.id);
     const item = { id: spec.id, control: spec.control, label: spec.label, hint: spec.hint, short: spec.short ?? '', twoRows: spec.twoRows === true };
     if (spec.control === 'slider') {
-      const { lo, hi } = scaleOf(field);
-      Object.assign(item, { min: Math.round(lo * 100), max: Math.round(hi * 100), step: 1, unit: '%', value: displayFromRaw(field, raw) });
+      if (spec.tempoTime) {
+        Object.assign(item, {
+          min: 5,
+          max: 1000,
+          step: 1,
+          unit: ' ms',
+          value: displayFromRaw(field, raw),
+        });
+      } else {
+        const { lo, hi } = scaleOf(field);
+        Object.assign(item, {
+          min: Math.round(lo * 100),
+          max: Math.round(hi * 100),
+          step: 1,
+          unit: '%',
+          value: displayFromRaw(field, raw),
+        });
+      }
     } else if (spec.control === 'switch') {
       item.value = raw !== 0;
     } else {
@@ -132,7 +157,7 @@ function summarize(group) {
       const labels = item.controls.map((control) => control.options.find((option) => option.value === control.value)?.label ?? '');
       if (group.key === 'sources') { if (labels.some((text) => text !== 'MIDI')) parts.push(`${item.label}: ${labels.join(' / ')}`); }
       else parts.push(`SW${item.label.match(/\d/)[0]}: ${labels[0]}`);
-    } else if (item.control === 'slider') parts.push(`${item.short} ${item.value}%`);
+    } else if (item.control === 'slider') parts.push(`${item.short} ${item.value}${item.unit ?? '%'}`);
     else if (item.control === 'switch') { if (item.value) parts.push(item.short); }
     else parts.push(`${item.short ? `${item.short} ` : ''}${item.options.find((option) => option.value === item.value)?.label ?? ''}`);
   }

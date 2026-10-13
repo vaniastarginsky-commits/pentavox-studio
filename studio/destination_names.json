@@ -81,5 +81,7 @@
   "Voice2Filter": {"group": "Plaits 2", "name": "Filter"},
   "Voice1FilterRes": {"group": "Plaits 1", "name": "Filter resonance"},
   "Voice2FilterRes": {"group": "Plaits 2", "name": "Filter resonance"},
-  "GlobalOutputLevel": {"group": "Global", "name": "Output level"}
+  "GlobalOutputLevel": {"group": "Global", "name": "Output level"},
+  "GlobalInputAux": {"group": "Global", "name": "Input to aux"},
+  "FxDrive": {"group": "FX", "name": "Drive (Chebyshev, then fold)"}
 }
