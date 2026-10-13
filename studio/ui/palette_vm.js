@@ -81,6 +81,17 @@ export function categoriesView(engines) {
   return [...new Set(engines.map((engine) => engine.cat))].sort((a, b) => a.localeCompare(b, 'en'));
 }
 
+// Studio assumes the compact product (two Plaits voices + one sampler) unless a connected module reports exactly
+// three Plaits voices. Without a module (not connected, demo, unreadable table) it must NOT fall back to the full
+// three-voice build: that once started a cloud build of the wrong product.
+export function voiceTabCount(table) {
+  return Number(table?.voiceCount) === 3 ? 3 : 2;
+}
+
+export function isCompactModule(table) {
+  return voiceTabCount(table) === 2;
+}
+
 // The AXI-code meter: estimated union size against the budget; red (and no Build) when over.
 // The budget is calibrated on the old three-voice build. On a compact module (two Plaits voices) real builds
 // measured 41-43 KB of AXI margin for sets whose estimates differ by tens of KB, so there the number is only

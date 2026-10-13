@@ -1,6 +1,6 @@
 import { BANK_LETTERS, PaletteModel, libraryEntries } from '../model/palette.js';
 import { EngineAudition } from '../audition.js';
-import { bankCardsView, categoriesView, libraryRowsView, memoryView } from './palette_vm.js';
+import { bankCardsView, categoriesView, isCompactModule, libraryRowsView, memoryView, voiceTabCount } from './palette_vm.js';
 import { lcdLabel, lcdSvg } from './lcd.js';
 import { lastBackupInfo } from '../model/preset_backup.js';
 import { apiFetch, servedLocally } from '../site.js';
@@ -140,7 +140,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     const root_ = root.querySelector('.voice-header'); root_.replaceChildren();
     const tabs = el('div', 'voice-tabs'); tabs.setAttribute('role', 'tablist');
     const table = getVoiceTable();
-    const voiceTotal = Math.max(1, Math.min(3, Number(table?.voiceCount) || 3));   // a compact module has two Plaits voices: no third tab
+    const voiceTotal = voiceTabCount(table);   // compact (two Plaits voices) unless the module reports three
     if (state.voice >= voiceTotal) state.voice = 0;
     for (let v = 0; v < voiceTotal; ++v) {
       const tab = button('', `voice-tab${state.voice === v ? ' active' : ''}`); tab.setAttribute('role', 'tab'); tab.setAttribute('aria-selected', String(state.voice === v));
@@ -261,7 +261,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   }
 
   // A compact module has two Plaits voices; its AXI budget is not the one the estimate was calibrated on.
-  function isCompact() { try { return Number(getVoiceTable()?.voiceCount) === 2; } catch { return false; } }
+  function isCompact() { try { return isCompactModule(getVoiceTable()); } catch { return true; } }
 
   function renderSummary() {
     const summary = model.summary(); const view = memoryView(summary, { compact: isCompact() });

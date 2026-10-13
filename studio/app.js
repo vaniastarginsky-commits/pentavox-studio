@@ -314,7 +314,7 @@ async function connect({ demo = false } = {}) {
     if (client) { try { await client.close(); } catch { /* already disconnected */ } }
     const assets = await assetsPromise;
     const transport = demoMode
-      ? Promise.all([fetchBytes('./tests/fixtures/descriptor.json'), fetchBytes('./tests/fixtures/live.bin'), fetchJson('./tests/fixtures/meta.json')])
+      ? Promise.all([fetchBytes('./tests/fixtures/compact/descriptor.json'), fetchBytes('./tests/fixtures/compact/live.bin'), fetchJson('./tests/fixtures/compact/meta.json')])
         .then(([descriptor, live, meta]) => new SimTransport(descriptor, live, { schemaHash: meta.schemaHash }))
       : openWebSerial();
     client = new HostLinkClient(await transport);
