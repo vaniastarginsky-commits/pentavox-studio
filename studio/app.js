@@ -18,6 +18,7 @@ import { mountSdCard } from './ui/sdcard.js';
 import { mountKnobLocks } from './ui/knob_locks.js';
 import { mountManual } from './ui/manual.js';
 import { mountPanelDock } from './ui/panel_dock.js';
+import { renderConnectionEmptyStates } from './ui/connection_empty.js';
 import { apiFetch, siteUrl } from './site.js';
 import { pairedDfuDevices } from './webdfu.js';
 
@@ -52,6 +53,15 @@ let activeTab = 'palette';
 
 let samplerMount;
 let locksMount;
+
+function showConnectionEmptyStates() {
+  renderConnectionEmptyStates(
+    [routingRoot, midiRoot, settingsRoot, presetsRoot],
+    { connectButton, demoButton },
+  );
+}
+
+showConnectionEmptyStates();
 
 function bytesToBase64(bytes) {
   let binary = '';
@@ -133,6 +143,7 @@ function markDisconnected() {
   startDfuWatch();
   connectButton.textContent = 'Reconnect';
   connectButton.disabled = false;
+  showConnectionEmptyStates();
   samplerMount.refreshConnection();
   sdcardMount.refreshConnection();
   locksMount.refreshConnection();
@@ -220,6 +231,8 @@ const dockMount = mountPanelDock(dock, {
   getSettings: () => session?.settings ?? null,
   loadSnapshot: () => fetchJson('./manual_module.json'),
   onNavigate: (tab) => document.querySelector(`[data-tab="${tab}"]`)?.click(),
+  getSession: () => (connectionStatus.dataset.state === 'on' ? session : null),
+  onLiveError: showError,
 });
 function setDock(open, remember = true) {
   dock.hidden = !open;
@@ -231,12 +244,8 @@ function setDock(open, remember = true) {
 dockToggle.addEventListener('click', () => setDock(dock.hidden));
 dock.querySelector('.dock-close').addEventListener('click', () => { setDock(false); dockToggle.focus(); });
 dock.addEventListener('keydown', (event) => { if (event.key === 'Escape') { setDock(false); dockToggle.focus(); } });
-{
-  let saved = null;
-  try { saved = localStorage.getItem('pentavox.studio.dock'); } catch { /* optional */ }
-  // Wide windows have room for the panel beside the page, so it starts open there unless it was closed on purpose.
-  setDock(saved === null ? matchMedia('(min-width: 1560px)').matches : saved === '1', false);
-}
+// The panel never opens by itself on load; the Panel button opens it.
+setDock(false, false);
 
 async function fetchBytes(url) {
   const response = await fetch(url);
@@ -263,7 +272,7 @@ const assetsPromise = Promise.all([
 // the firmware-matched names, so only the palette view gets the renamed copy.
 // Engines whose L and R stay nearly identical with stereo on (measured) lose the Stereo switch.
 function withCatalogNames(catalog, help, mono = new Set()) {
-  return { ...catalog, engines: catalog.engines.map((engine) => ({ ...engine, name: help[engine.id]?.name ?? engine.name, ...(mono.has(engine.id) ? { stereo: false, monoInPractice: true } : {}) })) };
+  return { ...catalog, engines: catalog.engines.map((engine) => ({ ...engine, firmwareName: engine.name, name: help[engine.id]?.name ?? engine.name, ...(mono.has(engine.id) ? { stereo: false, monoInPractice: true } : {}) })) };
 }
 
 const dx7Editor = mountDx7Editor({ getClient: () => client, getInfo: () => session?.info, onError: showError, onSuccess: showSuccess });

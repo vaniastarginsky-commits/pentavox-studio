@@ -103,7 +103,8 @@
 }
 @media (max-width: 560px) {
   .brand span:last-child { display: none; }
-  .connection-bar { gap: 6px; }
+  .connection-bar { gap: 6px; flex-wrap: wrap; row-gap: 6px; }
+  .connection-bar .session-footer { flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
   .connection-bar .session-footer select { max-width: 5.2rem; }
   .connection-bar .session-footer .dirty-badge { flex: 0 0 auto; width: 10px; height: 10px; padding: 0; font-size: 0; border-radius: 50%; }
   .connection-bar .session-footer button { padding: .4rem .6rem; }
@@ -121,8 +122,8 @@
 .sampler-heading h1 { font-family: var(--serif-display); font-size: clamp(1.9rem, 2.6vw, 2.7rem); font-weight: 500; letter-spacing: -.03em; line-height: 1; }
 .sampler-heading p { max-width: 52ch; font-size: .88rem; line-height: 1.45; }
 
-/* banks: no headers, just a colour band and a faint tint */
-.palette-bank { border-top: 5px solid var(--bank); border-radius: 18px; background: color-mix(in srgb, var(--bank) 7%, var(--surface)); padding-top: 4px; }
+/* Banks use a quiet full outline and tint keyed to their colour. */
+.palette-bank { border-color: color-mix(in srgb, var(--bank) 42%, var(--line)); border-radius: 18px; background: color-mix(in srgb, var(--bank) 7%, var(--surface)); padding-top: 4px; }
 .palette-bank .palette-slot:first-of-type { margin-top: 8px; }
 
 /* library: no heading; filters on top, compact search pinned at the bottom right */
@@ -208,8 +209,8 @@
 .cv-count { color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; }
 .chev { color: var(--muted); }
 .cv-body { display: grid; gap: 8px; padding: 4px 14px 14px; }
-.route-card { position: relative; display: grid; grid-template-columns: minmax(200px, 1.1fr) minmax(220px, 1.4fr) 34px; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--tile, var(--surface-2)); box-shadow: inset 3px 0 var(--mod); }
-.route-card.duplicate { box-shadow: inset 3px 0 #d98a3a, inset 0 0 0 1px #d98a3a; }
+.route-card { position: relative; display: grid; grid-template-columns: minmax(200px, 1.1fr) minmax(220px, 1.4fr) 34px; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--mod) 34%, var(--line)); border-radius: 12px; background: color-mix(in srgb, var(--mod) 5%, var(--tile, var(--surface-2))); }
+.route-card.duplicate { border-color: var(--bank-yellow); background: color-mix(in srgb, var(--bank-yellow) 10%, var(--tile, var(--surface-2))); }
 .dest-btn { display: flex; align-items: center; gap: 8px; min-width: 0; padding: .55rem .7rem; border-radius: 10px; text-align: left; cursor: pointer; }
 .dest-btn strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dest-group { color: var(--muted); font-size: .74rem; white-space: nowrap; }
@@ -239,7 +240,7 @@
 #settings-root.disconnected { min-height: 55vh; }
 .set-head { grid-template-columns: 220px minmax(0, 1fr) 18px; }
 .set-head .cv-name { gap: 10px; }
-.set-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, auto); align-items: center; gap: 8px 18px; padding: 11px 12px; border-radius: 12px; background: var(--tile, var(--surface-2)); box-shadow: inset 3px 0 var(--mod); }
+.set-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, auto); align-items: center; gap: 8px 18px; padding: 11px 12px; border: 1px solid color-mix(in srgb, var(--mod) 34%, var(--line)); border-radius: 12px; background: color-mix(in srgb, var(--mod) 5%, var(--tile, var(--surface-2))); }
 .set-text { display: grid; gap: 3px; min-width: 0; }
 .set-text small { color: var(--muted); font-size: .8rem; line-height: 1.4; }
 .set-seg { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; padding: 3px; border-radius: 999px; background: var(--surface); }
@@ -349,7 +350,7 @@
 .pm-row-head strong { font-size: .9rem; }
 .pm-reset-page { padding: .28rem .55rem; border-radius: 999px; background: transparent; color: var(--muted); font-size: .7rem; }
 .pm-cell { position: relative; min-width: 0; display: grid; align-content: start; gap: 6px; padding: 9px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); }
-.pm-cell.assigned { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); box-shadow: inset 0 3px var(--accent); }
+.pm-cell.assigned { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
 .pm-built-in { min-width: 0; display: grid; gap: 1px; }
 .pm-built-in span { color: var(--muted); font-size: .66rem; text-transform: uppercase; letter-spacing: .04em; }
 .pm-built-in strong { min-height: 2.2em; overflow: hidden; color: var(--text); font-size: .78rem; line-height: 1.1; }
@@ -417,12 +418,12 @@
 
 /* Pot map rows take their module colour (same hues as the routing destinations). */
 .pm-grid { grid-template-columns: 120px repeat(6, minmax(150px, 1fr)); }
-.pm-row-head { position: relative; padding: 6px 8px 6px 14px; background: color-mix(in srgb, var(--mod, var(--m-gl)) 16%, var(--surface-2)); box-shadow: inset 4px 0 var(--mod, var(--m-gl)); }
+.pm-row-head { position: relative; padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--mod, var(--m-gl)) 42%, var(--line)); background: color-mix(in srgb, var(--mod, var(--m-gl)) 16%, var(--surface-2)); }
 .pm-row-head strong { font-size: .86rem; }
 .pm-reset-page { width: 26px; height: 26px; padding: 0; display: grid; place-items: center; border: 1px solid transparent; border-radius: 50%; font-size: .95rem; line-height: 1; }
 .pm-reset-page:hover:not(:disabled) { border-color: var(--line); color: var(--text); }
 .pm-cell { border-color: color-mix(in srgb, var(--mod, var(--m-gl)) 38%, var(--line)); background: color-mix(in srgb, var(--mod, var(--m-gl)) 5%, var(--surface)); }
-.pm-cell.assigned { border-color: var(--mod, var(--accent)); background: color-mix(in srgb, var(--mod, var(--accent)) 14%, var(--surface)); box-shadow: inset 0 3px var(--mod, var(--accent)); }
+.pm-cell.assigned { border-color: var(--mod, var(--accent)); background: color-mix(in srgb, var(--mod, var(--accent)) 14%, var(--surface)); }
 
 /* Compact pass: inputs flow down their columns (opening one no longer leaves holes), Notes cells are two lines, quieter chrome. */
 #routing-root .cv-list { display: block; column-count: 2; column-gap: 10px; }
@@ -456,7 +457,7 @@
 .pm-panel.collapsed .pm-panel-head { padding-bottom: 8px; }
 
 /* Notes: each voice takes its module colour, like the Pot map rows. */
-.cvn-voice-cell { border-color: color-mix(in srgb, var(--mod, var(--m-gl)) 45%, var(--line)); background: color-mix(in srgb, var(--mod, var(--m-gl)) 13%, var(--surface-2)); box-shadow: inset 4px 0 var(--mod, var(--m-gl)); padding-left: 14px; }
+.cvn-voice-cell { border-color: color-mix(in srgb, var(--mod, var(--m-gl)) 45%, var(--line)); background: color-mix(in srgb, var(--mod, var(--m-gl)) 13%, var(--surface-2)); padding-left: 9px; }
 .cvn-voice-cell .cvn-voice::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--mod, var(--m-gl)); }
 
 /* Card files open for editing on click. */
@@ -581,7 +582,7 @@
 @media (min-width: 1101px) { #midi-root .midi-head.col2 { display: grid; } }
 @media (min-width: 2100px) { #midi-root .midi-head.col3 { display: grid; } }
 #midi-root .midi-row { position: relative; }
-#midi-root .midi-row.shared { border-left: 3px solid var(--warning-edge, #d9a420); }
+#midi-root .midi-row.shared { border-color: var(--bank-yellow); background: color-mix(in srgb, var(--bank-yellow) 9%, var(--tile)); }
 #midi-root .midi-row.shared::after { content: attr(data-shared); position: absolute; top: -7px; right: 30px; padding: 0 6px; border-radius: 999px; background: var(--warning); color: var(--text); font-weight: 600; font-size: .68rem; line-height: 14px; }
 @media (max-width: 700px) {
   #midi-root { --midi-cols: 8px minmax(0, 1fr) minmax(0, 1fr) 30px; }
@@ -655,6 +656,16 @@ body.studio-busy .tab-panel:not(#presets-tab) { pointer-events: none; opacity: .
 .sets-menu .palette-presets .pill-button:nth-child(-n+4) ~ .pill-button { border: 1px solid var(--line); }
 .sets-menu .preset-all { flex: 1 0 100%; margin: 6px 4px 0; padding-top: 8px; border-top: 1px solid var(--line); }
 
+/* The Sets menu must stay inside narrow palette viewports, including long file and checkbox labels. */
+@media (max-width: 640px) {
+  #palette-tab .sets-menu { min-width: 0; max-width: 100%; justify-self: stretch; }
+  #palette-tab .sets-menu > summary { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  #palette-tab .sets-menu .palette-presets { right: 0; left: auto; width: min(420px, calc(100vw - 48px)); max-width: calc(100vw - 48px); }
+  #palette-tab .sets-menu .palette-presets > * { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  #palette-tab .sets-menu .preset-all { flex-basis: auto; width: 100%; margin-inline: 0; }
+  #palette-tab .sets-menu .preset-all span { min-width: 0; overflow-wrap: anywhere; }
+}
+
 /* Engine tiles: a switch the engine cannot take is not shown, so what is left on a tile is what can be changed. */
 .palette-slot .stereo-pill:disabled { visibility: hidden; }
 .stereo-pill { font-size: .66rem; }
@@ -678,3 +689,31 @@ main > .banner { margin: 14px 24px 0; }
 .palette-bank .palette-slot { margin: 5px 6px 0; column-gap: 4px; grid-template-columns: 78px max-content max-content max-content minmax(0, 1fr) 34px; }
 .palette-bank .palette-slot > .slot-size { width: 54px; }
 .palette-slot .stereo-pill { padding: 3px 5px; }
+
+/* Touch screens: the common controls are at least 44px (WCAG 2.5.5); mouse layouts stay as dense as they were. */
+@media (pointer: coarse) {
+  .primary, .solid, .quiet-button, .pill-button, .icon-button, .add-button, .file-button, .preview-button, .bar-pill, .stereo-pill,
+  .set-seg-btn, .we-seg button, .ce-segment, .ce-toggle, .sb-toggle, .voice-toggle, .dock-toggle, .dock-close, .theme-toggle,
+  #demo-button, #connect-button, .session-footer button, .session-footer select, .app-header .tabs button { min-height: 44px; min-width: 44px; }
+}
+
+/* Engine cards wide enough to have a gap in the middle: size, Stereo and Sync In stack in a right-hand column instead of a third line under the name. */
+.palette-bank { container-type: inline-size; }
+@container (min-width: 230px) {
+  .palette-bank .palette-slot { grid-template-columns: minmax(0, 1fr) max-content 34px; grid-template-rows: repeat(3, auto); align-content: center; column-gap: 10px; row-gap: 3px; }
+  .palette-bank .palette-slot > .slot-main { grid-column: 1; grid-row: 1 / 4; align-self: center; }
+  .palette-bank .palette-slot > .slot-size { grid-column: 2; grid-row: 1; width: auto; justify-self: end; }
+  .palette-bank .palette-slot > .stereo-pill:not(.sync-pill) { grid-column: 2; grid-row: 2; justify-self: end; }
+  .palette-bank .palette-slot > .sync-pill { grid-column: 2; grid-row: 3; justify-self: end; }
+  .palette-bank .palette-slot > .preview-button { grid-column: 3; grid-row: 1 / 4; align-self: center; }
+  .palette-slot .stereo-pill:disabled, .palette-slot .sync-pill:disabled { display: none; }
+}
+/* Tight cards (the dock is open on a mid-size window): drop the icon so the name keeps its room. */
+@container (min-width: 230px) and (max-width: 299px) {
+  .palette-bank .palette-slot > .slot-main { grid-template-columns: 30px minmax(0, 1fr) auto; }
+  .palette-bank .slot-identity > :not(.slot-number) { display: none; }
+}
+
+/* The module's engine set differs from the copy Studio keeps in the browser. */
+.banner.module-set { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 10px 0 0; }
+.banner.module-set .module-set-text { flex: 1 1 18rem; min-width: 0; }

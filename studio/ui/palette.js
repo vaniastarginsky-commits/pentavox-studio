@@ -1,3 +1,4 @@
+import { setDifferences, adoptModuleSet } from '../model/module_set.js';
 import { BANK_LETTERS, PaletteModel, libraryEntries } from '../model/palette.js';
 import { EngineAudition } from '../audition.js';
 import { bankCardsView, categoriesView, isCompactModule, libraryRowsView, memoryView, voiceTabCount } from './palette_vm.js';
@@ -136,6 +137,29 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     try { const index = getVoiceTable()?.get(voice)?.engine; return Number.isInteger(index) ? index : null; } catch { return null; }
   }
 
+
+  // The module says which engine class sits in every slot; Studio's own copy of the sets lives in this browser. Never changed silently.
+  let dismissedSignature = null;
+  function moduleSetMismatch(table) {
+    if (!table?.voiceLabels) return null;
+    const labels = table.voiceLabels.slice(0, voiceTabCount(table));
+    const signature = JSON.stringify(labels);
+    if (signature === dismissedSignature) return null;
+    let differences;
+    try { differences = setDifferences(model, labels, catalog.engines); } catch { return null; }
+    const total = differences.reduce((sum, voice) => sum + voice.length, 0);
+    if (!total) return null;
+    const box = el('div', 'banner warning module-set');
+    const where = differences.map((voice, v) => (voice.length ? `Voice ${v + 1}: ${voice.length}` : '')).filter(Boolean).join(', ');
+    box.append(el('span', 'module-set-text', `The module holds a different engine set than Studio shows (${where} slot${total === 1 ? '' : 's'}). Names below may not be the ones that play.`));
+    const adopt = button('Use the module’s set', 'pill-button solid');
+    adopt.addEventListener('click', () => { adoptModuleSet(model, differences); changed(); });
+    const keep = button('Keep Studio’s', 'pill-button');
+    keep.addEventListener('click', () => { dismissedSignature = signature; renderVoiceHeader(); });
+    box.append(adopt, keep);
+    return box;
+  }
+
   function renderVoiceHeader() {
     const root_ = root.querySelector('.voice-header'); root_.replaceChildren();
     const tabs = el('div', 'voice-tabs'); tabs.setAttribute('role', 'tablist');
@@ -150,6 +174,8 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
       tab.addEventListener('click', () => { state.voice = v; renderVoiceHeader(); renderBanks(); renderLibrary(); }); tabs.append(tab);
     }
     const row = el('div', 'voice-row'); row.append(tabs, actions); root_.append(row);
+    const mismatch = moduleSetMismatch(table);
+    if (mismatch) root_.append(mismatch);
     const controller = getController();
     if (!controller) { root_.append(el('p', 'voice-hint', 'Connect the module: then clicking a slot assigns the engine to the selected voice.')); return; }
     const view = controller.view();
