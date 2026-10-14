@@ -2,7 +2,10 @@ import { HostLinkError } from '../hostlink/client.js';
 
 export const BACKUP_FORMAT = 'pentavox-presets';
 export const BACKUP_VERSION = 1;
-const STATUS_EMPTY_SLOT = 3;   // what the module answers when a slot holds nothing
+// What the module answers to LOAD_FROM_SLOT when a slot holds nothing usable: BAD_SLOT (5). The SDK's OnLoadFromSlot answers it for an empty slot,
+// a slot whose data failed validation, and an out-of-range index (the export only asks in-range ones). It is not BAD_STATE (3), which is what this
+// constant used to be, so exporting from a module with any empty slot failed with BAD_SLOT.
+const STATUS_EMPTY_SLOT = 5;
 
 const toBase64 = (bytes) => {
   let text = '';

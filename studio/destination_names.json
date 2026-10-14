@@ -83,5 +83,7 @@
   "Voice2FilterRes": {"group": "Plaits 2", "name": "Filter resonance"},
   "GlobalOutputLevel": {"group": "Global", "name": "Output level"},
   "GlobalInputAux": {"group": "Global", "name": "Input to aux"},
-  "FxDrive": {"group": "FX", "name": "Drive (Chebyshev, then fold)"}
+  "FxDrive": {"group": "FX", "name": "Drive (Chebyshev, then fold)"},
+  "Voice1XMod": {"group": "Plaits 1", "name": "Cross FM from Plaits 2"},
+  "Voice2XMod": {"group": "Plaits 2", "name": "Cross FM from Plaits 1"}
 }

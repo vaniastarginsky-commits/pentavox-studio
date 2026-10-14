@@ -193,7 +193,7 @@ export class SimTransport {
 
   #load(body) {
     if (body.length !== 1 || body[0] >= 16) return Uint8Array.of(5);
-    if (!this.slots[body[0]]) return Uint8Array.of(3);
+    if (!this.slots[body[0]]) return Uint8Array.of(5);   // BAD_SLOT: what the firmware answers for an empty or invalid slot (HostLink OnLoadFromSlot)
     this.live = Uint8Array.from(this.slots[body[0]]);
     return Uint8Array.of(0);
   }

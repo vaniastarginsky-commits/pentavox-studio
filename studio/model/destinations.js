@@ -1,6 +1,6 @@
 // Voice balance slots are aux-send aliases now; Stutter chance is inert since the random auto-stutter was retired.
 // Master page destinations exist only in the compact firmware; other builds ignore them.
-const MASTER_PAGE_SYMBOLS = /^(Voice[12]Filter|Voice[12]FilterRes|GlobalOutputLevel|GlobalInputAux|FxDrive)$/;
+const MASTER_PAGE_SYMBOLS = /^(Voice[12]Filter|Voice[12]FilterRes|GlobalOutputLevel|GlobalInputAux|FxDrive|Voice[12]XMod)$/;
 // The compact build has no Stutter on any page, so nothing there can be routed to it.
 const STUTTER_SYMBOLS = /^FxStutter/;
 const DEPRECATED_SYMBOLS = /^(Voice[123]Balance|FxStutterChance)$/;

@@ -6,6 +6,7 @@
 // The token lives in this browser only. Results travel through the contents API, which allows cross-origin reads; artifacts do not.
 
 const API = 'https://api.github.com';
+const NETWORK_ATTEMPTS = 4;
 const DEFAULTS = { repo: 'vaniastarginsky-commits/PENTAVOX', buildRef: 'compact-cleanup', workflow: 'studio-build.yml', workflowRef: 'main', resultBranch: 'studio-builds' };
 
 function storage() { try { return globalThis.localStorage ?? null; } catch { return null; } }
@@ -54,12 +55,22 @@ export class CloudBuild {
   }
 
   async api(path, { method = 'GET', body, accept = 'application/vnd.github+json' } = {}) {
-    const response = await this.fetch(`${API}${path}`, {
+    const init = {
       method,
       cache: 'no-store',
       headers: { Authorization: `Bearer ${this.token}`, Accept: accept, 'X-GitHub-Api-Version': '2022-11-28', ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
-    });
+    };
+    // A dropped connection ("Failed to fetch") during a 5-minute poll must not throw away a build that is still running on GitHub:
+    // reads are retried with a short back-off. A POST is sent once (a second dispatch would start a second build).
+    const attempts = method === 'GET' ? NETWORK_ATTEMPTS : 1;
+    let response;
+    for (let attempt = 1; ; attempt += 1) {
+      try { response = await this.fetch(`${API}${path}`, init); break; } catch (cause) {
+        if (attempt >= attempts) throw new CloudBuildError(`Network problem reaching GitHub (${cause?.message ?? cause}). The build, if one was started, keeps running there: check your connection and try again.`);
+        await this.sleep(500 * attempt);
+      }
+    }
     if (response.status === 401) { this.onUnauthorized(); throw new CloudBuildError('GitHub rejected the token (401). It was forgotten: click Build again to enter a new one.', { status: 401 }); }
     return response;
   }

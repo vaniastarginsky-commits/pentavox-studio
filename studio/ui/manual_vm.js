@@ -43,7 +43,7 @@ export function shiftOf(help) {
   return text === '-' ? '' : text;
 }
 
-const SHIFT_NAMES = Object.freeze({ Aux: 'Aux send', semitone: 'Semitone steps', 'Loop Bars': 'Loop length' });
+const SHIFT_NAMES = Object.freeze({ Aux: 'Aux send', 'Cross FM': 'Cross FM from the other Plaits', semitone: 'Semitone steps', 'Loop Bars': 'Loop length' });
 /** The firmware's short shift word as the manual spells it. */
 export const shiftName = (text) => SHIFT_NAMES[text] ?? text;
 
