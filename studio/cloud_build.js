@@ -43,6 +43,10 @@ export class CloudBuildError extends Error {
   constructor(message, { status = 0, log = '' } = {}) { super(message); this.name = 'CloudBuildError'; this.status = status; this.log = log; }
 }
 
+export class BuildCancelledError extends Error {
+  constructor() { super('Build cancelled'); this.name = 'BuildCancelledError'; }
+}
+
 export class CloudBuild {
   constructor({ token, repo, buildRef, fetchImpl = globalThis.fetch?.bind(globalThis), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), now = () => Date.now(), onUnauthorized = () => {} } = {}) {
     this.token = token;
@@ -99,6 +103,21 @@ export class CloudBuild {
     return (data.workflow_runs ?? []).find((run) => (run.display_title ?? run.name ?? '').includes(request)) ?? null;
   }
 
+  async cancelRun(run) {
+    const response = await this.api(`/repos/${this.repo}/actions/runs/${run.id}/cancel`, { method: 'POST' });
+    // A completion can race the click. Let the next status read resolve that.
+    if (response.status !== 202 && response.status !== 409)
+      throw new CloudBuildError(`Could not cancel the GitHub build (${response.status}). It may still be running on GitHub.`, { status: response.status });
+  }
+
+  async waitForPoll(ms, signal) {
+    if (!signal || signal.aborted) return this.sleep(ms);
+    let wake;
+    const interrupted = new Promise((resolve) => { wake = resolve; signal.addEventListener('abort', wake, { once: true }); });
+    try { await Promise.race([this.sleep(ms), interrupted]); }
+    finally { signal.removeEventListener('abort', wake); }
+  }
+
   /** A short "what is it doing" line for a run: the step in progress. */
   async stage(run) {
     try {
@@ -150,24 +169,34 @@ export class CloudBuild {
    * Run a whole build. onStatus({ state: 'building', stage }) as it progresses. Resolves { image, meta, log }; rejects CloudBuildError
    * (with .log) when the workflow fails or times out.
    */
-  async build(recipe, { onStatus = () => {}, compact = true, pollMs = 5000, timeoutMs = 50 * 60 * 1000 } = {}) {
+  async build(recipe, { onStatus = () => {}, compact = true, pollMs = 5000, timeoutMs = 50 * 60 * 1000, signal } = {}) {
+    if (signal?.aborted) throw new BuildCancelledError();
     onStatus({ state: 'building', stage: 'starting the cloud build' });
     const request = await this.start(recipe, { compact });
     const deadline = this.now() + timeoutMs;
     let run = null;
+    let cancelSent = false;
     while (this.now() < deadline) {
-      await this.sleep(pollMs);
+      await this.waitForPoll(pollMs, signal);
       run = run ?? await this.findRun(request);
-      if (!run) { onStatus({ state: 'building', stage: 'waiting for GitHub to start the run' }); continue; }
+      if (!run) { onStatus({ state: 'building', stage: signal?.aborted ? 'cancelling: waiting for GitHub to register the run' : 'waiting for GitHub to start the run' }); continue; }
       const current = await this.json(`/repos/${this.repo}/actions/runs/${run.id}`);
       if (current.status === 'completed') {
+        if (current.conclusion === 'cancelled') throw new BuildCancelledError();
         const result = await this.result(request);
         if (current.conclusion !== 'success' || !result.image) throw new CloudBuildError('The cloud build failed', { log: result.log });
         return result;
       }
+      if (signal?.aborted) {
+        if (!cancelSent) { await this.cancelRun(run); cancelSent = true; }
+        onStatus({ state: 'building', stage: 'cancelling the cloud build' });
+        continue;
+      }
       const step = await this.stage(run);
       onStatus({ state: 'building', stage: `cloud build: ${current.status === 'queued' ? 'queued' : step || 'running'}` });
     }
-    throw new CloudBuildError('The cloud build did not finish in time');
+    throw new CloudBuildError(signal?.aborted
+      ? 'GitHub has not confirmed cancellation. The build may still be running there.'
+      : 'The cloud build did not finish in time');
   }
 }

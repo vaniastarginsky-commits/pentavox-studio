@@ -122,3 +122,14 @@ export function memoryView(summary, { compact = false } = {}) {
     hint: over ? 'Does not fit in AXI: replace heavy engines (use the Suggest replacements button).' : '',
   };
 }
+
+// One button occupies one place: cancellation remains available even if the
+// recipe was edited over budget while its previous build is still running.
+export function buildButtonView({ phase, cancelling = false, buildDisabled = false, hint = '', demo = false }) {
+  const building = phase === 'building' || phase === 'cancelling';
+  return {
+    label: building ? 'Cancel' : 'Build',
+    disabled: demo || cancelling || phase === 'cancelling' || phase === 'flashing' || (!building && buildDisabled),
+    title: building ? (cancelling || phase === 'cancelling' ? 'Cancelling the firmware build' : 'Cancel the firmware build') : (buildDisabled ? hint : ''),
+  };
+}

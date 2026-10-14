@@ -559,3 +559,6 @@ input[type="search"], .library-tools > input { background: var(--surface); color
 .confirm-dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .confirm-text { margin: 0 0 16px; white-space: pre-wrap; font: inherit; line-height: 1.45; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Keep Build / Cancel in the same space. */
+.build-actions .build-toggle { min-width: 6.5em; }

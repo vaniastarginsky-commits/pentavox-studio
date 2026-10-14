@@ -1,7 +1,7 @@
 import { setDifferences, adoptModuleSet } from '../model/module_set.js';
 import { BANK_LETTERS, PaletteModel, libraryEntries } from '../model/palette.js';
 import { EngineAudition } from '../audition.js';
-import { bankCardsView, categoriesView, isCompactModule, libraryRowsView, memoryView, voiceTabCount } from './palette_vm.js';
+import { bankCardsView, buildButtonView, categoriesView, isCompactModule, libraryRowsView, memoryView, voiceTabCount } from './palette_vm.js';
 import { lcdLabel, lcdSvg } from './lcd.js';
 import { lastBackupInfo } from '../model/preset_backup.js';
 import { apiFetch, servedLocally } from '../site.js';
@@ -324,7 +324,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     }
   }
 
-  const build = button('Build', 'solid'); const flash = button('Flash', 'primary'); const dfu = button('Reboot to DFU'); const copyLog = button('Copy log', 'pill-button'); const suggestButton = button('Suggest replacements', 'pill-button'); suggestButton.hidden = true;
+  const build = button('Build', 'solid build-toggle'); const flash = button('Flash', 'primary'); const dfu = button('Reboot to DFU'); const copyLog = button('Copy log', 'pill-button'); const suggestButton = button('Suggest replacements', 'pill-button'); suggestButton.hidden = true;
   flash.disabled = true;
   suggestButton.addEventListener('click', () => { state.suggest = !state.suggest; renderSuggestions(model.summary().overBudget); });
   const progress = el('div', 'build-progress'); progress.hidden = true;
@@ -341,26 +341,97 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   const DEMO_HINT = 'Not available in demo mode: there is no real module';
   const inDemo = () => globalThis.document?.body?.classList.contains('demo-mode');
   function applyDemoLock() { if (!inDemo()) return; for (const control of [build, flash, dfu]) { control.disabled = true; control.title = DEMO_HINT; } }
-  function updateActions(view = memoryView(model.summary(), { compact: isCompact() })) { build.disabled = state.busy || view.buildDisabled; build.title = view.buildDisabled ? view.hint : ''; applyDemoLock(); }
+  let operation = null;
+  let operationVersion = 0;
+  function updateActions(view = memoryView(model.summary(), { compact: isCompact() })) {
+    const action = buildButtonView({ phase: state.phase, cancelling: operation?.cancelRequested || state.cancelPending, ...view });
+    build.textContent = action.label; build.disabled = action.disabled; build.title = action.title;
+    applyDemoLock();
+  }
   globalThis.addEventListener?.('pentavox-demo', () => { flash.disabled = state.busy || !state.hasImage; dfu.disabled = false; flash.title = dfu.title = ''; updateActions(); });
-  function renderBuild(status) { fullLog = [status.stage, status.margins, ...(status.log ?? [])].filter(Boolean).join('\n'); copyLog.hidden = !fullLog; const failed = status.state === 'error' || status.state === 'failed'; progress.hidden = !(['building', 'flashing'].includes(status.state) || failed || (state.touched && status.stage)); progress.classList.toggle('failed', failed); progress.classList.toggle('busy', ['building', 'flashing'].includes(status.state)); progressText.textContent = status.stage ?? status.state ?? ''; const busy = ['building', 'flashing'].includes(status.state); state.busy = busy; state.hasImage = !!status.image; flash.disabled = busy || !status.image; updateActions(); if (!busy && state.polling) { clearInterval(state.polling); state.polling = null; } }
-  async function poll() { try { const response = await apiFetch('/api/status', { cache: 'no-store' }); if (response.ok) renderBuild(await response.json()); } catch { /* composer server is optional */ } }
-  function startPolling() { state.touched = true; if (!state.polling) state.polling = setInterval(poll, 1500); poll(); }
-  build.addEventListener('click', async () => {
-    if (!isCompact() && !model.canBuild()) { onError(new Error('The set does not fit in AXI: replace heavy engines first')); return; }
+  function renderBuild(status) {
+    fullLog = [status.stage, status.margins, ...(status.log ?? [])].filter(Boolean).join('\n');
+    copyLog.hidden = !fullLog;
+    const failed = status.state === 'error' || status.state === 'failed';
+    const busy = ['building', 'cancelling', 'flashing'].includes(status.state);
+    progress.hidden = !(busy || failed || (state.touched && status.stage));
+    progress.classList.toggle('failed', failed); progress.classList.toggle('busy', busy);
+    progressText.textContent = status.stage ?? status.state ?? '';
+    state.phase = status.state; state.busy = busy; state.hasImage = !!status.image;
+    state.buildId = status.build_id ?? null;
+    if (operation?.route === 'local' && operation.id && status.build_id && operation.id !== status.build_id)
+      operation = null; // another browser has started a different local build
+    if (!busy) operation = null;
+    flash.disabled = busy || !status.image; updateActions();
+    if (!busy && state.polling) { clearInterval(state.polling); state.polling = null; }
+  }
+  async function poll() {
+    // A stale local status must not overwrite a cloud build or its route probe.
+    if (operation && (operation.route !== 'local' || !operation.started)) return;
+    const expectedOperation = operation; const expectedVersion = operationVersion;
     try {
-      // A hosted page with no build server on this machine builds in GitHub Actions and flashes over WebUSB; otherwise serve.py does both.
-      if (!servedLocally() && !(await localServerUp(apiFetch))) {
-        cloudResult = null; state.touched = true;
-        cloudResult = await runCloudBuild({ recipe: model.recipe(), compact: isCompact(), onStatus: renderBuild });
+      const response = await apiFetch('/api/status', { cache: 'no-store' });
+      if (!response.ok) return;
+      const status = await response.json();
+      if (operation !== expectedOperation || operationVersion !== expectedVersion) return;
+      if (operation && (operation.route !== 'local' || !operation.started)) return;
+      renderBuild(status);
+    } catch { /* composer server is optional */ }
+  }
+  function startPolling() { state.touched = true; if (!state.polling) state.polling = setInterval(poll, 1500); poll(); }
+  async function cancelLocal(op) {
+    if (op?.cancelInFlight || state.cancelPending) return;
+    if (op) op.cancelInFlight = true;
+    state.cancelPending = true; updateActions();
+    const buildId = op?.id ?? state.buildId;
+    try {
+      const response = await apiFetch('/api/cancel', { method: 'POST', body: JSON.stringify({ build_id: buildId }) });
+      const result = await response.json();
+      if (!response.ok || result.error) throw new Error(result.error || `Cancel failed (${response.status})`);
+      startPolling();
+    } catch (error) {
+      if (op) { op.cancelRequested = false; op.cancelInFlight = false; }
+      onError(error);
+    } finally { state.cancelPending = false; updateActions(); }
+  }
+  build.addEventListener('click', async () => {
+    if (state.phase === 'building') {
+      if (operation?.cancelRequested) return;
+      if (operation) {
+        operation.cancelRequested = true; operation.controller.abort(); updateActions();
+        progressText.textContent = 'cancelling the build';
+        if (operation.route === 'local' && operation.started) await cancelLocal(operation);
+      } else await cancelLocal(null);  // a local build recovered after a reload
+      return;
+    }
+    if (state.busy || state.cancelPending || inDemo()) return;
+    if (!isCompact() && !model.canBuild()) { onError(new Error('The set does not fit in AXI: replace heavy engines first')); return; }
+    const op = { controller: new AbortController(), route: 'starting', started: false, cancelRequested: false };
+    operationVersion += 1;
+    operation = op; cloudResult = null; state.touched = true;
+    const recipe = model.recipe(); const compact = isCompact();
+    renderBuild({ state: 'building', stage: 'starting the build' });
+    try {
+      const cloud = !servedLocally() && !(await localServerUp(apiFetch));
+      if (op.cancelRequested) { renderBuild({ state: 'cancelled', stage: 'build cancelled' }); return; }
+      if (cloud) {
+        op.route = 'cloud';
+        const result = await runCloudBuild({ recipe, compact, onStatus: renderBuild, signal: op.controller.signal });
+        if (result) cloudResult = result;
         return;
       }
-      cloudResult = null;
-      const response = await apiFetch('/api/build', { method: 'POST', body: JSON.stringify(model.recipe()) });
+      op.route = 'local';
+      const response = await apiFetch('/api/build', { method: 'POST', body: JSON.stringify(recipe) });
       const result = await response.json();
-      if (result.error) throw new Error(result.error);
+      if (!response.ok || result.error) throw new Error(result.error || `Build failed (${response.status})`);
+      op.id = result.build_id;
+      op.started = true;
+      if (op.cancelRequested) await cancelLocal(op);
       startPolling();
-    } catch (error) { onError(error); }
+    } catch (error) {
+      renderBuild({ state: 'failed', stage: 'build failed', log: [String(error.message ?? error)] });
+      onError(error);
+    }
   });
   flash.addEventListener('click', async () => {
     if (cloudResult) {
@@ -377,9 +448,9 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   // A hosted page with no build server: the last cloud build is already published, so Flash is ready without building again.
   if (!servedLocally()) {
     localServerUp(apiFetch).then(async (up) => {
-      if (up || cloudResult || state.busy) return;
+      if (up || cloudResult || state.busy || state.touched) return;
       const latest = await loadLatestCloudBuild();
-      if (!latest || cloudResult || state.busy) return;
+      if (!latest || cloudResult || state.busy || state.touched) return;
       cloudResult = latest; state.touched = true;
       renderBuild({ state: 'built', image: 'cloud', stage: `last cloud build: ${(latest.meta.commit ?? '').slice(0, 7)} · ${(latest.image.byteLength / 1024).toFixed(0)} KB, ready to flash`, margins: latest.meta.margins ?? '', log: [] });
     });

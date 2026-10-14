@@ -1,7 +1,7 @@
 // What the Build and Flash buttons do when there is no build server on this machine: build in GitHub Actions, flash over WebUSB.
 // (With the local serve.py the buttons keep talking to it; see ui/palette.js.) Pure functions with injected dependencies, so they are testable.
 
-import { CloudBuild, CloudBuildError, cloudSettings, forgetGithubToken, githubToken } from './cloud_build.js';
+import { BuildCancelledError, CloudBuild, CloudBuildError, cloudSettings, forgetGithubToken, githubToken } from './cloud_build.js';
 import { FIRMWARE_ADDRESS, requestDfuDevice } from './webdfu.js';
 
 /** Is the build server (serve.py) answering? A hosted page that cannot reach one falls back to the cloud. */
@@ -19,15 +19,19 @@ export async function localServerUp(apiFetch, timeoutMs = 1500) {
  * Build in the cloud. onStatus gets the same shape the server's /api/status has ({ state, stage, image, margins, log }).
  * Resolves { image: Uint8Array, meta }; rejects after reporting a failed status.
  */
-export async function runCloudBuild({ recipe, compact, onStatus, token = githubToken(), settings = cloudSettings(), makeBuilder = (options) => new CloudBuild(options) }) {
+export async function runCloudBuild({ recipe, compact, onStatus, signal, token = githubToken(), settings = cloudSettings(), makeBuilder = (options) => new CloudBuild(options) }) {
   if (!token) throw new Error('A GitHub token is needed to build in the cloud (see the Studio README)');
   const builder = makeBuilder({ token, ...settings, onUnauthorized: forgetGithubToken });
   try {
-    const result = await builder.build(recipe, { onStatus, compact });
+    const result = await builder.build(recipe, { onStatus, compact, signal });
     const kb = (result.image.byteLength / 1024).toFixed(0);
     onStatus({ state: 'built', image: 'cloud', stage: `done: ${(result.meta.commit ?? '').slice(0, 7)} · ${kb} KB`, margins: result.meta.margins ?? '', log: [] });
     return result;
   } catch (error) {
+    if (error instanceof BuildCancelledError) {
+      onStatus({ state: 'cancelled', stage: 'build cancelled', log: [] });
+      return null;
+    }
     onStatus({ state: 'failed', stage: 'build failed', log: String(error.log ?? error.message ?? error).split('\n').slice(-60) });
     throw error;
   }
