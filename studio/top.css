@@ -264,7 +264,7 @@
 /* Settings rows: controls hug the right edge at their natural size (no stretched capsule), the slider never overflows its card. */
 .set-row { grid-template-columns: minmax(0, 1fr) auto; }
 .set-seg, .set-multi { justify-self: end; }
-.set-slider { justify-self: end; width: min(300px, 100%); grid-template-columns: minmax(0, 1fr) 5ch; }
+.set-slider { justify-self: end; width: min(300px, 100%); grid-template-columns: minmax(0, 1fr) max-content; }
 .set-slider input[type="range"] { width: 100%; min-width: 0; }
 .set-slider output { white-space: nowrap; }
 @media (max-width: 820px) { .set-row { grid-template-columns: 1fr; } .set-seg, .set-multi, .set-slider { justify-self: start; } }
