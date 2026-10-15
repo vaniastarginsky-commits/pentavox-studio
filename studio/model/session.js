@@ -57,7 +57,7 @@ export class StudioSession {
       // intentionally different for the two- and three-Plaits-voice builds.
       // Studio addresses fields through the device descriptor, so compatibility
       // hinges on the one numeric ABI it interprets itself: DestinationId.
-      if (table.destCount !== this.destinations.count) {
+      if (!(this.destinations.supportedCounts ?? [this.destinations.count]).includes(table.destCount)) {
         readOnly = true;
         reason = table.destCount > this.destinations.count
           ? 'The firmware has routing destinations newer than Studio'
@@ -210,6 +210,7 @@ export class StudioSession {
   destinationGroups() {
     const compact = this.voices?.voiceCount === 2 && this.samplerVoices === 1 && !this.granularEnabled && !this.tapeEnabled;
     return this.destinations.groups({
+      destCount: this.table?.destCount ?? this.destinations.count,
       masterPage: compact,
       stutter: !compact,
       plaitsVoices: this.voices?.voiceCount,

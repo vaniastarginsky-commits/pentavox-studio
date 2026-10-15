@@ -1,6 +1,11 @@
 {
   "schemaHash": 639964394,
-  "count": 87,
+  "count": 92,
+  "supportedCounts": [
+    87,
+    90,
+    92
+  ],
   "entries": [
     {
       "id": 0,
@@ -523,6 +528,36 @@
       "symbol": "Voice2XMod",
       "group": "Plaits 2",
       "name": "Cross FM from Plaits 1"
+    },
+    {
+      "id": 87,
+      "symbol": "FxReverbShimmer",
+      "group": "FX",
+      "name": "Reverb shimmer (retired)"
+    },
+    {
+      "id": 88,
+      "symbol": "FxDelayDamp",
+      "group": "FX",
+      "name": "Delay damp"
+    },
+    {
+      "id": 89,
+      "symbol": "FxDelaySpace",
+      "group": "FX",
+      "name": "Delay space"
+    },
+    {
+      "id": 90,
+      "symbol": "FxDelayReverse",
+      "group": "FX",
+      "name": "Delay reverse"
+    },
+    {
+      "id": 91,
+      "symbol": "FxDelayPingPong",
+      "group": "FX",
+      "name": "Delay ping-pong"
     }
   ]
 }

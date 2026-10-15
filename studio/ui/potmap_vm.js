@@ -10,10 +10,10 @@ export function potMapPages(table) {
     plaitsVoices = 3, samplerVoices = 2, granularEnabled = true,
     tapeEnabled = true, masterPage = false,
   } = table.capabilities ?? {};
-  // The compact build hosts its Master page in the FX granular slot: the three DJ filters, output level and the two drive shapers.
+  // The Compact Master page occupies the FX granular slot.
   const MASTER = Object.freeze({
     page: 'Master',
-    pots: Object.freeze(['builtin:Plaits 1 filter', 'builtin:Plaits 2 filter', 'Sampler1Cutoff', 'builtin:Output level', 'FxChebAmount', 'FxFoldAmount']),
+    pots: Object.freeze(['builtin:Plaits 1 filter', 'FxPhaserMix', 'builtin:Plaits 2 filter', 'builtin:Input level', 'Sampler1Cutoff', 'builtin:Output level']),
   });
   const labels = PANEL_POT_PAGES.filter(({ page }) => {
     if (page === 'Plaits 3') return plaitsVoices === 3;
@@ -24,6 +24,7 @@ export function potMapPages(table) {
   }).map((entry) => {
     if (!masterPage) return entry;
     if (entry.page === 'FX granular') return MASTER;
+    if (entry.page === 'FX live') return { ...entry, pots: Object.freeze(['builtin:Stutter division', 'FxFilterPosition', 'FxDelayMix', 'FxReverbMix', 'FxDelayTime', 'FxReverbSize']) };
     // Pot 4 of the sampler page is Loop mode here; the filter moved to the Master page.
     if (entry.page === 'Sampler 1') return { ...entry, pots: Object.freeze(entry.pots.map((symbol, pot) => (pot === 3 ? 'builtin:Loop mode' : symbol))) };
     return entry;
@@ -36,7 +37,7 @@ export function potMapPages(table) {
     ['FX tone', sampler1 + 4],
   ]);
   return labels.map((entry) => {
-    if (entry.page !== 'FX live' || tapeEnabled) {
+    if (entry.page !== 'FX live' || tapeEnabled || masterPage) {
       return { ...entry, index: physical.get(entry.page) };
     }
     return {
@@ -68,7 +69,7 @@ export function potMapView(table, destinations) {
         const normal = builtIns[pot].get(page) ?? '';
         const shifted = layer === 1 ? shiftBuiltIn(page, pot, Boolean(table.capabilities?.masterPage)) : '';
         // What the pot does on this page/layer when nothing is assigned.
-        const builtIn = layer === 0 ? normal : (shifted || (normal ? `${normal} (as normal)` : ''));
+        const builtIn = layer === 0 ? normal : (shifted || (!table.capabilities?.masterPage && normal ? `${normal} (as normal)` : ''));
         const off = destId === POTMAP_OFF;
         const assigned = destId !== 0 && !off;
         const entry = assigned ? destinations.byId(destId) : null;

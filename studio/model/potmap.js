@@ -5,7 +5,7 @@ export const POTMAP_LAYERS = 2;
 export const POTMAP_PAGES = 8;
 export const POTMAP_POTS = 6;
 export const POTMAP_DESTINATIONS = 78;
-/** Stored value meaning "this pot does nothing here" (one past the last destination id). */
+/** Persisted Off sentinel; newer destination IDs extend beyond it. */
 export const POTMAP_OFF = POTMAP_DESTINATIONS;
 
 const idFor = (layer, page, pot) => `potmap.${layer}.${page}.${pot}`;
@@ -59,7 +59,7 @@ export class PotMapTable {
 
   set(layer, page, pot, destId) {
     const field = this.field(layer, page, pot);
-    if (!Number.isInteger(destId) || destId < 0 || destId > POTMAP_OFF) {
+    if (!Number.isInteger(destId) || destId < 0 || destId >= (field.zones ?? POTMAP_OFF + 1)) {
       throw new RangeError('pot map destination is out of range');
     }
     this.values.set(field.id, destId);

@@ -59,13 +59,16 @@ const SHIFT_BUILT_IN = Object.freeze({
 export function shiftBuiltIn(page, potIndex, masterPage = false) {
   if (masterPage) {
     const table = MASTER_SHIFT_BUILT_IN[page];
-    if (table) return table[potIndex] ?? '';
+    return table?.[potIndex] ?? '';
   }
   return SHIFT_BUILT_IN[page]?.[potIndex] ?? '';
 }
 
-// The compact build: B1 over a DJ filter is its resonance; Loop mode and the sampler's resonance left the sampler page.
+// Compact B1 controls are explicit: every missing pot is inert.
 const MASTER_SHIFT_BUILT_IN = Object.freeze({
-  'Master': { 0: 'Plaits 1 filter resonance', 1: 'Plaits 2 filter resonance', 2: 'Sampler filter resonance' },
-  'Sampler 1': { 0: 'Tune (steps)', 2: 'Loop length', 4: 'Attack', 5: 'Balance' },
+  'Plaits 1': { 0: 'Cross FM', 4: 'Attack', 5: 'Aux send' },
+  'Plaits 2': { 0: 'Cross FM', 4: 'Attack', 5: 'Aux send' },
+  'Master': { 0: 'Plaits 1 filter resonance', 1: 'Phaser rate', 2: 'Plaits 2 filter resonance', 3: 'Input Aux send', 4: 'Sampler filter resonance', 5: 'Drive' },
+  'Sampler 1': { 0: 'Tune (steps)', 2: 'Loop length', 4: 'Attack', 5: 'Aux send' },
+  'FX live': { 0: 'Space', 1: 'Filter resonance', 2: 'Delay damp', 3: 'Reverb damp', 4: 'Delay feedback' },
 });

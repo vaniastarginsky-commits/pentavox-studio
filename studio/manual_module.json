@@ -157,7 +157,7 @@
      "name": "Stutter Time",
      "page": 3,
      "pot": 0,
-     "help": "B1:Delay Time B2:stutter",
+     "help": "B1:Space B2:stutter",
      "def": 0.55
     },
     {
@@ -168,31 +168,31 @@
      "def": 0.5
     },
     {
-     "name": "Phaser Mix",
+     "name": "Delay Mix",
      "page": 3,
      "pot": 2,
-     "help": "B1:Depth B2:stutter",
+     "help": "B1:Damp B2:stutter",
      "def": 0
     },
     {
-     "name": "Phaser Rate",
+     "name": "Reverb Mix",
      "page": 3,
      "pot": 3,
-     "help": "B1:Feedback B2:stutter",
+     "help": "B1:Damp B2:stutter",
      "def": 0
     },
     {
-     "name": "Delay Mix",
+     "name": "Delay Time",
      "page": 3,
      "pot": 4,
      "help": "B1:Feedback B2:stutter",
      "def": 0.5
     },
     {
-     "name": "Reverb Mix",
+     "name": "Reverb Size",
      "page": 3,
      "pot": 5,
-     "help": "B1:Size B2:stutter",
+     "help": "B1:- B2:stutter",
      "def": 0.5
     }
    ]
@@ -212,7 +212,7 @@
     {
      "gesture": "hold",
      "label": "Shift layer",
-     "help": "While held: Plaits Cross FM (Freq pot: how much the other Plaits modulates this one), Attack and Aux send; all sampler shifts; Live Delay Feedback/Filter Resonance/Reverb Damp; Master filter resonances, Phaser Rate, Input To Aux and Chebyshev/Fold drive; Granular Scatter/Spread/Reverse; Tone Center/CV amount."
+     "help": "Voice pages: Level is a stereo VU; moving Level shows its value briefly. B2 top shows that voice's incoming MIDI/CV notes. While held: Plaits Cross FM (Freq pot: how much the other Plaits modulates this one), Attack and Aux send; all sampler shifts; Live Space/Filter Resonance/Delay Damp/Reverb Damp/Delay Feedback; Master filter resonances, Phaser Rate, Input To Aux and Chebyshev/Fold drive; Granular Scatter/Spread/Reverse; Tone Center/CV amount."
     }
    ],
    "see": [
@@ -355,7 +355,7 @@
    {
     "id": "fx-live",
     "title": "FX Live",
-    "body": "Pots 0-5, top row first, left to right: Stutter Time, Filter (centre bypass; B1: Resonance), Delay Mix, Reverb Mix (B1: Damp), Delay Time (1-4000 ms exponential; B1: Feedback), Reverb Size. Hold **B2** to stutter. Reverb Size no longer changes Damp: set the two separately."
+    "body": "Pots 0-5, top row first, left to right: Stutter Time (B1: Space, left reverse / right ping-pong), Filter (centre bypass; B1: Resonance), Delay Mix (B1: Damp), Reverb Mix (B1: Damp), Delay Time (1-4000 ms exponential; B1: Feedback), Reverb Size. Hold **B2** to stutter. Clocked Delay Time has13 steps:8/4/2 bars,1 bar,1/2,1/4,1/8,1/8T,1/16,1/16T,1/32,1/32T,1/64; each has one LED position. The buffer holds32 seconds. Reverse and Ping-pong are independent CV/MIDI destinations. Reverb Size no longer changes Damp: set the two separately."
    },
    {
     "id": "master",
@@ -385,7 +385,7 @@
    {
     "id": "route-destinations",
     "title": "Route destinations by zone",
-    "body": "1. None\n2. Voice 1 Harmonics\n3. Voice 1 Timbre\n4. Voice 1 Morph\n5. Voice 1 Decay\n6. Voice 1 Level\n7. Voice 1 Aux\n8. Voice 1 Attack\n9. Voice 2 Harmonics\n10. Voice 2 Timbre\n11. Voice 2 Morph\n12. Voice 2 Decay\n13. Voice 2 Level\n14. Voice 2 Aux\n15. Voice 2 Attack\n16. Voice 3 Harmonics\n17. Voice 3 Timbre\n18. Voice 3 Morph\n19. Voice 3 Decay\n20. Voice 3 Level\n21. Voice 3 Aux\n22. Voice 3 Attack\n23. Sampler 1 Start\n24. Sampler 1 End\n25. Sampler 1 Cutoff\n26. Sampler 1 Resonance\n27. Sampler 1 Attack\n28. Sampler 1 Decay\n29. Sampler 1 Level\n30. Sampler 1 Aux\n31. Sampler 1 Transpose\n32. Sampler 2 Start\n33. Sampler 2 End\n34. Sampler 2 Cutoff\n35. Sampler 2 Resonance\n36. Sampler 2 Attack\n37. Sampler 2 Decay\n38. Sampler 2 Level\n39. Sampler 2 Aux\n40. Sampler 2 Transpose\n41. FX Stutter Ratchet\n42. FX Stutter Decay\n43. FX Stutter Chance\n44. FX Tape Rate\n45. FX Tape Mix\n46. FX Filter Position\n47. FX Reverb Size\n48. FX Reverb Damp\n49. FX Reverb Mix\n50. FX Granular Density\n51. FX Granular Size\n52. FX Granular Position\n53. FX Granular Scatter\n54. FX Granular Pitch\n55. FX Granular Pitch Spread\n56. FX Granular Feedback\n57. FX Granular Mix\n58. FX Granular Reverse\n59. FX Chebyshev Amount\n60. FX Fold Amount\n61. FX Filter Resonance\n62. FX Phaser Rate\n63. FX Phaser Depth\n64. FX Phaser Center\n65. FX Phaser Feedback\n66. FX Phaser Mix\n67. FX Phaser CV Amount\n68. Global Input Level\n69. Voice 1 Model\n70. Voice 2 Model\n71. Voice 3 Model\n72. Sampler 1 Slot\n73. Sampler 2 Slot\n74. FX Stutter Trigger\n75. FX Stutter Hold\n76. FX Delay Time\n77. FX Delay Feedback\n78. FX Delay Mix\n79. Voice 1 Filter\n80. Voice 2 Filter\n81. Voice 1 Filter Resonance\n82. Voice 2 Filter Resonance\n83. Global Output Level\n84. Global Input Aux\n85. FX Drive\n86. Voice 1 Cross FM\n87. Voice 2 Cross FM\n"
+    "body": "1. None\n2. Voice 1 Harmonics\n3. Voice 1 Timbre\n4. Voice 1 Morph\n5. Voice 1 Decay\n6. Voice 1 Level\n7. Voice 1 Aux\n8. Voice 1 Attack\n9. Voice 2 Harmonics\n10. Voice 2 Timbre\n11. Voice 2 Morph\n12. Voice 2 Decay\n13. Voice 2 Level\n14. Voice 2 Aux\n15. Voice 2 Attack\n16. Voice 3 Harmonics\n17. Voice 3 Timbre\n18. Voice 3 Morph\n19. Voice 3 Decay\n20. Voice 3 Level\n21. Voice 3 Aux\n22. Voice 3 Attack\n23. Sampler 1 Start\n24. Sampler 1 End\n25. Sampler 1 Cutoff\n26. Sampler 1 Resonance\n27. Sampler 1 Attack\n28. Sampler 1 Decay\n29. Sampler 1 Level\n30. Sampler 1 Aux\n31. Sampler 1 Transpose\n32. Sampler 2 Start\n33. Sampler 2 End\n34. Sampler 2 Cutoff\n35. Sampler 2 Resonance\n36. Sampler 2 Attack\n37. Sampler 2 Decay\n38. Sampler 2 Level\n39. Sampler 2 Aux\n40. Sampler 2 Transpose\n41. FX Stutter Ratchet\n42. FX Stutter Decay\n43. FX Stutter Chance\n44. FX Tape Rate\n45. FX Tape Mix\n46. FX Filter Position\n47. FX Reverb Size\n48. FX Reverb Damp\n49. FX Reverb Mix\n50. FX Granular Density\n51. FX Granular Size\n52. FX Granular Position\n53. FX Granular Scatter\n54. FX Granular Pitch\n55. FX Granular Pitch Spread\n56. FX Granular Feedback\n57. FX Granular Mix\n58. FX Granular Reverse\n59. FX Chebyshev Amount\n60. FX Fold Amount\n61. FX Filter Resonance\n62. FX Phaser Rate\n63. FX Phaser Depth\n64. FX Phaser Center\n65. FX Phaser Feedback\n66. FX Phaser Mix\n67. FX Phaser CV Amount\n68. Global Input Level\n69. Voice 1 Model\n70. Voice 2 Model\n71. Voice 3 Model\n72. Sampler 1 Slot\n73. Sampler 2 Slot\n74. FX Stutter Trigger\n75. FX Stutter Hold\n76. FX Delay Time\n77. FX Delay Feedback\n78. FX Delay Mix\n79. Voice 1 Filter\n80. Voice 2 Filter\n81. Voice 1 Filter Resonance\n82. Voice 2 Filter Resonance\n83. Global Output Level\n84. Global Input Aux\n85. FX Drive\n86. Voice 1 Cross FM\n87. Voice 2 Cross FM\n88. FX Reverb Shimmer\n89. FX Delay Damp\n90. FX Delay Space\n91. FX Delay Reverse\n92. FX Delay Ping-pong\n"
    }
   ],
   "presets": {

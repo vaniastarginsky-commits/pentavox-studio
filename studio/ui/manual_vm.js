@@ -79,14 +79,14 @@ export function masterPage(pages) {
     index: pages.length,
     name: 'Master',
     colour: '#b9b6ad',
-    note: 'In the compact build this page takes the place of FX Granular, so B3 reaches it from FX Live. Each filter ring wears the colour of the voice it belongs to, a filter knob at centre is bypass, the Output level ring is a peak meter and the two drive shapers are red.',
+    note: 'In the compact build this page takes the place of FX Granular, so B3 reaches it from FX Live. Each filter ring wears the colour of the voice it belongs to, a filter knob at centre is bypass, the Output level ring is a peak meter. Hold B1 for resonance, Phaser rate, Input Aux and Drive.',
     pots: [
       knob(0, 'Plaits 1 filter', 0.5, colourOf('Voice 1'), 'Filter resonance'),
-      knob(1, 'Plaits 2 filter', 0.5, colourOf('Voice 2'), 'Filter resonance'),
-      knob(2, 'Sampler filter', 0.5, colourOf('Sampler 1'), 'Filter resonance'),
-      knob(3, 'Output level', 0.85, '#9a9a9a'),
-      knob(4, 'Chebyshev amount', 0, '#ff0000'),
-      knob(5, 'Fold amount', 0, '#ff0000'),
+      knob(1, 'Phaser mix', 0, '#00ffff', 'Phaser rate'),
+      knob(2, 'Plaits 2 filter', 0.5, colourOf('Voice 2'), 'Filter resonance'),
+      knob(3, 'Input level', 0.85, '#1919ff', 'Input Aux send'),
+      knob(4, 'Sampler filter', 0.5, colourOf('Sampler 1'), 'Filter resonance'),
+      knob(5, 'Output level', 0.85, '#9a9a9a', 'Drive'),
     ],
   };
 }

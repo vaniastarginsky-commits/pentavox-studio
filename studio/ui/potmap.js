@@ -55,7 +55,7 @@ export function mountPotMap(root, controller) {
         choice.type = 'button'; choice.addEventListener('click', () => choose(POTMAP_OFF)); list.append(choice);
       }
       for (const group of controller.destinationGroups()) {
-        const items = group.items.filter((item) => item.id !== 0 && item.id < POTMAP_OFF && (!q || `${group.group} ${item.name}`.toLocaleLowerCase('en').includes(q)));
+        const items = group.items.filter((item) => item.id !== 0 && item.id !== POTMAP_OFF && item.id < (controller.session.potMap.field(cell.layer, cell.page, cell.pot).zones ?? POTMAP_OFF + 1) && (!q || `${group.group} ${item.name}`.toLocaleLowerCase('en').includes(q)));
         if (!items.length) continue;
         const head = element('div', 'dest-head'); head.dataset.mod = moduleKey(group.group); head.append(element('span', 'mod-dot'), element('span', '', group.group));
         list.append(head);
