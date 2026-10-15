@@ -1,5 +1,5 @@
 // DX7 bank editor: a sheet over the Engines page. Library on the left (3,500 Palette patches + imports),
-// the three six-op banks on the right. Reads and writes /DX7/BANK_A|B|C.SYX on the module's SD card.
+// the six six-op banks on the right. Reads and writes /DX7/BANK_A..F.SYX on the module's SD card.
 import { DX7Audition } from '../audition_dx7.js';
 import { BANK_LETTERS, BANK_SIZE, DX7Banks } from '../model/dx7_banks.js';
 import { buildCatalog, CATEGORIES, checkShape, patchFrom, SOUND_TAGS } from '../model/dx7_catalog.js';
@@ -12,7 +12,7 @@ import { EditorState } from './dx7_editor_vm.js';
 const DATA = './data/dx7/';
 const PITCHES = [['C2', 36], ['C3', 48], ['C4', 60]];
 const SORTS = [['name', 'Name (A–Z)'], ['nameDesc', 'Name (Z–A)'], ['category', 'Category'], ['algorithm', 'Algorithm'], ['source', 'Cartridge order']];
-const MISSING_CATALOG = 'Only the 96 Plaits factory patches are loaded. Run python3 tools/dx7_composer/fetch_palette_library.py to add the full Palette catalog (about 3,500 patches).';
+const MISSING_CATALOG = 'The full Palette catalog is unavailable. Factory and community banks remain available. Run python3 tools/dx7_composer/fetch_palette_library.py to add the full Palette catalog (about 3,500 patches).';
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -56,13 +56,14 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
   // ---- loading -------------------------------------------------------------------------------------
   async function ensureLoaded() {
     if (ui.state) return;
-    const [sample, rom, stock, factory, saved] = await Promise.all([
+    const [sample, rom, stock, factory, saved, community] = await Promise.all([
       fetchJson('dx7-catalog-sample.json'), fetchJson('dx7-rom-catalog.json'), fetchJson('dx7-stock-banks.json'), fetchFactory(), store.loadImports(),
+      fetchJson('dx7-community-banks.json'),
     ]);
     const problem = checkShape(sample, rom, stock);
     const usable = !problem;
     ui.notice = problem ?? (sample || rom ? '' : MISSING_CATALOG);
-    const catalog = buildCatalog({ sample: usable ? sample ?? [] : [], rom: usable ? rom : null, stock: usable ? stock : null, factory });
+    const catalog = buildCatalog({ sample: usable ? sample ?? [] : [], rom: usable ? rom : null, stock: usable ? stock : null, factory, community: community ?? [] });
     ui.state = new EditorState(catalog, new DX7Banks());
     for (const entry of saved) { imports.push(entry); importPatches(entry.name, b64ToBytes(entry.b64), false); }
     const draft = await store.loadDraft();

@@ -6,6 +6,7 @@ import { lcdLabel, lcdSvg } from './lcd.js';
 import { lastBackupInfo } from '../model/preset_backup.js';
 import { apiFetch, servedLocally } from '../site.js';
 import { describeBuild, loadLatestCloudBuild, localServerUp, runCloudBuild, runWebFlash } from '../build_flow.js';
+import { mountWaveResourcesEditor } from './wave_resources_editor.js';
 
 /** The confirm text before flashing: a new firmware can change the preset layout, which resets every stored slot. */
 export function flashWarning(backup = lastBackupInfo()) {
@@ -97,6 +98,7 @@ function migrateStockBankOrder(recipe) {
 export function mountPalette(root, { catalog, sets, measured, help = {}, getVoiceTable = () => null, getController = () => null, getClient = () => null, onEditBanks = () => {}, onError = () => {} }) {
   HELP = help;
   const model = new PaletteModel(catalog, sets, measured);
+  const waveEditor = mountWaveResourcesEditor({ getResources: () => model.resources, onChange: (resources) => { model.setResources(resources); changed(); }, model, catalog, onError });
   try { const saved = JSON.parse(localStorage.getItem('pentavox.palette.recipe')); if (saved) model.importRecipe(migrateStockBankOrder(saved)); } catch { /* invalid local state falls back to stock */ }
   const audition = new EngineAudition(catalog.engines);
   const entries = libraryEntries(catalog);
@@ -334,9 +336,13 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   let fullLog = '';
   let cloudResult = null;   // the image of the last cloud build (hosted page without a local build server): flashed over WebUSB
   copyLog.addEventListener('click', async () => { try { await navigator.clipboard.writeText(fullLog); copyLog.textContent = 'Saved'; setTimeout(() => { copyLog.textContent = 'Copy log'; }, 2000); } catch (error) { onError(error); } });
-  const dx7Button = button('DX7 banks', 'pill-button'); dx7Button.title = 'Compose the three Six-op FM banks and write them to the SD card';
+  const dx7Button = button('DX7 banks', 'pill-button'); dx7Button.title = 'Compose the six Six-op FM banks and write them to the SD card';
   dx7Button.addEventListener('click', () => onEditBanks('A'));
-  actions.append(progress, build, flash, dfu, dx7Button, copyLog, suggestButton);
+  const wavesButton = button('Wave tables', 'pill-button');
+  wavesButton.addEventListener('click', () => waveEditor.open('wavetables'));
+  const terrainButton = button('Wave Terrain', 'pill-button');
+  terrainButton.addEventListener('click', () => waveEditor.open('terrain'));
+  actions.append(progress, build, flash, dfu, dx7Button, wavesButton, terrainButton, copyLog, suggestButton);
   // Demo mode (a simulated module): nothing may be built or flashed, so the three buttons stay off with an explanation.
   const DEMO_HINT = 'Not available in demo mode: there is no real module';
   const inDemo = () => globalThis.document?.body?.classList.contains('demo-mode');
@@ -471,5 +477,5 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
 
   function changed() { persist(); renderVoiceHeader(); renderBanks(); renderLibrary(); renderSummary(); }
   changed(); fitLibrary(); new ResizeObserver(fitLibrary).observe(document.body);
-  return { refreshLive() { renderVoiceHeader(); renderBanks(); renderSummary(); }, dispose() { removeEventListener('scroll', fitLibrary); removeEventListener('resize', fitLibrary); if (state.polling) clearInterval(state.polling); root.replaceChildren(); } };
+  return { refreshLive() { renderVoiceHeader(); renderBanks(); renderSummary(); }, dispose() { waveEditor.destroy(); removeEventListener('scroll', fitLibrary); removeEventListener('resize', fitLibrary); if (state.polling) clearInterval(state.polling); root.replaceChildren(); } };
 }

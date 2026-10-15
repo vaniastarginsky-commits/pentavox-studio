@@ -6,6 +6,8 @@
 //
 // Memory: the AXI image holds the UNION of every voice's engine CODE, so the
 // estimate is taken over the distinct engine classes of all three sets.
+import { normalizeResources } from './wave_resources.js';
+
 export const SLOT_COUNT = 24;
 export const VOICE_COUNT = 3;
 export const BANK_LETTERS = Object.freeze(['A', 'B', 'C', 'D', 'E', 'F']);   // SD files BANK_A..F.SYX
@@ -47,6 +49,7 @@ export class PaletteModel {
     this.measured = measured; // kept for API compatibility; the estimate is union based
     this.byId = new Map(catalog.engines.map((engine) => [engine.id, engine]));
     this.voices = [[], [], []];
+    this.resources = {};
     this.loadPreset(preset);
   }
 
@@ -159,6 +162,7 @@ export class PaletteModel {
   // Always recipe v2.
   recipe() {
     return {
+      ...(Object.keys(this.resources).length ? { resources: normalizeResources(this.resources) } : {}),
       voices: this.voices.map((slots) => ({
         slots: slots.map((slot, slotIndex) => {
           const engine = this.#engine(slot.id);
@@ -206,18 +210,25 @@ export class PaletteModel {
   // Accepts v2 ({voices:[3 x {slots}]}) or v1 ({slots}); v1 is replicated onto the three voices.
   // All-or-nothing: a bad recipe leaves the model untouched.
   importRecipe(recipe) {
+    const resources = normalizeResources(recipe?.resources ?? {});
     if (recipe && typeof recipe === 'object' && 'voices' in recipe) {
       if ('slots' in recipe) throw new TypeError('recipe has both slots (v1) and voices (v2)');
       if (!Array.isArray(recipe.voices) || recipe.voices.length !== VOICE_COUNT) {
         throw new TypeError('recipe v2 must contain exactly 3 voices');
       }
       this.voices = recipe.voices.map((voice, i) => this.#parseSet(voice?.slots, `voice ${i + 1}`));
+      this.resources = resources;
       return 2;
     }
     if (!Array.isArray(recipe?.slots)) throw new TypeError('recipe must contain exactly 24 slots');
     const single = this.#parseSet(recipe.slots, 'recipe');
     this.voices = [0, 1, 2].map(() => single.map((slot) => ({ ...slot })));
+    this.resources = resources;
     return 1;
+  }
+
+  setResources(resources) {
+    this.resources = normalizeResources(resources);
   }
 
   // ---- memory estimate over the UNION of engine classes -------------------------------------

@@ -75,7 +75,7 @@ function stockBanksFrom(stock, factory) {
 }
 
 /** One patch list from every source. A voice that appears twice is kept once; ROM entries win over the rest. */
-export function buildCatalog({ sample = [], rom = null, stock = null, factory = null } = {}) {
+export function buildCatalog({ sample = [], rom = null, stock = null, factory = null, community = [] } = {}) {
   const patches = []; const seen = new Set();
   const take = (patch) => { const key = voiceKey(patch.voice); if (seen.has(key)) return; seen.add(key); patches.push(patch); };
   const roms = rom?.roms ?? [];
@@ -83,7 +83,14 @@ export function buildCatalog({ sample = [], rom = null, stock = null, factory = 
   for (const p of sample ?? []) take(patchFrom({ ...p, src: 'Palette catalog' }, b64ToBytes(p.b64)));
   const stockBanks = stockBanksFrom(stock, factory);
   for (const bank of stockBanks) for (const p of bank.patches) take(p);
-  return { patches, roms, stockBanks, romPatches: (rom?.patches ?? []) };
+  const communityBanks = community.map((bank) => ({
+    id: bank.id, name: bank.name,
+    patches: bank.voices.map((v, i) => patchFrom({ id: `${bank.id}-${i + 1}`, name: v.name, src: bank.name, slot: i + 1 }, b64ToBytes(v.b64))),
+  }));
+  for (const bank of communityBanks) for (const p of bank.patches) take(p);
+  const byVoice = new Map(patches.map((p) => [voiceKey(p.voice), p]));
+  for (const bank of communityBanks) bank.patches = bank.patches.map((p) => byVoice.get(voiceKey(p.voice)));
+  return { patches, roms, stockBanks, communityBanks, romPatches: (rom?.patches ?? []) };
 }
 
 export function filterPatches(patches, { query = '', category = null, tags = [] } = {}) {
@@ -115,6 +122,7 @@ export function pageOf(list, page, size = PAGE_SIZE) {
 export function sourceGroups(catalog) {
   const groups = [];
   if (catalog.stockBanks.length) groups.push({ label: 'Plaits stock banks', items: catalog.stockBanks.map((b) => ({ id: b.id, label: b.name, patches: b.patches })) });
+  if (catalog.communityBanks?.length) groups.push({ label: 'Community banks', items: catalog.communityBanks.map((b) => ({ id: b.id, label: b.name, patches: b.patches })) });
   const byRom = new Map(catalog.roms.map((r) => [r.id, []]));
   const known = new Map(catalog.patches.map((p) => [p.id, p]));
   for (const raw of catalog.romPatches) if (byRom.has(raw.rom) && known.has(raw.id)) byRom.get(raw.rom).push(known.get(raw.id));

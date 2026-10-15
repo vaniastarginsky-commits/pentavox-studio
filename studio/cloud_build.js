@@ -87,10 +87,12 @@ export class CloudBuild {
 
   /** Start a build; resolves with the request id that names the run. */
   async start(recipe, { compact = true } = {}) {
+    const encodedRecipe = toBase64(JSON.stringify(recipe));
+    if (encodedRecipe.length > 60000) throw new CloudBuildError('This recipe is too large for cloud Build. Remove some custom wave/terrain banks, or download recipe.json and build with the local Studio server.');
     const request = `${this.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const response = await this.api(`/repos/${this.repo}/actions/workflows/${DEFAULTS.workflow}/dispatches`, {
       method: 'POST',
-      body: { ref: DEFAULTS.workflowRef, inputs: { ref: this.buildRef, recipe_b64: toBase64(JSON.stringify(recipe)), compact: String(compact), request } },
+      body: { ref: DEFAULTS.workflowRef, inputs: { ref: this.buildRef, recipe_b64: encodedRecipe, compact: String(compact), request } },
     });
     if (response.status === 404) throw new CloudBuildError(`The workflow ${DEFAULTS.workflow} was not found in ${this.repo} (is it on ${DEFAULTS.workflowRef}, and does the token have Actions: write?)`, { status: 404 });
     if (response.status !== 204) throw new CloudBuildError(`GitHub did not start the build (${response.status}): ${(await response.text()).slice(0, 200)}`, { status: response.status });
