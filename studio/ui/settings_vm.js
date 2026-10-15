@@ -35,6 +35,8 @@ const SIMPLE_ITEMS = Object.freeze([
   { id: 's2.1', short: 'input aux', group: 'input', control: 'slider', label: 'Input AUX / FX send', hint: 'How much of the external Audio In signal is sent through the effects. 0 % is fully dry; 100 % sends the whole input through the FX chain.' },
   { id: 's1.5', short: 'output', group: 'input', control: 'slider', label: 'Output level', hint: 'Final volume of the module\u2019s outputs, applied after all effects. 100 % is the original level; the control is a squared curve, so 50 % is about \u221212 dB.' },
   { id: 's0.0', short: 'brightness', group: 'input', control: 'slider', label: 'LED brightness', hint: 'Brightness of the panel LEDs. Brighter LEDs draw more power.' },
+  { id: 'transport.source', group: 'clock', control: 'segmented', label: 'Clock source', hint: 'Auto prefers CV, then MIDI, then internal.', labels: ['Auto', 'Internal', 'CV', 'MIDI'] },
+  { id: 'transport.bpm', group: 'clock', control: 'slider', label: 'Internal tempo', hint: 'Internal quarter-note tempo.', bpm: true },
   { id: 's0.1', short: 'PPQ', group: 'clock', control: 'segmented', label: 'Clock pulses per quarter note', hint: 'How many pulses on jack J8 make up one quarter note.', labels: ['1', '2', '4'] },
   { id: 's0.3', group: 'clock', control: 'segmented', label: 'Tempo multiplier', hint: 'Module tempo relative to the incoming clock: ÷ is slower, × is faster.', labels: ['÷4', '÷3', '÷2', '×1', '×2', '×3', '×4'] },
   { id: 's2.0', short: 'grid', group: 'clock', control: 'segmented', label: 'Trigger quantize', hint: 'Grid used to quantize live slice jumps, stutter and freeze.', labels: ['Off', '1/16', '1/8', '1/4', '1 bar'] },
@@ -59,6 +61,7 @@ const tempoTimeMsFromRaw = (raw) => Math.round(5 * (200 ** raw));
 const tempoTimeRawFromMs = (ms) => Math.log(ms / 5) / Math.log(200);
 
 export function displayFromRaw(field, raw) {
+  if (field.id === 'transport.bpm') return raw;
   if (field.id === 's2.3') return tempoTimeMsFromRaw(raw);
   const { lo, hi } = scaleOf(field);
   return Math.round((lo + raw * (hi - lo)) * 100);
@@ -67,6 +70,7 @@ export function displayFromRaw(field, raw) {
 export function rawFromDisplay(field, value) {
   const number = Number(value);
   if (!Number.isFinite(number)) throw new TypeError('setting must be a number');
+  if (field.id === 'transport.bpm') return Math.max(20, Math.min(300, number));
   if (field.id === 's2.3') {
     return Math.max(0, Math.min(1, tempoTimeRawFromMs(number)));
   }
@@ -110,7 +114,9 @@ export function settingsView(table) {
     const raw = table.get(spec.id);
     const item = { id: spec.id, control: spec.control, label: spec.label, hint: spec.hint, short: spec.short ?? '', twoRows: spec.twoRows === true };
     if (spec.control === 'slider') {
-      if (spec.tempoTime) {
+      if (spec.bpm) {
+        Object.assign(item, { min: 20, max: 300, step: 1, unit: ' BPM', value: raw });
+      } else if (spec.tempoTime) {
         Object.assign(item, {
           min: 5,
           max: 1000,

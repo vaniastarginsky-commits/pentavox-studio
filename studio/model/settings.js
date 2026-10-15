@@ -15,6 +15,7 @@ const OPTIONAL_SETTING_NAMES = Object.freeze({
 });
 
 export const SETTING_IDS = Object.freeze([
+  'transport.bpm', 'transport.source',
   's0.0', 's0.1', 's0.2', 's0.3', 's0.4', 's0.5', 's1.0', 's1.5', 's2.0',
   's2.1', 's2.2', 's2.3', 's2.4', 's2.5',
   ...Array.from({ length: VOICES }, (_, v) => [
@@ -77,7 +78,7 @@ export class SettingsTable {
       if (!Number.isInteger(value) || value < 0 || value >= Number(field.zones)) throw new RangeError(`${id} is out of range`);
     } else {
       if (!Number.isFinite(value)) throw new TypeError(`${id} must be finite`);
-      value = Math.max(0, Math.min(1, value));
+      value = id === 'transport.bpm' ? Math.max(20, Math.min(300, value)) : Math.max(0, Math.min(1, value));
     }
     this.values.set(id, value);
   }
