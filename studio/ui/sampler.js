@@ -154,6 +154,33 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     await loadCard();
   }
 
+  async function eraseSlot(group) {
+    const client = files();
+    if (!client || state.card || state.cardLoading || !group.existing.length || group.existing.some((entry) => entry.locked)) return;
+    if (!confirm(`Erase all ${group.existing.length} WAV files from Slot ${group.slot + 1} (SLOT${group.slot})? This cannot be undone.`)) return;
+    const controller = new AbortController();
+    let removed = 0;
+    state.confirming = null;
+    state.card = { label: `Erasing Slot ${group.slot + 1}`, progress: 0, controller };
+    renderCardBar(); updateHeading(); renderPlan();
+    try {
+      for (const entry of group.existing) {
+        if (controller.signal.aborted) break;
+        await client.remove(entry.path);
+        removed += 1;
+        state.card.progress = removed / group.existing.length;
+        renderCardBar();
+      }
+      onSuccess(`${removed} WAV files erased from Slot ${group.slot + 1}${controller.signal.aborted ? ' (cancelled)' : ''}`);
+    } catch (error) { onError(new Error(`${removed} files erased. ${describeFsError(error)}`, { cause: error })); }
+    finally {
+      if (removed) {
+        try { await client.rescanLibraries(); } catch (error) { onError(new Error(describeFsError(error), { cause: error })); }
+      }
+      state.card = null; renderCardBar(); updateHeading(); await loadCard();
+    }
+  }
+
   async function exportZip() {
     const current = plan(); const checked = validation(); if (!checked.valid) return onError(new Error(checked.errors[0]));
     state.exporting = true; updateHeading();
@@ -374,6 +401,10 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const slots = el('div', `sd-slots${slotCount() === 2 ? ' two-slots' : ''}`); groups.forEach((group) => {
       const column = el('section', `sd-slot${group.overLimit ? ' over-limit' : ''}`); const header = el('header'); const headerCopy = el('div'); headerCopy.append(el('strong', '', `Slot ${group.slot + 1}`), el('span', '', `SLOT${group.slot} · ${group.count}/16`));
       const startValue = state.starts[group.slot] ?? defaults[group.slot]; const start = numberInput(String(startValue).padStart(4, '0'), 0, 9999, 1, (value) => { state.starts[group.slot] = value; refreshSide(); }, `First number for slot ${group.slot + 1}`); header.append(headerCopy, field('Start numbering at', start)); column.append(header);
+      const erase = button('Erase all', 'quiet-button danger');
+      erase.title = `Delete all WAV files from Slot ${group.slot + 1}`;
+      erase.disabled = Boolean(state.card) || state.cardLoading || !files() || !group.existing.length || group.existing.some((entry) => entry.locked);
+      erase.addEventListener('click', () => eraseSlot(group)); header.append(erase);
       const rows = el('div', 'sd-files');
       for (const entry of group.existing) {
         const row = el('div', 'sd-file card-file'); const info = el('div', 'sd-file-info'); info.append(el('code', '', entry.name), el('span', '', formatSize(entry.size)));
