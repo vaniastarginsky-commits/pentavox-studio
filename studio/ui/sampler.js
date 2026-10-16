@@ -10,6 +10,7 @@ import { createBreakPanel, hasBreakPatterns } from './break_panel.js';
 import { createWaveEditor } from './wave_editor.js';
 import { buildSamplerPlan, mergeSamplerSlots, nextStartNumbers, sliceSummary, validateSamplerPlan } from './sampler_vm.js';
 import { pcm16FromWav, SampleUploadClient } from '../model/sample_upload.js';
+import { beginLinkJob } from '../model/link_jobs.js';
 import { SdFilesClient, describeFsError, describeTransfer } from '../model/sd_files.js';
 import { samplerFolders, cardSummary, formatSize, sortEntries } from './sdcard_vm.js';
 
@@ -77,6 +78,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const client = getClient(); const info = getInfo();
     if (!client || !info) return onError(new Error('Connect the module before sending a sample'));
     const controller = new AbortController(); state.upload = { item, voice, progress: 0, controller }; hooks.status();
+    const endJob = beginLinkJob(`Sending ${item.name}`);
     try {
       const pcm = pcm16FromWav(await wavFor(item));
       const result = await new SampleUploadClient(client, info).upload({ voice, ...pcm, signal: controller.signal, onProgress: (progress) => { if (state.upload?.controller === controller) { state.upload.progress = progress; hooks.status(); } } });
@@ -86,6 +88,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     } catch (error) {
       if (error?.name !== 'AbortError') onError(error);
     } finally {
+      endJob();
       if (state.upload?.controller === controller) { state.upload = null; hooks.status(); }
     }
   }
@@ -101,6 +104,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const files = new SdFilesClient(client, info); const controller = new AbortController();
     state.card = { label: '', progress: 0, controller }; renderCardBar(); updateHeading();
     let written = 0; let lastRate = ''; const skipped = [];
+    const endJob = beginLinkJob('Writing to the card');
     try {
       for (const [index, item] of chosen.entries()) {
         const path = `/SLOT${item.slot}/${item.fileName}`;
@@ -114,28 +118,29 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
       if (written) { onSuccess(`${written} file${written === 1 ? '' : 's'} written to the card; the module re-reads its libraries now`); showResult(`Written ${written} file${written === 1 ? '' : 's'}. Last file: ${lastRate}`); }
     } catch (error) {
       if (error?.name !== 'AbortError') onError(new Error(describeFsError(error), { cause: error }));
-    } finally { state.card = null; renderCardBar(); updateHeading(); if (written) await loadCard(); }
+    } finally { endJob(); state.card = null; renderCardBar(); updateHeading(); if (written) await loadCard(); }
   }
 
   async function downloadCardFile(entry) {
     const client = files(); if (!client || state.card) return;
     const controller = new AbortController(); state.card = { label: `Reading ${entry.name}`, progress: 0, controller, size: entry.size, startedAt: performance.now() }; renderCardBar(); updateHeading();
+    const endJob = beginLinkJob(`Reading ${entry.name}`);
     try {
       const bytes = await client.download(entry.path, { signal: controller.signal, onProgress: (progress) => { if (state.card?.controller === controller) { state.card.progress = progress; renderCardBar(); } } });
       download(bytes, entry.name, 'audio/wav'); showResult(`Read ${entry.name}: ${describeTransfer(client.lastTransfer)}`);
     } catch (error) { if (error?.name !== 'AbortError') onError(new Error(describeFsError(error), { cause: error })); }
-    finally { if (state.card?.controller === controller) { state.card = null; renderCardBar(); updateHeading(); } }
+    finally { endJob(); if (state.card?.controller === controller) { state.card = null; renderCardBar(); updateHeading(); } }
   }
 
   // Reads a file from the card and puts it in the loaded list, ready to edit (trim, normalise, send back).
   async function openCardFile(entry, slot) {
     const client = files(); if (!client || state.card) return;
     const controller = new AbortController(); state.card = { label: `Reading ${entry.name}`, progress: 0, controller, size: entry.size, startedAt: performance.now() }; renderCardBar(); updateHeading();
-    let bytes = null;
+    let bytes = null; const endJob = beginLinkJob(`Reading ${entry.name}`);
     try {
       bytes = await client.download(entry.path, { signal: controller.signal, onProgress: (progress) => { if (state.card?.controller === controller) { state.card.progress = progress; renderCardBar(); } } });
     } catch (error) { if (error?.name !== 'AbortError') onError(new Error(describeFsError(error), { cause: error })); }
-    finally { if (state.card?.controller === controller) { state.card = null; renderCardBar(); updateHeading(); } }
+    finally { endJob(); if (state.card?.controller === controller) { state.card = null; renderCardBar(); updateHeading(); } }
     if (bytes) {
       showResult(`Read ${entry.name}: ${describeTransfer(client.lastTransfer)}`); state.importing = true; renderList();
       const file = new File([bytes], `SLOT${slot} ${entry.name}`, { type: 'audio/wav' });

@@ -1,5 +1,6 @@
 import { SdFilesClient, describeFsError, joinPath, parentPath, sanitizeFileName, validatePath } from '../model/sd_files.js';
 import { createStoreZip } from '../model/zip.js';
+import { beginLinkJob } from '../model/link_jobs.js';
 import { samplerFolders, breadcrumbs, cardSummary, entryRow, formatSize, sortEntries } from './sdcard_vm.js';
 
 function el(tag, className, text) { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; }
@@ -43,9 +44,10 @@ export function mountSdCard(root, { onError = (error) => console.error(error), o
 
   async function runTransfer(label, task) {
     const controller = new AbortController(); state.transfer = { label, progress: 0, controller }; render();
+    const endJob = beginLinkJob(label);
     try { await task(controller.signal, (progress) => { if (state.transfer?.controller === controller) { state.transfer.progress = progress; renderTransfer(); } }); return true; }
     catch (error) { if (error?.name !== 'AbortError') onError(new Error(describeFsError(error), { cause: error })); return false; }
-    finally { if (state.transfer?.controller === controller) state.transfer = null; }
+    finally { endJob(); if (state.transfer?.controller === controller) state.transfer = null; }
   }
 
   async function uploadFiles(list) {

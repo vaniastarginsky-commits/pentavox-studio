@@ -7,6 +7,7 @@ import { lastBackupInfo } from '../model/preset_backup.js';
 import { apiFetch, servedLocally } from '../site.js';
 import { describeBuild, loadLatestCloudBuild, localServerUp, runCloudBuild, runWebFlash } from '../build_flow.js';
 import { mountWaveResourcesEditor } from './wave_resources_editor.js';
+import { activeLinkJob, linkBusyMessage } from '../model/link_jobs.js';
 
 /** The confirm text before flashing: a new firmware can change the preset layout, which resets every stored slot. */
 export function flashWarning(backup = lastBackupInfo()) {
@@ -720,7 +721,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     if (!confirm(flashWarning())) return;
     try { const response = await apiFetch('/api/flash', { method: 'POST', body: '{}' }); const result = await response.json(); if (result.error) throw new Error(result.error); startPolling(); } catch (error) { onError(error); }
   });
-  dfu.addEventListener('click', async () => { try { const client = getClient(); if (!client) throw new Error('Connect the module first'); await client.reboot(1); startPolling(); } catch (error) { onError(error); } });
+  dfu.addEventListener('click', async () => { try { const client = getClient(); if (!client) throw new Error('Connect the module first'); if (activeLinkJob()) throw new Error(linkBusyMessage()); await client.reboot(1); startPolling(); } catch (error) { onError(error); } });
   poll();
   // A hosted page with no build server: the last cloud build is already published, so Flash is ready without building again.
   if (!servedLocally()) {
