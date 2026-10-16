@@ -44,9 +44,9 @@ const SIMPLE_ITEMS = Object.freeze([
   { id: 's2.3', short: 'change time', group: 'clock', control: 'slider', label: 'Tempo change time', hint: 'Transition time for Delay Time, Rate and clock-tempo changes. Large Glide jumps may take longer to keep playback moving forwards. Small clock wobble is ignored.', tempoTime: true },
   { id: 's0.2', group: 'voices', control: 'segmented', label: 'Voice mode', hint: 'Split: each Plaits voice plays independently; set its MIDI channel in CV routing > Notes. Poly: the three voices share the notes. Unison: one note plays all three.', labels: ['Split', 'Poly', 'Unison'] },
   { id: 's0.4', short: 'mute other', group: 'sampler', control: 'switch', label: 'Mute the other sampler', hint: 'While one sampler plays, the other is silenced.' },
-  { id: 's0.5', short: 'threshold', group: 'sampler', control: 'segmented', twoRows: true, label: 'Auto-record threshold', hint: 'What starts a recording after you arm it with B2: input level, the first clock, MIDI Start, reset, or Clock Loop. Clock Loop waits for a clocked downbeat established by J7 Reset/MIDI Start and then stops automatically after Record length.', labels: ['Off', '−40 dB', '−30 dB', '−20 dB', 'Clock', 'Start', 'Reset', 'Reset+Stop', 'Clock Loop'] },
+  { id: 's0.5', short: 'threshold', group: 'sampler', control: 'segmented', label: 'Auto-record threshold', hint: 'What starts a recording after you arm it with B2: the input level, or Clock Loop, which starts on the next downbeat (J7 Reset or MIDI Start) and stops by itself after Record length.', show: [0, 1, 2, 3, 8], labels: ['Off', '−40 dB', '−30 dB', '−20 dB', 'Clock', 'Start', 'Reset', 'Reset+Stop', 'Clock Loop'] },
   { id: 's2.5', short: 'sleep', group: 'voices', control: 'switch', label: 'Voice sleep', hint: 'On: a voice whose note has ended and whose sound has died away (about half a second of silence) stops being computed, which frees processor time. Off: every voice is always computed. If you ever hear a click when a voice wakes after silence, switch this off.' },
-  { id: 's2.4', short: 'record', group: 'sampler', control: 'segmented', twoRows: true, label: 'Record length', hint: 'Length of an automatic Clock Loop take, in bars. Arm with B2; J7 Reset establishes the next downbeat. A sample slot holds 30 s, so 16 bars need 128 BPM or faster, 8 bars 64 BPM.', labels: Array.from({ length: 16 }, (_, index) => `${index + 1}`) },
+  { id: 's2.4', short: 'record', group: 'sampler', control: 'segmented', label: 'Record length', hint: 'Length of a Clock Loop take, in bars. A sample slot holds 30 s: 16 bars need 128 BPM or faster, 8 bars 64 BPM.', show: [0, 1, 3, 7, 15], labels: Array.from({ length: 16 }, (_, index) => `${index + 1}`) },
 ]);
 
 const options = (labels, count = labels.length) => Array.from({ length: count }, (_, value) => ({ value, label: labels[value] ?? String(value) }));
@@ -137,7 +137,8 @@ export function settingsView(table) {
     } else if (spec.control === 'switch') {
       item.value = raw !== 0;
     } else {
-      item.options = options(spec.labels, Number(field.zones));
+      // `show` trims the choices to the ones worth offering; a value the module already holds (an old preset, a hand-set mode) stays visible.
+      item.options = options(spec.labels, Number(field.zones)).filter((option) => !spec.show || spec.show.includes(option.value) || option.value === raw);
       item.value = raw;
     }
     groups.get(spec.group).items.push(item);

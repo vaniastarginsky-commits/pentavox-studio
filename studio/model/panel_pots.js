@@ -48,8 +48,8 @@ export function builtInSummary(items) {
 // normal function while B1 is held. Mirrors ShiftTargetFor() in fw/include/pentavox/panel_shift.h.
 const SHIFT_BUILT_IN = Object.freeze({
   'Plaits 1': { 4: 'Attack', 5: 'Aux send' }, 'Plaits 2': { 4: 'Attack', 5: 'Aux send' }, 'Plaits 3': { 4: 'Attack', 5: 'Aux send' },
-  'Sampler 1': { 0: 'Tune (steps)', 1: 'Loop mode', 2: 'Loop length', 3: 'Resonance', 4: 'Attack', 5: 'Balance' },
-  'Sampler 2': { 0: 'Tune (steps)', 1: 'Loop mode', 2: 'Loop length', 3: 'Resonance', 4: 'Attack', 5: 'Balance' },
+  'Sampler 1': { 0: 'Tune (steps)', 1: 'Loop mode', 2: 'End (fine trim)', 3: 'Resonance', 4: 'Attack', 5: 'Balance' },
+  'Sampler 2': { 0: 'Tune (steps)', 1: 'Loop mode', 2: 'End (fine trim)', 3: 'Resonance', 4: 'Attack', 5: 'Balance' },
   'FX live': { 1: 'Filter resonance', 2: 'Phaser depth', 3: 'Phaser feedback', 4: 'Delay feedback', 5: 'Reverb size' },
   'FX granular': { 0: 'Scatter', 1: 'Pitch spread', 2: 'Reverse' },
   'FX tone': { 0: 'Phaser center', 1: 'Phaser CV amount' },
@@ -69,6 +69,6 @@ const MASTER_SHIFT_BUILT_IN = Object.freeze({
   'Plaits 1': { 0: 'Cross FM', 4: 'Attack', 5: 'Aux send' },
   'Plaits 2': { 0: 'Cross FM', 4: 'Attack', 5: 'Aux send' },
   'Master': { 0: 'Plaits 1 filter resonance', 1: 'Phaser rate', 2: 'Plaits 2 filter resonance', 3: 'Input Aux send', 4: 'Sampler filter resonance', 5: 'Drive' },
-  'Sampler 1': { 0: 'Tune (steps)', 2: 'Loop length', 4: 'Attack', 5: 'Aux send' },
+  'Sampler 1': { 0: 'Tune (steps)', 2: 'End (fine trim)', 4: 'Attack', 5: 'Aux send' },
   'FX live': { 0: 'Space', 1: 'Filter resonance', 2: 'Delay damp', 3: 'Reverb damp', 4: 'Delay feedback' },
 });
