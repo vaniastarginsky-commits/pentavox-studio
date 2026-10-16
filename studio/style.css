@@ -280,7 +280,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .sd-slot > header > div:first-child { display: grid; gap: 2px; }
 .sd-slot > header strong { font-family: var(--serif); font-size: 1rem; font-weight: 500; }
 .sd-slot > header span, .sd-slot > footer { color: var(--muted); font-size: .65rem; }
-.sd-files { min-height: 74px; max-height: 205px; overflow: auto; }
+.sd-files { min-height: 74px; max-height: 560px; overflow: auto; overscroll-behavior: contain; }
 .sd-file { min-width: 0; padding: 6px 9px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); font-size: .68rem; }
 .sd-file code { color: var(--text); font-weight: 700; }
 .sd-file span, .sd-empty { color: var(--muted); }
@@ -309,7 +309,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .sampler-files .sd-slots,
 .sampler-files .sd-slots.two-slots { width: 100%; grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .sampler-files .sd-slot > header { grid-template-columns: 1fr; align-items: start; }
-.sampler-files .sd-files { max-height: 160px; }
+.sampler-files .sd-files { max-height: 420px; }
 .sampler-files .sd-file { display: grid; align-items: start; }
 .sampler-files .sd-file-actions { justify-content: flex-start; flex-wrap: wrap; }
 .sampler-help { margin-top: 13px; padding: 12px 13px; border-radius: 10px; background: var(--surface-2); }
