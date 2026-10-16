@@ -98,3 +98,9 @@ button.primary, .primary { border-radius: 6px; }
 .page-head h2 { margin: 0; font-size: 1.05rem; }
 .page-head .crumb { color: var(--muted); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 760px) { .page-head .crumb { display: none; } }
+
+/* the logo is a light mark on a transparent background: dark on the light theme, as is on the dark theme */
+.side .brand-mark img { display: block; width: 100%; height: 100%; object-fit: contain; filter: invert(1); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .side .brand-mark img { filter: none; } }
+:root[data-theme="dark"] .side .brand-mark img { filter: none; }
+.side .brand-mark { width: 38px; height: 30px; }
