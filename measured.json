@@ -1,0 +1,22 @@
+{
+ "set1": {
+  "axi_used": 416088,
+  "margin": 59048,
+  "recipe_hash": "60da339cfa39"
+ },
+ "set2": {
+  "axi_used": 412728,
+  "margin": 62408,
+  "recipe_hash": "2c4a0ecfeee5"
+ },
+ "set3": {
+  "axi_used": 433848,
+  "margin": 41288,
+  "recipe_hash": "99a05cec0696"
+ },
+ "stock": {
+  "axi_used": 472472,
+  "margin": 2664,
+  "recipe_hash": "9d00a20d49b8"
+ }
+}

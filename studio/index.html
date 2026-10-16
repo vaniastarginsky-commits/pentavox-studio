@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <script>try { const t = localStorage.getItem('pentavox.studio.theme'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pentavox Studio</title>
+  <link rel="icon" type="image/png" href="./assets/favicon.png">
+  <link rel="stylesheet" href="./style.css?v=f36054b">
+  <link rel="stylesheet" href="./top.css?v=f36054b">
+  <link rel="stylesheet" href="./empty.css?v=f36054b">
+  <link rel="stylesheet" href="./curve.css?v=f36054b">
+  <link rel="stylesheet" href="./dx7.css?v=f36054b">
+  <link rel="stylesheet" href="./wave_resources.css?v=f36054b">
+  <link rel="stylesheet" href="./manual.css?v=f36054b">
+  <link rel="stylesheet" href="./dock.css?v=f36054b">
+  <link rel="stylesheet" href="./console.css?v=f36054b">
+  <link rel="stylesheet" href="./console_engines.css?v=f36054b">
+  <link rel="stylesheet" href="./console_sampler.css?v=f36054b">
+  <link rel="stylesheet" href="./console_control.css?v=f36054b">
+</head>
+<body>
+  <script>
+    // Opened by double-click (file://): the module scripts are blocked there and the page stays empty. Say so.
+    if (location.protocol === 'file:') document.write('<div style="font:16px/1.5 system-ui;max-width:42rem;margin:12vh auto;padding:0 1rem;color:#ddd">'
+      + '<h1 style="font-size:1.4rem">Studio needs its local server</h1>'
+      + '<p>This page was opened as a file, so the browser blocks its scripts. Start the server from the project folder:</p>'
+      + '<pre style="background:#000;padding:.8rem;border-radius:6px">./studio/serve.sh</pre>'
+      + '<p>It opens Studio in the browser and prints the address (http://127.0.0.1:8766/studio/index.html, or the next free port).</p></div>');
+  </script>
+  <div class="shell">
+  <aside class="side" aria-label="Sections">
+    <a class="brand" href="./index.html" aria-label="Pentavox Studio"><span class="brand-mark" aria-hidden="true"><img src="./assets/logo.png" alt="" width="34" height="26"></span><b>Studio</b></a>
+    <nav class="tabs" aria-label="Sections">
+      <h6>Sound</h6>
+      <button type="button" class="active" aria-current="page" data-tab="palette">Engines</button>
+      <button type="button" class="sub" data-tab="dx7">DX7 banks</button>
+      <button type="button" class="sub" data-tab="wavetable">Wave tables</button>
+      <button type="button" class="sub" data-tab="terrain">Wave terrain</button>
+      <button type="button" data-tab="sampler">Sampler</button>
+      <button type="button" data-tab="presets">Presets</button>
+      <h6>Control</h6>
+      <button type="button" data-tab="routing">CV routing</button>
+      <button type="button" data-tab="midi">MIDI routing</button>
+      <button type="button" data-tab="locks">Knob record</button>
+      <h6>Module</h6>
+      <button type="button" data-tab="settings">Settings</button>
+      <button type="button" id="dock-toggle" class="dock-toggle" aria-controls="panel-dock" aria-expanded="false" title="Show the front panel next to the page">Front panel</button>
+      <button type="button" data-tab="manual" class="tab-help" title="Manual" aria-label="Manual">Manual</button>
+    </nav>
+  </aside>
+  <div class="content">
+  <header class="app-header">
+    <div class="page-head"><h2 id="page-title">Engines</h2><span id="page-crumb" class="crumb">Two voices, three banks of eight</span></div>
+    <div class="connection-bar">
+      <div id="session-footer" class="session-footer" hidden></div>
+      <span id="connection-status" class="connection-status" title="Port busy? Close the official programmer.">Module not connected</span>
+      <button id="connect-button" type="button" class="primary">Connect</button>
+      <button id="demo-button" type="button" title="Explore Studio on a simulated module, no hardware needed">Demo</button>
+      <button id="theme-toggle" type="button" class="theme-toggle" aria-label="Toggle theme">☾</button>
+    </div>
+  </header>
+  <main>
+    <div id="unsupported-banner" class="banner warning" role="status" hidden><span id="unsupported-text"></span> <button type="button" id="unsupported-demo">Open Demo</button></div>
+    <div id="demo-banner" class="banner" role="status" hidden>Demo mode: a simulated module. Nothing is sent to hardware and edits are not saved.</div>
+    <div id="disconnect-banner" class="banner warning" role="alert" hidden><span id="disconnect-text">The module is disconnected, so edits are not sent to it.</span> <button type="button" id="banner-reconnect">Reconnect</button></div>
+    <section id="dx7-tab" class="tab-panel" hidden></section>
+    <section id="wavetable-tab" class="tab-panel" hidden></section>
+    <section id="terrain-tab" class="tab-panel" hidden></section>
+    <section id="sampler-tab" class="tab-panel" hidden><div id="sampler-root"></div></section>
+    <section id="palette-tab" class="tab-panel palette-panel"><div id="palette-root"></div></section>
+    <section id="routing-tab" class="tab-panel" hidden><h1 class="page-title">CV routing</h1><div id="routing-root" class="disconnected"><p>Connect Pentavox to see its routes.</p></div></section>
+    <section id="midi-tab" class="tab-panel" hidden><h1 class="page-title">MIDI routing</h1><div id="midi-root" class="disconnected"><p>Connect Pentavox to route MIDI controllers.</p></div></section>
+    <section id="locks-tab" class="tab-panel" hidden><div id="locks-root" class="lock-root"></div></section>
+    <section id="settings-tab" class="tab-panel" hidden><h1 class="page-title">Settings</h1><div id="settings-root" class="disconnected"><p>Connect Pentavox to see the module settings.</p></div></section>
+    <section id="presets-tab" class="tab-panel" hidden><h1 class="page-title">Presets</h1><div id="presets-root" class="disconnected"><p>Connect Pentavox to load and save presets.</p></div></section>
+    <section id="manual-tab" class="tab-panel" hidden><div id="manual-root"><p>Loading the manual…</p></div></section>
+  </main>
+  </div>
+  </div>
+  <aside id="panel-dock" class="panel-dock" aria-label="Front panel" hidden>
+    <header class="dock-head"><h2>Front panel</h2><button type="button" class="dock-close" aria-label="Close the front panel">Close</button></header>
+    <div class="dock-body"><p class="dock-note">Loading the panel…</p></div>
+  </aside>
+  <dialog id="sdcard-dialog" class="sd-dialog" aria-label="SD card files">
+    <button type="button" class="sd-dialog-close" aria-label="Close">Close</button>
+    <div id="sdcard-root"></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="importmap">{"imports": {"./app.js": "./app.js?v=f36054b", "./audition.js": "./audition.js?v=f36054b", "./audition_dx7.js": "./audition_dx7.js?v=f36054b", "./build_flow.js": "./build_flow.js?v=f36054b", "./cloud_build.js": "./cloud_build.js?v=f36054b", "./hostlink/client.js": "./hostlink/client.js?v=f36054b", "./hostlink/frame.js": "./hostlink/frame.js?v=f36054b", "./hostlink/transport_sim.js": "./hostlink/transport_sim.js?v=f36054b", "./hostlink/transport_sim_fs.js": "./hostlink/transport_sim_fs.js?v=f36054b", "./hostlink/transport_webserial.js": "./hostlink/transport_webserial.js?v=f36054b", "./model/blob.js": "./model/blob.js?v=f36054b", "./model/break_embed.js": "./model/break_embed.js?v=f36054b", "./model/break_engine.js": "./model/break_engine.js?v=f36054b", "./model/break_generators.js": "./model/break_generators.js?v=f36054b", "./model/break_grooves.js": "./model/break_grooves.js?v=f36054b", "./model/break_pattern.js": "./model/break_pattern.js?v=f36054b", "./model/break_presets.js": "./model/break_presets.js?v=f36054b", "./model/break_preview.js": "./model/break_preview.js?v=f36054b", "./model/break_repeat.js": "./model/break_repeat.js?v=f36054b", "./model/capabilities.js": "./model/capabilities.js?v=f36054b", "./model/classify.js": "./model/classify.js?v=f36054b", "./model/curve_draft.js": "./model/curve_draft.js?v=f36054b", "./model/curve_library.js": "./model/curve_library.js?v=f36054b", "./model/curve_points.js": "./model/curve_points.js?v=f36054b", "./model/destinations.js": "./model/destinations.js?v=f36054b", "./model/dx7_banks.js": "./model/dx7_banks.js?v=f36054b", "./model/dx7_catalog.js": "./model/dx7_catalog.js?v=f36054b", "./model/dx7_sd.js": "./model/dx7_sd.js?v=f36054b", "./model/dx7_store.js": "./model/dx7_store.js?v=f36054b", "./model/dx7_syx.js": "./model/dx7_syx.js?v=f36054b", "./model/key_map.js": "./model/key_map.js?v=f36054b", "./model/knob_locks.js": "./model/knob_locks.js?v=f36054b", "./model/merge.js": "./model/merge.js?v=f36054b", "./model/midi_learn.js": "./model/midi_learn.js?v=f36054b", "./model/module_set.js": "./model/module_set.js?v=f36054b", "./model/onsets.js": "./model/onsets.js?v=f36054b", "./model/palette.js": "./model/palette.js?v=f36054b", "./model/panel_pots.js": "./model/panel_pots.js?v=f36054b", "./model/panel_pots_data.js": "./model/panel_pots_data.js?v=f36054b", "./model/potmap.js": "./model/potmap.js?v=f36054b", "./model/preset_backup.js": "./model/preset_backup.js?v=f36054b", "./model/rotate.js": "./model/rotate.js?v=f36054b", "./model/routes.js": "./model/routes.js?v=f36054b", "./model/sample_upload.js": "./model/sample_upload.js?v=f36054b", "./model/sd_files.js": "./model/sd_files.js?v=f36054b", "./model/session.js": "./model/session.js?v=f36054b", "./model/settings.js": "./model/settings.js?v=f36054b", "./model/slices.js": "./model/slices.js?v=f36054b", "./model/tempo_hint.js": "./model/tempo_hint.js?v=f36054b", "./model/timestretch.js": "./model/timestretch.js?v=f36054b", "./model/voices.js": "./model/voices.js?v=f36054b", "./model/wav.js": "./model/wav.js?v=f36054b", "./model/wave_edit.js": "./model/wave_edit.js?v=f36054b", "./model/wave_resources.js": "./model/wave_resources.js?v=f36054b", "./model/zip.js": "./model/zip.js?v=f36054b", "./site.js": "./site.js?v=f36054b", "./ui/app_controller.js": "./ui/app_controller.js?v=f36054b", "./ui/break_panel.js": "./ui/break_panel.js?v=f36054b", "./ui/connection_empty.js": "./ui/connection_empty.js?v=f36054b", "./ui/curve_editor.js": "./ui/curve_editor.js?v=f36054b", "./ui/dx7_editor.js": "./ui/dx7_editor.js?v=f36054b", "./ui/dx7_editor_vm.js": "./ui/dx7_editor_vm.js?v=f36054b", "./ui/engine_set.js": "./ui/engine_set.js?v=f36054b", "./ui/knob_locks.js": "./ui/knob_locks.js?v=f36054b", "./ui/lcd.js": "./ui/lcd.js?v=f36054b", "./ui/manual.js": "./ui/manual.js?v=f36054b", "./ui/manual_vm.js": "./ui/manual_vm.js?v=f36054b", "./ui/midi_routing.js": "./ui/midi_routing.js?v=f36054b", "./ui/palette.js": "./ui/palette.js?v=f36054b", "./ui/palette_vm.js": "./ui/palette_vm.js?v=f36054b", "./ui/panel_dock.js": "./ui/panel_dock.js?v=f36054b", "./ui/panel_drawing.js": "./ui/panel_drawing.js?v=f36054b", "./ui/panel_live.js": "./ui/panel_live.js?v=f36054b", "./ui/popover_place.js": "./ui/popover_place.js?v=f36054b", "./ui/potmap.js": "./ui/potmap.js?v=f36054b", "./ui/potmap_vm.js": "./ui/potmap_vm.js?v=f36054b", "./ui/presets.js": "./ui/presets.js?v=f36054b", "./ui/routing.js": "./ui/routing.js?v=f36054b", "./ui/routing_controller.js": "./ui/routing_controller.js?v=f36054b", "./ui/routing_vm.js": "./ui/routing_vm.js?v=f36054b", "./ui/sampler.js": "./ui/sampler.js?v=f36054b", "./ui/sampler_vm.js": "./ui/sampler_vm.js?v=f36054b", "./ui/sdcard.js": "./ui/sdcard.js?v=f36054b", "./ui/sdcard_vm.js": "./ui/sdcard_vm.js?v=f36054b", "./ui/session_footer.js": "./ui/session_footer.js?v=f36054b", "./ui/settings.js": "./ui/settings.js?v=f36054b", "./ui/settings_vm.js": "./ui/settings_vm.js?v=f36054b", "./ui/slice_bar.js": "./ui/slice_bar.js?v=f36054b", "./ui/voices.js": "./ui/voices.js?v=f36054b", "./ui/voices_vm.js": "./ui/voices_vm.js?v=f36054b", "./ui/wave_editor.js": "./ui/wave_editor.js?v=f36054b", "./ui/wave_resources_editor.js": "./ui/wave_resources_editor.js?v=f36054b", "./webdfu.js": "./webdfu.js?v=f36054b"}}</script>
+  <script type="module" src="./app.js?v=f36054b"></script>
+</body>
+</html>

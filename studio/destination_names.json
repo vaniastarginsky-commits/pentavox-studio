@@ -1,0 +1,370 @@
+{
+  "None": {
+    "group": "Global",
+    "name": "— none —"
+  },
+  "Voice1Harmonics": {
+    "group": "Plaits 1",
+    "name": "Harmonics"
+  },
+  "Voice1Timbre": {
+    "group": "Plaits 1",
+    "name": "Timbre"
+  },
+  "Voice1Morph": {
+    "group": "Plaits 1",
+    "name": "Morph"
+  },
+  "Voice1Decay": {
+    "group": "Plaits 1",
+    "name": "Decay"
+  },
+  "Voice1Level": {
+    "group": "Plaits 1",
+    "name": "Level"
+  },
+  "Voice1Balance": {
+    "group": "Plaits 1",
+    "name": "Aux send"
+  },
+  "Voice1Attack": {
+    "group": "Plaits 1",
+    "name": "Attack"
+  },
+  "Voice2Harmonics": {
+    "group": "Plaits 2",
+    "name": "Harmonics"
+  },
+  "Voice2Timbre": {
+    "group": "Plaits 2",
+    "name": "Timbre"
+  },
+  "Voice2Morph": {
+    "group": "Plaits 2",
+    "name": "Morph"
+  },
+  "Voice2Decay": {
+    "group": "Plaits 2",
+    "name": "Decay"
+  },
+  "Voice2Level": {
+    "group": "Plaits 2",
+    "name": "Level"
+  },
+  "Voice2Balance": {
+    "group": "Plaits 2",
+    "name": "Aux send"
+  },
+  "Voice2Attack": {
+    "group": "Plaits 2",
+    "name": "Attack"
+  },
+  "Voice3Harmonics": {
+    "group": "Plaits 3",
+    "name": "Harmonics"
+  },
+  "Voice3Timbre": {
+    "group": "Plaits 3",
+    "name": "Timbre"
+  },
+  "Voice3Morph": {
+    "group": "Plaits 3",
+    "name": "Morph"
+  },
+  "Voice3Decay": {
+    "group": "Plaits 3",
+    "name": "Decay"
+  },
+  "Voice3Level": {
+    "group": "Plaits 3",
+    "name": "Level"
+  },
+  "Voice3Balance": {
+    "group": "Plaits 3",
+    "name": "Aux send"
+  },
+  "Voice3Attack": {
+    "group": "Plaits 3",
+    "name": "Attack"
+  },
+  "Sampler1Start": {
+    "group": "Sampler 1",
+    "name": "Start"
+  },
+  "Sampler1End": {
+    "group": "Sampler 1",
+    "name": "End"
+  },
+  "Sampler1Cutoff": {
+    "group": "Sampler 1",
+    "name": "Cutoff"
+  },
+  "Sampler1Resonance": {
+    "group": "Sampler 1",
+    "name": "Resonance"
+  },
+  "Sampler1Attack": {
+    "group": "Sampler 1",
+    "name": "Attack"
+  },
+  "Sampler1Decay": {
+    "group": "Sampler 1",
+    "name": "Decay"
+  },
+  "Sampler1Level": {
+    "group": "Sampler 1",
+    "name": "Level"
+  },
+  "Sampler1Balance": {
+    "group": "Sampler 1",
+    "name": "Aux send"
+  },
+  "Sampler1Transpose": {
+    "group": "Sampler 1",
+    "name": "Transpose"
+  },
+  "Sampler2Start": {
+    "group": "Sampler 2",
+    "name": "Start"
+  },
+  "Sampler2End": {
+    "group": "Sampler 2",
+    "name": "End"
+  },
+  "Sampler2Cutoff": {
+    "group": "Sampler 2",
+    "name": "Cutoff"
+  },
+  "Sampler2Resonance": {
+    "group": "Sampler 2",
+    "name": "Resonance"
+  },
+  "Sampler2Attack": {
+    "group": "Sampler 2",
+    "name": "Attack"
+  },
+  "Sampler2Decay": {
+    "group": "Sampler 2",
+    "name": "Decay"
+  },
+  "Sampler2Level": {
+    "group": "Sampler 2",
+    "name": "Level"
+  },
+  "Sampler2Balance": {
+    "group": "Sampler 2",
+    "name": "Aux send"
+  },
+  "Sampler2Transpose": {
+    "group": "Sampler 2",
+    "name": "Transpose"
+  },
+  "FxStutterRatchet": {
+    "group": "FX",
+    "name": "Stutter ratchet"
+  },
+  "FxStutterDecay": {
+    "group": "FX",
+    "name": "Stutter decay"
+  },
+  "FxStutterChance": {
+    "group": "FX",
+    "name": "Stutter chance"
+  },
+  "FxTapeRate": {
+    "group": "FX",
+    "name": "Tape rate"
+  },
+  "FxTapeMix": {
+    "group": "FX",
+    "name": "Tape mix"
+  },
+  "FxFilterPosition": {
+    "group": "FX",
+    "name": "Filter position"
+  },
+  "FxReverbSize": {
+    "group": "FX",
+    "name": "Reverb size"
+  },
+  "FxReverbDamp": {
+    "group": "FX",
+    "name": "Reverb damp"
+  },
+  "FxReverbMix": {
+    "group": "FX",
+    "name": "Reverb mix"
+  },
+  "FxGranularDensity": {
+    "group": "FX",
+    "name": "Granular density"
+  },
+  "FxGranularSize": {
+    "group": "FX",
+    "name": "Granular size"
+  },
+  "FxGranularPosition": {
+    "group": "FX",
+    "name": "Granular position"
+  },
+  "FxGranularScatter": {
+    "group": "FX",
+    "name": "Granular scatter"
+  },
+  "FxGranularPitch": {
+    "group": "FX",
+    "name": "Granular pitch"
+  },
+  "FxGranularPitchSpread": {
+    "group": "FX",
+    "name": "Granular pitch spread"
+  },
+  "FxGranularFeedback": {
+    "group": "FX",
+    "name": "Granular feedback"
+  },
+  "FxGranularMix": {
+    "group": "FX",
+    "name": "Granular mix"
+  },
+  "FxGranularReverse": {
+    "group": "FX",
+    "name": "Granular reverse"
+  },
+  "FxChebAmount": {
+    "group": "FX",
+    "name": "Chebyshev amount"
+  },
+  "FxFoldAmount": {
+    "group": "FX",
+    "name": "Fold amount"
+  },
+  "FxFilterResonance": {
+    "group": "FX",
+    "name": "Filter resonance"
+  },
+  "FxPhaserRate": {
+    "group": "FX",
+    "name": "Phaser rate"
+  },
+  "FxPhaserDepth": {
+    "group": "FX",
+    "name": "Phaser depth"
+  },
+  "FxPhaserCenter": {
+    "group": "FX",
+    "name": "Phaser center"
+  },
+  "FxPhaserFeedback": {
+    "group": "FX",
+    "name": "Phaser feedback"
+  },
+  "FxPhaserMix": {
+    "group": "FX",
+    "name": "Phaser mix"
+  },
+  "FxPhaserCvAtten": {
+    "group": "FX",
+    "name": "Phaser CV amount"
+  },
+  "GlobalInputLevel": {
+    "group": "Global",
+    "name": "Input level"
+  },
+  "Voice1Model": {
+    "group": "Plaits 1",
+    "name": "Model"
+  },
+  "Voice2Model": {
+    "group": "Plaits 2",
+    "name": "Model"
+  },
+  "Voice3Model": {
+    "group": "Plaits 3",
+    "name": "Model"
+  },
+  "Sampler1Slot": {
+    "group": "Sampler 1",
+    "name": "Slot"
+  },
+  "Sampler2Slot": {
+    "group": "Sampler 2",
+    "name": "Slot"
+  },
+  "FxStutterTrigger": {
+    "group": "FX",
+    "name": "Stutter trigger"
+  },
+  "FxStutterHold": {
+    "group": "FX",
+    "name": "Stutter hold"
+  },
+  "FxDelayTime": {
+    "group": "FX",
+    "name": "Delay time"
+  },
+  "FxDelayFeedback": {
+    "group": "FX",
+    "name": "Delay feedback"
+  },
+  "FxDelayMix": {
+    "group": "FX",
+    "name": "Delay mix"
+  },
+  "Voice1Filter": {
+    "group": "Plaits 1",
+    "name": "Filter"
+  },
+  "Voice2Filter": {
+    "group": "Plaits 2",
+    "name": "Filter"
+  },
+  "Voice1FilterRes": {
+    "group": "Plaits 1",
+    "name": "Filter resonance"
+  },
+  "Voice2FilterRes": {
+    "group": "Plaits 2",
+    "name": "Filter resonance"
+  },
+  "GlobalOutputLevel": {
+    "group": "Global",
+    "name": "Output level"
+  },
+  "GlobalInputAux": {
+    "group": "Global",
+    "name": "Input to aux"
+  },
+  "FxDrive": {
+    "group": "FX",
+    "name": "Drive (Chebyshev, then fold)"
+  },
+  "Voice1XMod": {
+    "group": "Plaits 1",
+    "name": "Cross FM from Plaits 2"
+  },
+  "Voice2XMod": {
+    "group": "Plaits 2",
+    "name": "Cross FM from Plaits 1"
+  },
+  "FxReverbShimmer": {
+    "group": "FX",
+    "name": "Reverb shimmer (retired)"
+  },
+  "FxDelayDamp": {
+    "group": "FX",
+    "name": "Delay damp"
+  },
+  "FxDelaySpace": {
+    "group": "FX",
+    "name": "Delay space"
+  },
+  "FxDelayReverse": {
+    "group": "FX",
+    "name": "Delay reverse"
+  },
+  "FxDelayPingPong": {
+    "group": "FX",
+    "name": "Delay ping-pong"
+  }
+}
