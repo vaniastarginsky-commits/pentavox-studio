@@ -104,3 +104,7 @@ button.primary, .primary { border-radius: 6px; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .side .brand-mark img { filter: none; } }
 :root[data-theme="dark"] .side .brand-mark img { filter: none; }
 .side .brand-mark { width: 38px; height: 30px; }
+
+/* toast: inverse of the page (dark bar on light theme, light bar on dark theme), so its text is always readable */
+.toast { background: var(--text); color: var(--bg); }
+.toast.error { background: color-mix(in srgb, var(--bad) 28%, var(--text)); color: var(--bg); border: 1px solid var(--bad); }
