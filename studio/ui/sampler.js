@@ -389,6 +389,9 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   // ---------------------------------------------------------------- live SD card panel
   function renderPlan() {
     const currentPlan = plan(); const checked = validation(); const groups = mergeSamplerSlots(currentPlan, state.cardFiles, slotCount()); const defaults = nextStartNumbers(state.cardFiles, slotCount());
+    // Rebuilding the panel collapses the page for a moment, which used to throw the scroll position to the top.
+    const pageX = window.scrollX, pageY = window.scrollY; const listScroll = [...planPanel.querySelectorAll('.sd-files')].map((node) => node.scrollTop);
+    const focusedConfirm = planPanel.contains(document.activeElement) && document.activeElement.dataset?.confirmFor;
     planPanel.replaceChildren();
     const top = el('div', 'sd-live-head'); const title = el('div', 'sd-live-title'); title.append(el('h2', '', 'SD card'));
     const cardState = el('div', 'sd-live-state');
@@ -409,13 +412,20 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
       for (const entry of group.existing) {
         const row = el('div', 'sd-file card-file'); const info = el('div', 'sd-file-info'); info.append(el('code', '', entry.name), el('span', '', formatSize(entry.size)));
         const fileActions = el('div', 'sd-file-actions'); const edit = button('Edit', 'quiet-button'); edit.title = 'Read this file from the card into the list above for editing'; edit.disabled = Boolean(state.card); edit.addEventListener('click', () => openCardFile(entry, group.slot)); info.classList.add('openable'); info.title = 'Click to edit this file'; info.addEventListener('click', () => { if (!state.card) openCardFile(entry, group.slot); }); const get = button('Download', 'quiet-button'); get.disabled = Boolean(state.card); get.addEventListener('click', () => downloadCardFile(entry));
-        const confirming = state.confirming === entry.path; const remove = button(confirming ? 'Really delete?' : 'Delete', `quiet-button${confirming ? ' danger' : ''}`); remove.disabled = Boolean(state.card) || entry.locked; remove.addEventListener('click', () => { if (confirming) { state.confirming = null; deleteCardFile(entry); } else { state.confirming = entry.path; renderPlan(); } }); fileActions.append(edit, get, remove); row.append(info, fileActions); rows.append(row);
+        const confirming = state.confirming === entry.path;
+        const remove = button(confirming ? 'Delete?' : 'Delete', `quiet-button${confirming ? ' danger' : ''}`); remove.disabled = Boolean(state.card) || entry.locked; remove.dataset.confirmFor = entry.path;
+        remove.addEventListener('click', () => { if (confirming) { state.confirming = null; deleteCardFile(entry); } else { state.confirming = entry.path; renderPlan(); } });
+        if (confirming) { const cancel = button('Cancel', 'quiet-button'); cancel.addEventListener('click', () => { state.confirming = null; renderPlan(); }); fileActions.append(remove, cancel); } else fileActions.append(edit, get, remove);
+        row.append(info, fileActions); rows.append(row);
       }
       for (const item of group.planned) { const row = el('div', 'sd-file planned-file'); const info = el('div', 'sd-file-info'); info.append(el('code', '', item.fileName), el('span', '', seconds(item.trimEnd - item.trimStart))); row.append(info, el('em', '', 'to send')); rows.append(row); }
       if (!group.existing.length && !group.planned.length) rows.append(el('span', 'sd-empty', state.cardInfo ? 'No WAV files' : 'No files to show'));
       const cardBytes = group.existing.reduce((sum, entry) => sum + entry.size, 0); column.append(rows, el('footer', '', `${group.existing.length} on card · ${formatSize(cardBytes)} · ${group.planned.length} to send`)); slots.append(column);
     }); planPanel.append(slots);
     if (!checked.valid) { const warnings = el('div', 'sampler-warnings'); for (const error of checked.errors) warnings.append(el('p', '', error)); planPanel.append(warnings); }
+    planPanel.querySelectorAll('.sd-files').forEach((node, index) => { node.scrollTop = listScroll[index] ?? 0; });
+    window.scrollTo(pageX, pageY);
+    if (focusedConfirm) planPanel.querySelector(`[data-confirm-for="${CSS.escape(focusedConfirm)}"]`)?.focus({ preventScroll: true });
   }
 
   // Everything except the editor itself. Coalesced, so a handle drag costs one pass per frame.
