@@ -108,3 +108,47 @@ button.primary, .primary { border-radius: 6px; }
 /* toast: inverse of the page (dark bar on light theme, light bar on dark theme), so its text is always readable */
 .toast { background: var(--text); color: var(--bg); }
 .toast.error { background: color-mix(in srgb, var(--bad) 28%, var(--text)); color: var(--bg); border: 1px solid var(--bad); }
+
+/* ---- phones: one compact top row, small banners, no repeated titles ---- */
+@media (max-width: 640px) {
+  body { font-size: 13.5px; }
+  .content > .app-header { min-height: 0; padding: 6px 10px; gap: 6px; justify-content: flex-start; }
+  .page-head { display: none; }
+  .content > .app-header .connection-bar { flex-wrap: wrap; justify-content: flex-start; width: 100%; gap: 5px 6px; padding-block: 1px; }
+  .connection-bar .connection-status { margin-left: auto; }
+  .connection-bar #session-footer, .connection-bar .session-footer { position: static; display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; padding: 0; background: none; border: 0; box-shadow: none; backdrop-filter: none; }
+  .connection-bar button, .connection-bar select { padding: 4px 9px; font-size: .78rem; min-height: 30px; }
+  .connection-bar .dirty-badge { font-size: .72rem; padding: 2px 8px; }
+  .connection-bar .connection-status { font-size: .74rem; padding: 3px 9px 3px 7px; white-space: nowrap; }
+  .connection-bar .theme-toggle { width: 30px; height: 30px; padding: 0; }
+  .content > main > .banner { margin: 6px 10px 0; padding: 6px 10px; min-height: 0; font-size: 12px; line-height: 1.35; gap: 8px; border-radius: 8px; }
+  .content > main > .banner button { padding: 3px 9px; font-size: 12px; white-space: nowrap; }
+  .content > main > .tab-panel { padding: 12px 10px 28px; }
+  .side { padding: 4px 6px; }
+  .side .brand { padding: 0 4px; }
+  .side .brand-mark { width: 30px; height: 24px; }
+  .side .tabs button { padding: 7px 10px; font-size: .8rem; }
+  .side .tabs h6 { display: none; }
+  .side .tabs button.sub { padding-left: 10px; }
+}
+.content { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 640px) {
+  .content > .app-header #connect-button, .content > .app-header #demo-button, .content > .app-header .connection-bar select, .content > .app-header .session-footer button { min-height: 30px; min-width: 0; padding: 4px 11px; font-size: .78rem; }
+  .content > .app-header .connection-status { gap: 6px; padding: 3px 10px; }
+  .content > .app-header .connection-status::before { flex: none; }
+  .content > .app-header .connection-bar { align-items: center; }
+}
+@media (max-width: 640px) {
+  .connection-bar .session-footer button:not(.primary):disabled { display: none; }
+  .content > .app-header .connection-status { font-size: 0; padding: 3px 6px; margin-left: 0; }
+  .content > .app-header .connection-status::before { margin: 0; }
+  .content > main > .banner { padding: 4px 9px; font-size: 11.5px; margin-top: 5px; }
+  .content > main > .banner::before { display: none; }
+}
+@media (max-width: 640px) {
+  .content > .app-header .connection-bar { gap: 4px; flex-wrap: nowrap; }
+  .content > .app-header .connection-bar select { padding: 3px 4px; font-size: .74rem; max-width: 78px; }
+  .content > .app-header .session-footer button, .content > .app-header #connect-button { padding: 4px 8px; }
+  .content > .app-header .connection-status { padding: 3px 4px; }
+  .content > .app-header .theme-toggle { margin-left: auto; }
+}

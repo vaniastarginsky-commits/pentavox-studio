@@ -228,3 +228,13 @@
   .eg-lib-row { grid-template-columns: 34px minmax(0, 1fr) auto 28px 26px; }
   .eg-lib-row .eg-use { display: none; }
 }
+
+/* ---- phones: Engines ---- */
+@media (max-width: 640px) {
+  .eg-legend { display: none; }
+  .eg-stats { gap: 4px; }
+  .eg-stats .eg-chip, .eg-chips .eg-chip { font-size: 11px; padding: 2px 7px; }
+  .eg-status { padding: 6px 10px; gap: 4px 10px; }
+  .eg-meter small { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .eg-status button { padding: 5px 10px; font-size: 12px; }
+}

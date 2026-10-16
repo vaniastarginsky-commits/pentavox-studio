@@ -363,3 +363,31 @@
 .cc-sbody { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 14px; }
 .cc-sbody > .cc-rlist { flex: 1 1 100%; }
 .cc-sbody > p { margin: 0; align-self: center; }
+
+/* ---- phones: DX7 banks and the other editor pages ---- */
+@media (max-width: 640px) {
+  .dx7-dialog.as-page .dx7-head { padding: 10px 12px; gap: 8px; }
+  .dx7-title h2 { font-size: 1.15rem; }
+  .dx7-sub { display: none; }
+  .dx7-head-actions { gap: 6px; }
+  .dx7-head-actions button, .dx7-head-actions .dx7-ghost { padding: .3rem .7rem; font-size: .78rem; }
+  .dx7-dialog.as-page .dx7-body { padding: 8px 10px 12px; gap: 10px; }
+  .dx7-toolbar { gap: 6px; }
+  .dx7-import, .dx7-toolbar .dx7-ghost { white-space: nowrap; }
+  .dx7-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .dx7-chips::-webkit-scrollbar { display: none; }
+  .dx7-chip { flex: none; }
+  .dx7-range { white-space: nowrap; font-size: .78rem; }
+  .dx7-meta { flex-wrap: wrap; }
+  .dx7-hint { display: none; }
+  .dx7-dialog.as-page .dx7-table { max-height: 60vh; min-height: 240px; }
+  .dx7-tabs { gap: 6px; }
+}
+@media (max-width: 640px) {
+  .dx7-row { grid-template-columns: 28px auto minmax(0, 1fr) 28px; }
+  .dx7-row .dx7-cat { display: block; } .dx7-row .dx7-tags { display: flex; }
+}
+@media (max-width: 640px) {
+  .cc-page > .cc-head h2, #presets-root .page-title, #locks-root .lock-intro h2 { font-size: 17px; }
+  .cc-lead, #presets-root .page-hint, #locks-root .lock-lede { font-size: 12.5px; line-height: 1.4; }
+}
