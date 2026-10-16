@@ -284,6 +284,7 @@ assetsPromise.then((assets) => {
     measured: assets.measured,
     help: assets.help,
     getVoiceTable: () => session?.voices,
+    isDemo: () => demoMode,   // the simulated module's set is not a real mismatch
     getController: () => controller,
     getClient: () => client,
     onEditBanks: (letter) => dx7Editor.open(letter),

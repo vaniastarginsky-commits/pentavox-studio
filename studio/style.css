@@ -465,6 +465,7 @@ input[type="search"], .library-tools > input { background: var(--surface); color
 .sb-toggle input { accent-color: var(--m-s1); }
 .sb-status { color: var(--muted); font-size: .76rem; font-variant-numeric: tabular-nums; }
 @media (max-width: 1199px) { .sampler-main { grid-template-columns: 220px minmax(0, 1fr); } }
+@media (max-width: 760px) { .sampler-main { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .we-tip { transition: none; } }
 
 /* SD card tab */

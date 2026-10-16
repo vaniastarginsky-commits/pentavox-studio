@@ -116,3 +116,6 @@
 @media (prefers-reduced-motion: reduce) {
   .manual *, .manual *::before { transition: none !important; }
 }
+
+/* A long unbroken string (a file path, a code) wraps instead of widening the page on a phone. */
+.manual p, .manual li, .manual dd { overflow-wrap: anywhere; }

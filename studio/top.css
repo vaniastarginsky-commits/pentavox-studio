@@ -717,3 +717,20 @@ main > .banner { margin: 14px 24px 0; }
 /* The module's engine set differs from the copy Studio keeps in the browser. */
 .banner.module-set { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 10px 0 0; }
 .banner.module-set .module-set-text { flex: 1 1 18rem; min-width: 0; }
+
+/* Phone header: the brand keeps its size, the session controls wrap under it, and the nine tabs scroll in one row. */
+@media (max-width: 760px) {
+  .app-header, .app-header:where(:has(.session-footer:not([hidden]))) { grid-template-columns: auto minmax(0, 1fr); }
+  .brand-mark { flex: none; }
+  .connection-bar { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; }
+  .app-header .tabs { display: flex; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 8px; }
+  .app-header .tabs button { padding: 10px 12px; }
+  .app-header .tabs button::after { left: 12px; right: 12px; }
+}
+
+/* Knob record uses the page width like the other tabs instead of a 980px column against the left edge. */
+.lock-root { max-width: none; }
+
+/* Sampler: a quieter empty state, and Erase all sits as a small action beside the slot's numbering field. */
+.sampler-empty { min-height: 140px; padding: 28px; }
+.sd-slot > header .quiet-button.danger { justify-self: start; padding: .3rem .6rem; font-size: .7rem; }

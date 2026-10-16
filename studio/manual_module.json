@@ -157,7 +157,7 @@
      "name": "Stutter Time",
      "page": 3,
      "pot": 0,
-     "help": "B1:Space B2:stutter",
+     "help": "Left reverse / right forward; center shortest. B1:Reverse B2:stutter",
      "def": 0.55
     },
     {
@@ -355,7 +355,7 @@
    {
     "id": "fx-live",
     "title": "FX Live",
-    "body": "Pots 0-5, top row first, left to right: Stutter Time (B1: Space, left reverse / right ping-pong), Filter (centre bypass; B1: Resonance), Delay Mix (B1: Damp), Reverb Mix (B1: Damp), Delay Time (1-4000 ms exponential; B1: Feedback), Reverb Size. Hold **B2** to stutter. Clocked Delay Time has13 steps:8/4/2 bars,1 bar,1/2,1/4,1/8,1/8T,1/16,1/16T,1/32,1/32T,1/64; each has one LED position. The buffer holds32 seconds. Reverse and Ping-pong are independent CV/MIDI destinations. Reverb Size no longer changes Damp: set the two separately."
+    "body": "Pots 0-5, top row first, left to right: Stutter Time (left pink reverse / right green forward, center shortest with white bottom pip; B1: Reverse), Filter (centre bypass; B1: Resonance), Delay Mix (B1: Damp), Reverb Mix (B1: Damp), Delay Time (1-4000 ms exponential; B1: Feedback), Reverb Size. Hold **B2** to stutter. The stutter division lengths mirror on both sides and increase toward the ends. Clocked Delay Time has13 steps:8/4/2 bars,1 bar,1/2,1/4,1/8,1/8T,1/16,1/16T,1/32,1/32T,1/64; each has one LED position. The buffer holds32 seconds. Reverse and Ping-pong are independent CV/MIDI destinations. Reverb Size no longer changes Damp: set the two separately."
    },
    {
     "id": "master",

@@ -95,7 +95,7 @@ function migrateStockBankOrder(recipe) {
   };
 }
 
-export function mountPalette(root, { catalog, sets, measured, help = {}, getVoiceTable = () => null, getController = () => null, getClient = () => null, onEditBanks = () => {}, onError = () => {} }) {
+export function mountPalette(root, { catalog, sets, measured, help = {}, getVoiceTable = () => null, isDemo = () => false, getController = () => null, getClient = () => null, onEditBanks = () => {}, onError = () => {} }) {
   HELP = help;
   const model = new PaletteModel(catalog, sets, measured);
   const waveEditor = mountWaveResourcesEditor({ getResources: () => model.resources, onChange: (resources) => { model.setResources(resources); changed(); }, model, catalog, onError });
@@ -143,7 +143,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   // The module says which engine class sits in every slot; Studio's own copy of the sets lives in this browser. Never changed silently.
   let dismissedSignature = null;
   function moduleSetMismatch(table) {
-    if (!table?.voiceLabels) return null;
+    if (!table?.voiceLabels || isDemo()) return null;
     const labels = table.voiceLabels.slice(0, voiceTabCount(table));
     const signature = JSON.stringify(labels);
     if (signature === dismissedSignature) return null;
