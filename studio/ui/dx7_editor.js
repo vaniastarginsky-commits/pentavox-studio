@@ -354,5 +354,5 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
     table.focus({ preventScroll: true });
   }
 
-  return { open, close: () => dialog.close(), refresh: renderHeader };
+  return { open, dialog, close: () => dialog.close(), refresh: renderHeader };
 }

@@ -275,6 +275,7 @@ function withCatalogNames(catalog, help, mono = new Set()) {
   return { ...catalog, engines: catalog.engines.map((engine) => ({ ...engine, firmwareName: engine.name, name: help[engine.id]?.name ?? engine.name, ...(mono.has(engine.id) ? { stereo: false, monoInPractice: true } : {}) })) };
 }
 
+let pendingBank = 'A';
 const dx7Editor = mountDx7Editor({ getClient: () => client, getInfo: () => session?.info, onError: showError, onSuccess: showSuccess });
 
 assetsPromise.then((assets) => {
@@ -287,7 +288,7 @@ assetsPromise.then((assets) => {
     isDemo: () => demoMode,   // the simulated module's set is not a real mismatch
     getController: () => controller,
     getClient: () => client,
-    onEditBanks: (letter) => dx7Editor.open(letter),
+    onEditBanks: (letter) => { pendingBank = letter; document.querySelector('[data-tab="dx7"]')?.click(); },
     onError: showError,
   });
 }).catch(showError);
@@ -379,6 +380,10 @@ for (const tab of document.querySelectorAll('[data-tab]')) {
     if (activeTab === 'sampler') samplerMount.show();
     if (activeTab === 'locks') locksMount.show(); else locksMount.hide();
     if (activeTab === 'manual') manualMount.show();
+    if (activeTab !== 'dx7' && dx7Editor.dialog.open) dx7Editor.dialog.close();
+    if (activeTab !== 'wavetable' && activeTab !== 'terrain' && paletteMount?.waves.dialog.open) paletteMount.waves.close();
+    if (activeTab === 'dx7') { const letter = pendingBank; pendingBank = 'A'; dx7Editor.open(letter); }
+    if ((activeTab === 'wavetable' || activeTab === 'terrain') && paletteMount) { document.getElementById(`${activeTab}-tab`).append(paletteMount.waves.dialog); paletteMount.waves.open(activeTab); }
   });
 }
 
@@ -399,4 +404,28 @@ if (demoMode) connect({ demo: true });
     label();
   });
   label();
+}
+
+
+// The three editors (DX7 banks, Wave tables, Wave terrain) are full pages: their dialogs are shown inline in the matching tab.
+function asPage(dialog, hostFor) {
+  dialog.classList.add('as-page');
+  dialog.showModal = () => { const host = hostFor(); if (host && dialog.parentNode !== host) host.append(dialog); if (!dialog.open) dialog.show(); };
+  dialog.addEventListener('click', (event) => { if (event.target === dialog) event.stopImmediatePropagation(); }, true);
+}
+asPage(dx7Editor.dialog, () => document.getElementById('dx7-tab'));
+assetsPromise.then(() => { if (paletteMount) asPage(paletteMount.waves.dialog, () => document.getElementById(`${activeTab}-tab`)); });
+
+// Page title and crumb in the top bar, like the Console design.
+{
+  const TITLES = {
+    palette: ['Engines', 'Two voices, three banks of eight'], dx7: ['DX7 banks', 'Six-op patches on the SD card'], wavetable: ['Wave tables', 'Harmonics banks for the Wavetable engine'],
+    terrain: ['Wave terrain', 'Terrains for the Wave Terrain engine'], sampler: ['Sampler', 'SD card, two slots'], presets: ['Presets', 'Stored sounds'],
+    routing: ['CV routing', 'Notes, jacks J3 to J8, pot map'], midi: ['MIDI routing', 'One table for the module'], locks: ['Knob record', 'Loops recorded with B3'],
+    settings: ['Settings', 'Tempo, levels, voices'], manual: ['Manual', 'Using Studio'],
+  };
+  const title = document.getElementById('page-title'); const crumb = document.getElementById('page-crumb');
+  const show = (tab) => { const [t, c] = TITLES[tab] || [tab, '']; title.textContent = t; crumb.textContent = c; };
+  for (const tab of document.querySelectorAll('[data-tab]')) tab.addEventListener('click', () => show(tab.dataset.tab));
+  show(activeTab);
 }

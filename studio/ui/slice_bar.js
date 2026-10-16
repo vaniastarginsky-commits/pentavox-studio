@@ -8,7 +8,7 @@ function el(tag, className, text) { const node = document.createElement(tag); if
 function button(text, className = '') { const node = el('button', className, text); node.type = 'button'; return node; }
 
 export function createSliceBar(item, { editor, onChange = () => {} }) {
-  const root = el('div', 'sb');
+  const root = el('section', 'sb sx-panel');
   const controls = el('div', 'sb-controls');
 
   const evenCount = document.createElement('input'); evenCount.type = 'number'; evenCount.min = '2'; evenCount.max = '32'; evenCount.step = '1'; evenCount.value = '8'; evenCount.setAttribute('aria-label', 'Number of even slices');
@@ -17,14 +17,16 @@ export function createSliceBar(item, { editor, onChange = () => {} }) {
   for (const value of [1, 2, 4]) { const option = el('option', '', String(value)); option.value = String(value); beatsPerSlice.append(option); }
   const beatsButton = button('Beats');
   const sensitivity = document.createElement('input'); sensitivity.type = 'range'; sensitivity.min = '0'; sensitivity.max = '1'; sensitivity.step = '0.05'; sensitivity.value = '0.5'; sensitivity.setAttribute('aria-label', 'Onset detection sensitivity');
+  const paintSensitivity = () => sensitivity.style.setProperty('--p', `${Number(sensitivity.value) * 100}%`); sensitivity.addEventListener('input', paintSensitivity); paintSensitivity();
   const detectButton = button('Detect');
   const classifyButton = button('Classify');
   const filterButtons = [['kick', 'Kicks'], ['snare', 'Snares'], ['hat', 'Hats']].map(([type, label]) => [type, button(label, 'sb-filter')]);
   const clearButton = button('Clear'); const undoButton = button('Undo'); const redoButton = button('Redo');
   // Label the selected slice (click its number on the waveform first): Kick / Snare / Hat toggle, None clears; Delete removes its marker.
-  const labelGroup = el('span', 'sb-group'); labelGroup.append(el('span', 'sb-hint', 'Label'));
-  const labelButtons = [['kick', 'Kick'], ['snare', 'Snare'], ['hat', 'Hat'], ['none', 'None']].map(([action, text]) => { const b = button(text, 'sb-filter'); b.dataset.action = action; b.title = `${text} for the selected slice (click a slice number on the waveform first)`; labelGroup.append(b); return b; });
-  const removeButton = button('Delete marker', 'sb-filter'); removeButton.title = 'Remove the selected slice marker (the slice joins the one before it)'; labelGroup.append(removeButton);
+  const labelGroup = el('span', 'sb-group'); labelGroup.append(el('span', 'sb-hint', 'Label slice'));
+  const labelSeg = el('span', 'sb-seg'); labelGroup.append(labelSeg);
+  const labelButtons = [['kick', 'Kick', 'K'], ['snare', 'Snare', 'S'], ['hat', 'Hat', 'H'], ['none', 'None', 'None']].map(([action, text, short]) => { const b = button(short, 'sb-filter'); b.dataset.action = action; b.title = `${text} for the selected slice (click a slice number on the waveform first)`; b.setAttribute('aria-label', text); labelSeg.append(b); return b; });
+  const removeButton = button('Delete marker', 'sb-filter sb-delete'); removeButton.title = 'Remove the selected slice marker (the slice joins the one before it)'; labelGroup.append(removeButton);
   const oneShot = el('label', 'sb-toggle'); const oneShotInput = document.createElement('input'); oneShotInput.type = 'checkbox'; oneShot.append(oneShotInput, el('span', '', 'One-shot'));
   const playMode = document.createElement('select'); playMode.setAttribute('aria-label', 'How the module plays the slices on its clock');
   PLAY_MODES.forEach((label, value) => { const option = el('option', '', label); option.value = String(value); playMode.append(option); });
@@ -35,11 +37,18 @@ export function createSliceBar(item, { editor, onChange = () => {} }) {
   const playFilter = document.createElement('select'); playFilter.setAttribute('aria-label', 'Play only this drum type');
   PLAY_FILTERS.forEach((label, value) => { const option = el('option', '', label); option.value = String(value); playFilter.append(option); });
   const status = el('output', 'sb-status'); status.setAttribute('aria-live', 'polite');
+  const noteLine = el('div', 'sb-note'); noteLine.setAttribute('aria-live', 'polite');
 
   evenCount.title = 'How many equal slices Even makes (2-32)'; evenButton.title = 'Cut the file into equal slices';
   beatsPerSlice.title = 'Beats in each slice for Beats'; beatsButton.title = 'Cut on the beat grid (needs a BPM)';
-  controls.append(evenCount, el('span', 'sb-hint', 'slices'), evenButton, beatsPerSlice, el('span', 'sb-hint', 'beats each'), beatsButton, sensitivity, detectButton, classifyButton, ...filterButtons.map(([, node]) => node), clearButton, undoButton, redoButton, labelGroup, (() => { const group = el('span', 'sb-group'); group.append(el('span', 'sb-hint', 'Play'), playMode, playStep, el('span', 'sb-hint', 'only'), playFilter); return group; })(), oneShot);
-  root.append(controls, status);
+  const dot = () => el('span', 'sx-dot', '·');
+  const row = () => el('div', 'sb-row');
+  const row1 = row(); row1.append(evenCount, evenButton, dot(), beatsPerSlice, el('span', 'sb-hint', 'beats each'), beatsButton, dot(), el('span', 'sb-hint', 'Sensitivity'), sensitivity, detectButton, classifyButton);
+  const row2 = row(); row2.append(el('span', 'sb-hint', 'Keep only'), ...filterButtons.map(([, node]) => node), clearButton, dot(), labelGroup);
+  const row3 = row(); const playGroup = el('span', 'sb-group'); playGroup.append(el('span', 'sb-hint', 'Play mode'), playMode, playStep, el('span', 'sb-hint', 'only'), playFilter); row3.append(playGroup, oneShot);
+  controls.append(row1, row2, row3, noteLine);
+  const head = el('header', 'sx-phead'); head.append(el('h3', '', 'Slices'), status, el('span', 'sp'), undoButton, redoButton);
+  root.append(head, controls);
 
   let timer = null; let destroyed = false; let note = '';
   const changed = () => { editor.refreshSlices(); onChange(); };
@@ -61,7 +70,7 @@ export function createSliceBar(item, { editor, onChange = () => {} }) {
     const classified = counts.kick + counts.snare + counts.hat;
     const summary = count <= 1 ? 'No slices: 16 equal steps are used' : count >= 32 ? '32 max' : `${count} slices`;
     const labels = classified ? `${counts.kick} kicks, ${counts.snare} snares, ${counts.hat} hats` : '';
-    status.textContent = [summary, labels, note].filter(Boolean).join(' · ');
+    status.textContent = [summary, labels].filter(Boolean).join(' · '); noteLine.textContent = note;
   }
 
   for (const b of labelButtons) b.addEventListener('click', () => { if (editor.labelSelected(b.dataset.action)) onChange(); });

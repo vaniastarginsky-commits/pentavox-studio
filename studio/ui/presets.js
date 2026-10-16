@@ -57,24 +57,26 @@ export function mountPresets(root, controller, { onError = () => {}, onSuccess =
 
   function row(slot) {
     const item = element('div', `preset-row${slot.autosave ? ' autosave' : ''}`);
-    const number = element('span', 'preset-number', String(slot.number));
+    const number = element('span', 'preset-number', String(slot.number).padStart(2, '0'));
     const name = document.createElement('input');
     name.type = 'text'; name.maxLength = 40; name.value = names[slot.number] ?? ''; name.disabled = slot.autosave;
     name.placeholder = slot.autosave ? 'Autosave' : 'Unnamed';
     name.setAttribute('aria-label', `Name of slot ${slot.number}`);
-    name.addEventListener('change', () => { const value = name.value.trim(); if (value) names[slot.number] = value; else delete names[slot.number]; savePresetNames(uid, names, storage); });
-    const load = element('button', 'solid', 'Load'); load.type = 'button'; load.disabled = busy;
+    const main = element('span', 'preset-main'); main.append(name);
+    if (slot.autosave) main.append(element('small', '', 'Written by the module'));
+    name.addEventListener('change', () => { const value = name.value.trim(); if (value) names[slot.number] = value; else delete names[slot.number]; savePresetNames(uid, names, storage); item.classList.toggle('named', Boolean(value)); save.classList.toggle('primary', !slot.autosave && !value); });
+    const load = element('button', 'preset-load', 'Load'); load.type = 'button'; load.disabled = busy;
     load.addEventListener('click', () => {
       if (controller.session.dirty && !confirmAction?.('Loading replaces the changes that are not saved on the module. Continue?')) return;
       run(`Loaded slot ${slot.number}`, () => controller.load(slot.number), `Loading slot ${slot.number}…`);
     });
-    const save = element('button', '', 'Save here'); save.type = 'button'; save.disabled = busy || slot.autosave;
+    const save = element('button', slot.autosave || names[slot.number] ? '' : 'primary', 'Save here'); save.type = 'button'; save.disabled = busy || slot.autosave;
     save.title = slot.autosave ? 'The module overwrites this slot by itself' : '';
     save.addEventListener('click', () => {
       if (!confirmAction?.(`Overwrite slot ${slot.number}${names[slot.number] ? ` (${names[slot.number]})` : ''} with the current sound?`)) return;
       run(`Saved to slot ${slot.number}`, () => controller.save(slot.number), `Saving slot ${slot.number}…`);
     });
-    item.append(number, name, load, save);
+    item.append(number, main, load, save); if (names[slot.number]) item.classList.add('named');
     return item;
   }
 

@@ -58,6 +58,12 @@ export class EngineAudition {
     clearTimeout(this.timer);
     this.node.port.postMessage({ type: 'engine', set: engine.set, slot: engine.slot, stereo });
     this.node.port.postMessage({ type: 'on', note: 48, velocity: .8 });
-    this.timer = setTimeout(() => this.node?.port.postMessage({ type: 'off' }), 900);
+    this.timer = setTimeout(() => this.stop(), 8000);
+  }
+
+  stop() {
+    clearTimeout(this.timer);
+    this.node?.port.postMessage({ type: 'off' });
+    this.onstop?.();
   }
 }

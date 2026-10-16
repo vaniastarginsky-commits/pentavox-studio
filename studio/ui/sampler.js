@@ -209,7 +209,9 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   drop.addEventListener('drop', (event) => { event.preventDefault(); drop.classList.remove('dragging'); importFiles([...event.dataTransfer.files]); });
   drop.addEventListener('keydown', (event) => { if (event.target === drop && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); picker.click(); } });
   const planPanel = el('aside', 'sd-plan');
-  filesPane.append(list, drop, planPanel);
+  const listCard = el('section', 'sx-card sf-card'); const listHead = el('header', 'sx-chead'); const listCount = el('small', 'sf-count');
+  listHead.append(el('h3', '', 'Files to convert'), listCount); listCard.append(listHead, list);
+  filesPane.append(listCard, drop, planPanel);
   const editorHost = el('section', 'sampler-editor'); main.append(filesPane, editorHost);
   workspace.append(main); root.replaceChildren(cardBar, workspace);
 
@@ -253,7 +255,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
 
   function renderList() {
     const hadFocus = list.contains(document.activeElement); const slotCounts = validation().counts; let focusTarget = null;
-    list.replaceChildren(); dropTitle.textContent = state.importing ? 'Decoding…' : 'Drop audio files here'; choose.disabled = state.importing;
+    list.replaceChildren(); listCount.textContent = state.items.length ? String(state.items.length) : ''; dropTitle.textContent = state.importing ? 'Decoding…' : 'Drop audio files here'; choose.disabled = state.importing;
     for (const item of state.items) {
       const row = el('li', `sample-row${item === state.selected ? ' selected' : ''}`); const select = button('', 'sample-select'); select.setAttribute('aria-current', String(item === state.selected));
       const wave = el('canvas', 'sl-wave'); wave.setAttribute('aria-hidden', 'true'); const text = el('span', 'sl-text'); const trimmed = item.trimEnd - item.trimStart;
@@ -280,19 +282,20 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   function renderEditor() {
     breakPanel?.destroy(); breakPanel = null; sliceBar?.destroy(); sliceBar = null; editor?.destroy(); editor = null; editorHost.replaceChildren(); hooks = { fields: () => {}, status: () => {} }; const item = state.selected;
     if (!item) { editorHost.append(el('div', 'sampler-empty', 'Add one or more files. Their waveform and conversion settings will appear here.')); return; }
-    const card = el('article', 'sample-card'); const head = el('header', 'sample-head'); const title = el('div', 'sample-title');
+    const card = el('article', 'sample-card sx-card'); const head = el('header', 'sample-head sx-chead'); const title = el('div', 'sample-title');
     title.append(el('strong', '', item.name), el('span', '', `${seconds(item.duration)} · ${item.audio.channels.length} ch · ${item.audio.sampleRate.toLocaleString('en-US')} Hz`)); head.append(title); card.append(head);
+    const body = el('div', 'se-body'); card.append(body);
     const selection = () => ({ start: item.trimStart, end: item.trimEnd });
-    editor = createWaveEditor(item, { getContext: context, onError, onChange: () => { hooks.fields(); refreshSide(); } }); card.append(editor.el);
-    sliceBar = createSliceBar(item, { editor, onChange: () => { hooks.fields(); renderList(); breakPanel?.refresh(); } }); card.append(sliceBar.el);
-    breakPanel = createBreakPanel(item, { getContext: context, onChange: () => hooks.status() }); card.append(breakPanel.el);
-    const controls = el('div', 'sample-controls');
+    editor = createWaveEditor(item, { getContext: context, onError, onChange: () => { hooks.fields(); refreshSide(); } }); body.append(editor.el);
+    sliceBar = createSliceBar(item, { editor, onChange: () => { hooks.fields(); renderList(); breakPanel?.refresh(); } });
+    breakPanel = createBreakPanel(item, { getContext: context, onChange: () => hooks.status() });
+    const controls = el('div', 'sample-controls se-fields');
     const startInput = numberInput(item.trimStart.toFixed(3), 0, item.duration, .001, (value) => { if (Number.isFinite(value)) editor.setSelection(dragHandle('start', value, selection(), item.duration)); hooks.fields(); refreshSide(); }, 'Trim start');
     const endInput = numberInput(item.trimEnd.toFixed(3), 0, item.duration, .001, (value) => { if (Number.isFinite(value)) editor.setSelection(dragHandle('end', value, selection(), item.duration)); hooks.fields(); refreshSide(); }, 'Trim end');
     controls.append(field('Start, s', startInput), field('End, s', endInput));
     const mode = document.createElement('select'); for (const [value, label] of [['mono', 'Mono'], ['stereo', 'Stereo']]) { const option = el('option', '', label); option.value = value; option.selected = item.channelMode === value; if (value === 'stereo' && item.audio.channels.length === 1) option.disabled = true; mode.append(option); } mode.addEventListener('change', () => { item.channelMode = mode.value; refreshSide(); }); controls.append(field('Channels', mode));
     const slot = document.createElement('select'); for (let index = 0; index < slotCount(); index += 1) { const option = el('option', '', `Slot ${index + 1}`); option.value = index; option.selected = item.slot === index; slot.append(option); } slot.addEventListener('change', () => { item.slot = Number(slot.value); refreshSide(); }); controls.append(field('SD folder', slot));
-    const normalize = el('label', 'check-field'); const check = document.createElement('input'); check.type = 'checkbox'; check.checked = item.normalize; check.addEventListener('change', () => { item.normalize = check.checked; }); normalize.append(check, el('span', '', 'Normalize to −1 dBFS')); controls.append(normalize);
+    const normalize = el('label', 'check-field'); const check = document.createElement('input'); check.type = 'checkbox'; check.checked = item.normalize; check.addEventListener('change', () => { item.normalize = check.checked; }); normalize.append(check, el('span', '', 'Normalize to −1 dBFS'));
     const bpmInput = numberInput(item.bpm, 1, 999, .01, (value) => { item.bpm = value > 0 ? value : ''; item.tempoAuto = false; updateStretch(); refreshSide(); }, 'Tempo in BPM');
     const beatsInput = numberInput(item.beats, 1, 99999, 1, (value) => { item.beats = Number.isInteger(value) && value > 0 ? value : ''; item.tempoAuto = false; updateTempoButtons(); refreshSide(); }, 'Beat count');
     const halfTempo = button('÷2'); halfTempo.title = 'Use the half-time alternative (halve tempo and beat count together)'; halfTempo.setAttribute('aria-label', 'Halve tempo and beat count');
@@ -354,28 +357,35 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
       item.stretchError = false; item.stretchStatus = `shifted the start by ${ms} ms (${ms > 0 ? 'the first' : 'the last'} ${Math.abs(ms)} ms moved to the ${ms > 0 ? 'end' : 'front'}); trim reset to the whole clip`;
       restoreButton.hidden = false; renderEditor(); refreshSide();
     });
-    controls.append(field('Tempo, BPM', bpmInput), field('Beats', beatsInput), halfTempo, doubleTempo, field('Stretch to, BPM', stretchInput), stretchButton, field('Shift start, ms', shiftInput), shiftButton, restoreButton); card.append(controls); updateStretch();
-    const footer = el('footer', 'sample-status'); card.append(footer); editorHost.append(card);
+    const tempoPanel = el('section', 'sx-panel sx-tempo'); const tempoHead = el('header', 'sx-phead'); tempoHead.append(el('h3', '', 'Tempo'));
+    const tempoRow = el('div', 'sx-tempo-row'); const dot = () => el('span', 'sx-dot', '·');
+    tempoRow.append(field('Tempo, BPM', bpmInput), field('Beats', beatsInput), halfTempo, doubleTempo, dot(), field('Stretch to, BPM', stretchInput), stretchButton, dot(), field('Shift start, ms', shiftInput), shiftButton, restoreButton);
+    tempoPanel.append(tempoHead, tempoRow); updateStretch();
+    const footer = el('footer', 'sample-status se-foot');
+    body.append(controls, normalize, sliceBar.el, tempoPanel, breakPanel.el, footer); editorHost.append(card);
     hooks = {
       fields() { startInput.value = item.trimStart.toFixed(3); endInput.value = item.trimEnd.toFixed(3); bpmInput.value = item.bpm; beatsInput.value = item.beats; updateStretch(); },
       status() {
         footer.replaceChildren(); footer.classList.remove('error'); const index = state.items.indexOf(item); const planned = plan()[index]; if (!planned) return;
         const checked = validation(); const slotCount = checked.counts[item.slot]; const trimmedDuration = item.trimEnd - item.trimStart;
-        if (item.stretchError) { footer.classList.add('error'); footer.append(el('span', '', item.stretchStatus)); }
-        else if (trimmedDuration > MAX_CLIP_SECONDS) { footer.classList.add('error'); footer.append(el('span', '', `The clip is ${seconds(trimmedDuration)}; the maximum is ${MAX_CLIP_SECONDS} s.`)); const trim = button('Trim to 30 s'); trim.addEventListener('click', () => { editor.setSelection(cap30(selection(), item.duration)); hooks.fields(); refreshSide(); }); footer.append(trim); }
-        else if (slotCount > 16) { footer.classList.add('error'); footer.append(el('span', '', `Slot ${item.slot + 1} has more than 16 files, so this set cannot be exported.`)); }
-        else footer.append(el('span', '', item.stretchStatus || `${planned.fileName} · after conversion ${seconds(trimmedDuration)} / 48 kHz`));
-        const toCard = button('Write to SD card', 'quiet-button'); toCard.disabled = !getClient() || !getInfo() || trimmedDuration > MAX_CLIP_SECONDS || Boolean(state.card) || !checked.valid; toCard.addEventListener('click', () => writeToCard([item]));
-        const wav = button('Download WAV only', 'quiet-button'); wav.disabled = trimmedDuration > MAX_CLIP_SECONDS; wav.addEventListener('click', async () => { try { download(await wavFor(item), planned.fileName, 'audio/wav'); } catch (error) { onError(error); } }); footer.append(toCard, wav);
+        const note = el('div', 'se-note');
+        if (item.stretchError) { footer.classList.add('error'); note.classList.add('error'); note.append(el('span', '', item.stretchStatus)); }
+        else if (trimmedDuration > MAX_CLIP_SECONDS) { footer.classList.add('error'); note.classList.add('error'); note.append(el('span', '', `The clip is ${seconds(trimmedDuration)}; the maximum is ${MAX_CLIP_SECONDS} s.`)); const trim = button('Trim to 30 s'); trim.addEventListener('click', () => { editor.setSelection(cap30(selection(), item.duration)); hooks.fields(); refreshSide(); }); note.append(trim); }
+        else if (slotCount > 16) { footer.classList.add('error'); note.classList.add('error'); note.append(el('span', '', `Slot ${item.slot + 1} has more than 16 files, so this set cannot be exported.`)); }
+        else note.append(el('span', '', item.stretchStatus || `${planned.fileName} · after conversion ${seconds(trimmedDuration)} / 48 kHz`));
+        footer.append(note);
+        const row = el('div', 'se-actions');
+        const toCard = button('Write to SD card', 'primary'); toCard.disabled = !getClient() || !getInfo() || trimmedDuration > MAX_CLIP_SECONDS || Boolean(state.card) || !checked.valid; toCard.addEventListener('click', () => writeToCard([item]));
+        const wav = button('Download WAV only'); wav.disabled = trimmedDuration > MAX_CLIP_SECONDS; wav.addEventListener('click', async () => { try { download(await wavFor(item), planned.fileName, 'audio/wav'); } catch (error) { onError(error); } }); row.append(toCard, wav, el('span', 'sx-dot', '·'));
         const connected = Boolean(getClient() && getInfo()); const tooLong = trimmedDuration > MAX_CLIP_SECONDS; const active = state.upload;
         const actions = el('div', 'sample-send-actions');
         actions.append(el('span', 'send-label', connected ? 'Play on the module:' : 'Connect the module (top right) to play this on it'));
         for (let voice = 0; voice < 2; voice += 1) {
-          const send = button(`Send to voice ${voice + 1}`, 'primary send-button'); send.disabled = !connected || tooLong || Boolean(active);
+          const send = button(`Send to voice ${voice + 1}`, 'send-button'); send.disabled = !connected || tooLong || Boolean(active);
           send.title = !connected ? 'Connect the module first' : tooLong ? 'The selection is longer than 30 seconds' : active ? 'Another sample upload is in progress' : `Send the current selection to sampler voice ${voice + 1}`;
           send.addEventListener('click', () => sendToVoice(item, voice)); actions.append(send);
         }
-        footer.append(actions);
+        row.append(actions); footer.append(row);
         if (active?.item === item) {
           const progress = el('div', 'sample-upload-progress'); const meter = document.createElement('progress'); meter.max = 1; meter.value = active.progress;
           const cancel = button('Cancel', 'quiet-button'); cancel.addEventListener('click', () => active.controller.abort());
@@ -393,36 +403,44 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const pageX = window.scrollX, pageY = window.scrollY; const listScroll = [...planPanel.querySelectorAll('.sd-files')].map((node) => node.scrollTop);
     const focusedConfirm = planPanel.contains(document.activeElement) && document.activeElement.dataset?.confirmFor;
     planPanel.replaceChildren();
-    const top = el('div', 'sd-live-head'); const title = el('div', 'sd-live-title'); title.append(el('h2', '', 'SD card'));
-    const cardState = el('div', 'sd-live-state');
+    const sdCard = el('section', 'sx-card sd-card'); const top = el('header', 'sx-chead sd-card-head'); top.append(el('h3', '', 'SD card'));
+    const cardState = el('div', 'sd-live-state'); const body = el('div', 'sd-card-body');
     if (state.cardInfo) {
-      if (state.cardInfo.freeKnown && state.cardInfo.totalKiB > 0) { const meter = document.createElement('progress'); meter.max = state.cardInfo.totalKiB; meter.value = state.cardInfo.freeKiB; meter.setAttribute('aria-label', 'Free space'); cardState.append(meter); }
-      cardState.append(el('span', '', cardSummary(state.cardInfo)));
-    } else cardState.append(el('span', state.cardProblem ? 'error' : '', state.cardLoading ? 'Reading the card…' : state.cardProblem || 'Connect the module to see what is on the card'));
-    title.append(cardState); const actions = el('div', 'sd-live-actions'); const refresh = button(state.cardLoading ? 'Refreshing…' : 'Refresh', 'quiet-button'); refresh.disabled = state.cardLoading || Boolean(state.card) || !files(); refresh.addEventListener('click', loadCard);
-    const all = button('Browse all files…', 'quiet-button'); all.addEventListener('click', onOpenSdTab); actions.append(all, refresh, exportButton, cardButton); top.append(title, actions); planPanel.append(top);
+      const summary = cardSummary(state.cardInfo); const kind = summary.split(' · ')[0];
+      const chip = el('span', 'sx-chip ok'); chip.append(el('span', 'sx-dotled'), document.createTextNode(kind)); top.append(chip);
+      if (state.cardInfo.freeKnown && state.cardInfo.totalKiB > 0) { const meter = document.createElement('progress'); meter.max = state.cardInfo.totalKiB; meter.value = Math.max(0, state.cardInfo.totalKiB - state.cardInfo.freeKiB); meter.setAttribute('aria-label', 'Space used'); cardState.append(meter); }
+      cardState.append(el('small', '', summary));
+    } else cardState.append(el('small', state.cardProblem ? 'error' : '', state.cardLoading ? 'Reading the card…' : state.cardProblem || 'Connect the module to see what is on the card'));
+    top.append(el('span', 'sp'));
+    const refresh = button(state.cardLoading ? 'Refreshing…' : 'Refresh', 'quiet-button'); refresh.disabled = state.cardLoading || Boolean(state.card) || !files(); refresh.addEventListener('click', loadCard); top.append(refresh);
+    const all = button('Browse all files…', 'quiet-button'); all.addEventListener('click', onOpenSdTab);
+    const actions = el('div', 'sd-live-actions'); actions.append(all, exportButton);
+    body.append(cardState, actions);
+    if (!checked.valid) { const warnings = el('div', 'sampler-warnings'); for (const error of checked.errors) warnings.append(el('p', '', error)); body.append(warnings); }
+    body.append(cardButton); sdCard.append(top, body); planPanel.append(sdCard);
     const slots = el('div', `sd-slots${slotCount() === 2 ? ' two-slots' : ''}`); groups.forEach((group) => {
-      const column = el('section', `sd-slot${group.overLimit ? ' over-limit' : ''}`); const header = el('header'); const headerCopy = el('div'); headerCopy.append(el('strong', '', `Slot ${group.slot + 1}`), el('span', '', `SLOT${group.slot} · ${group.count}/16`));
-      const startValue = state.starts[group.slot] ?? defaults[group.slot]; const start = numberInput(String(startValue).padStart(4, '0'), 0, 9999, 1, (value) => { state.starts[group.slot] = value; refreshSide(); }, `First number for slot ${group.slot + 1}`); header.append(headerCopy, field('Start numbering at', start)); column.append(header);
+      const column = el('section', `sd-slot sx-card${group.overLimit ? ' over-limit' : ''}`); const header = el('header', 'sx-chead');
+      header.append(el('strong', '', `Slot ${group.slot + 1}`), el('span', 'sd-slot-id', `SLOT${group.slot} · ${group.count}/16`), el('span', 'sp'));
+      const startValue = state.starts[group.slot] ?? defaults[group.slot]; const start = numberInput(String(startValue).padStart(4, '0'), 0, 9999, 1, (value) => { state.starts[group.slot] = value; refreshSide(); }, `First number for slot ${group.slot + 1}`);
       const erase = button('Erase all', 'quiet-button danger');
       erase.title = `Delete all WAV files from Slot ${group.slot + 1}`;
       erase.disabled = Boolean(state.card) || state.cardLoading || !files() || !group.existing.length || group.existing.some((entry) => entry.locked);
-      erase.addEventListener('click', () => eraseSlot(group)); header.append(erase);
+      erase.addEventListener('click', () => eraseSlot(group)); header.append(erase); column.append(header);
+      const numbering = el('label', 'sd-start'); numbering.append(el('span', '', 'Start numbering at'), start); column.append(numbering);
       const rows = el('div', 'sd-files');
       for (const entry of group.existing) {
         const row = el('div', 'sd-file card-file'); const info = el('div', 'sd-file-info'); info.append(el('code', '', entry.name), el('span', '', formatSize(entry.size)));
         const fileActions = el('div', 'sd-file-actions'); const edit = button('Edit', 'quiet-button'); edit.title = 'Read this file from the card into the list above for editing'; edit.disabled = Boolean(state.card); edit.addEventListener('click', () => openCardFile(entry, group.slot)); info.classList.add('openable'); info.title = 'Click to edit this file'; info.addEventListener('click', () => { if (!state.card) openCardFile(entry, group.slot); }); const get = button('Download', 'quiet-button'); get.disabled = Boolean(state.card); get.addEventListener('click', () => downloadCardFile(entry));
         const confirming = state.confirming === entry.path;
-        const remove = button(confirming ? 'Delete?' : 'Delete', `quiet-button${confirming ? ' danger' : ''}`); remove.disabled = Boolean(state.card) || entry.locked; remove.dataset.confirmFor = entry.path;
+        const remove = button(confirming ? 'Delete?' : 'Delete', `quiet-button danger${confirming ? ' confirming' : ''}`); remove.disabled = Boolean(state.card) || entry.locked; remove.dataset.confirmFor = entry.path;
         remove.addEventListener('click', () => { if (confirming) { state.confirming = null; deleteCardFile(entry); } else { state.confirming = entry.path; renderPlan(); } });
         if (confirming) { const cancel = button('Cancel', 'quiet-button'); cancel.addEventListener('click', () => { state.confirming = null; renderPlan(); }); fileActions.append(remove, cancel); } else fileActions.append(edit, get, remove);
         row.append(info, fileActions); rows.append(row);
       }
-      for (const item of group.planned) { const row = el('div', 'sd-file planned-file'); const info = el('div', 'sd-file-info'); info.append(el('code', '', item.fileName), el('span', '', seconds(item.trimEnd - item.trimStart))); row.append(info, el('em', '', 'to send')); rows.append(row); }
+      for (const item of group.planned) { const row = el('div', 'sd-file planned-file'); const info = el('div', 'sd-file-info'); info.append(el('code', '', item.fileName), el('span', '', seconds(item.trimEnd - item.trimStart))); row.append(info, el('em', 'sx-chip', 'to send')); rows.append(row); }
       if (!group.existing.length && !group.planned.length) rows.append(el('span', 'sd-empty', state.cardInfo ? 'No WAV files' : 'No files to show'));
       const cardBytes = group.existing.reduce((sum, entry) => sum + entry.size, 0); column.append(rows, el('footer', '', `${group.existing.length} on card · ${formatSize(cardBytes)} · ${group.planned.length} to send`)); slots.append(column);
     }); planPanel.append(slots);
-    if (!checked.valid) { const warnings = el('div', 'sampler-warnings'); for (const error of checked.errors) warnings.append(el('p', '', error)); planPanel.append(warnings); }
     planPanel.querySelectorAll('.sd-files').forEach((node, index) => { node.scrollTop = listScroll[index] ?? 0; });
     window.scrollTo(pageX, pageY);
     if (focusedConfirm) planPanel.querySelector(`[data-confirm-for="${CSS.escape(focusedConfirm)}"]`)?.focus({ preventScroll: true });

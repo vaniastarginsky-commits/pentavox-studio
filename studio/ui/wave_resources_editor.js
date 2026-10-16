@@ -133,6 +133,7 @@ export function mountWaveResourcesEditor({ getResources = defaultResources, onCh
   tabs.addEventListener('keydown', (event) => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return; event.preventDefault(); kind = event.key === 'Home' ? 'wavetable' : event.key === 'End' ? 'terrain' : kind === 'wavetable' ? 'terrain' : 'wavetable'; selected = 0; stop(); notice(); render(); tabButtons[kind].focus(); });
   dialog.addEventListener('close', stop);
   return {
+    dialog,
     async open(nextKind = 'wavetable') { if (destroyed) return; stop(); const saved = normalizeResources(getResources() ?? {}); persistedKinds = new Set(Object.keys(saved)); draft = { ...defaultResources(), ...saved }; kind = nextKind === 'terrain' ? 'terrain' : 'wavetable'; selected = 0; notice(); render(); if (!dialog.open) dialog.showModal(); await loadAssets(); if (!destroyed && dialog.open) render(); },
     close() { stop(); dialog.close(); }, render,
     destroy() { destroyed = true; stop(); if (context) { context.close().catch(() => {}); context = null; } dialog.remove(); },

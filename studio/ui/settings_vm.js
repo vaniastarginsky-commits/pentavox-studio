@@ -37,7 +37,7 @@ const SIMPLE_ITEMS = Object.freeze([
   { id: 's0.0', short: 'brightness', group: 'input', control: 'slider', label: 'LED brightness', hint: 'Brightness of the panel LEDs. Brighter LEDs draw more power.' },
   { id: 'transport.source', group: 'clock', control: 'segmented', label: 'Clock source', hint: 'Auto prefers CV, then MIDI, then internal.', labels: ['Auto', 'Internal', 'CV', 'MIDI'] },
   { id: 'transport.bpm', group: 'clock', control: 'slider', label: 'Internal tempo', hint: 'Internal quarter-note tempo.', bpm: true },
-  { id: 's0.1', short: 'PPQ', group: 'clock', control: 'segmented', label: 'Clock pulses per quarter note', hint: 'How many pulses on jack J8 make up one quarter note.', labels: ['1', '2', '4'] },
+  { id: 's0.1', short: 'PPQ', group: 'clock', control: 'segmented', label: 'Clock pulses per quarter note', hint: 'How many pulses on jack J8 make up one quarter note.', labels: ['1', '2', '4', '24'] },
   { id: 's0.3', group: 'clock', control: 'segmented', label: 'Tempo multiplier', hint: 'Module tempo relative to the incoming clock: ÷ is slower, × is faster.', labels: ['÷4', '÷3', '÷2', '×1', '×2', '×3', '×4'] },
   { id: 's2.0', short: 'grid', group: 'clock', control: 'segmented', label: 'Trigger quantize', hint: 'Grid used to quantize live slice jumps, stutter and freeze.', labels: ['Off', '1/16', '1/8', '1/4', '1 bar'] },
   { id: 's2.2', short: 'change', group: 'clock', control: 'segmented', label: 'Tempo change mode', hint: 'Glide bends the pitch like a tape delay when Delay Time, Rate or clock tempo changes. Crossfade blends between delay times without a pitch bend.', labels: ['Glide', 'Crossfade'] },

@@ -23,7 +23,7 @@ export function parseChain(text, count) {
 }
 
 export function createBreakPanel(item, { getContext, onChange = () => {} }) {
-  const root = el('section', 'bk');
+  const root = el('section', 'bk sx-panel');
   item.breakBank ??= { patterns: [{ steps: 16, events: [] }], chain: [0] };
   item.breakSel ??= 0; item.breakEvent ??= null; item.breakGen ??= { kind: 'jungle', mode: 'embed', density: 0.5, seed: 1 };
   item.breakGen.mode ??= 'embed';
@@ -62,8 +62,8 @@ export function createBreakPanel(item, { getContext, onChange = () => {} }) {
   // ------------------------------------------------------------ render
   function render() {
     const c = ctx(); root.replaceChildren(); headCells = [];
-    root.append(el('h3', 'bk-title', 'Break patterns'));
-    if (!c) { root.append(el('p', 'bk-note', 'Cut the file into slices first (Even, Beats or Detect), then build or generate patterns here.')); return; }
+    const head = el('header', 'sx-phead'); head.append(el('h3', 'bk-title', 'Break patterns')); const body = el('div', 'bk-body'); root.append(head, body);
+    if (!c) { body.append(el('p', 'bk-note', 'Cut the file into slices first (Even, Beats or Detect), then build or generate patterns here.')); return; }
     const p = pattern();
     // bank tabs
     const bar = el('div', 'bk-row');
@@ -76,7 +76,7 @@ export function createBreakPanel(item, { getContext, onChange = () => {} }) {
     for (const n of PATTERN_STEPS) { const o = el('option', '', `${n / 16} bar${n > 16 ? 's' : ''} (${n} steps)`); o.value = n; o.selected = n === p.steps; steps.append(o); }
     steps.addEventListener('change', () => setPattern({ ...p, steps: Number(steps.value) }));
     const clear = button('Clear', 'quiet-button'); clear.addEventListener('click', () => setPattern({ ...p, events: [] }));
-    bar.append(add, del, steps, clear); root.append(bar);
+    bar.append(add, del, steps, clear); body.append(bar);
     // generators
     const g = item.breakGen; const gen = el('div', 'bk-row');
     const kind = document.createElement('select'); kind.setAttribute('aria-label', 'Generator');
@@ -97,6 +97,7 @@ export function createBreakPanel(item, { getContext, onChange = () => {} }) {
         density.min = '0'; density.max = '1'; density.step = '0.05'; density.value = g.density;
         density.title = 'Density: how busy the pattern is'; amount.textContent = 'density';
       }
+      density.style.setProperty('--p', `${(Number(density.value) - Number(density.min)) / ((Number(density.max) - Number(density.min)) || 1) * 100}%`);
     };
     density.addEventListener('input', () => { if (g.mode === 'embed') g.count = Math.trunc(Number(density.value)); else g.density = Number(density.value); syncDensity(); });
     syncDensity();
@@ -112,7 +113,7 @@ export function createBreakPanel(item, { getContext, onChange = () => {} }) {
     repeats.addEventListener('change', () => { item.breakRepeats = Math.max(1, Math.min(32, Math.trunc(Number(repeats.value)) || 1)); });
     const repeat = button('Beat repeat', 'quiet-button'); repeat.title = 'Repeat the hit that has just sounded, in shaped rolls, on musical places (never on a kick or snare); the number is how many';
     repeat.addEventListener('click', () => setPattern(beatRepeat(p, { fileSteps: c.fileSteps, sliceStarts: c.sliceStarts, labels: c.labels }, { count: item.breakRepeats, seed: g.seed })));
-    gen.append(kind, mode, amount, density, el('span', 'bk-hint', 'seed'), seed, make, makeSet, dice, repeat, repeats); root.append(gen);
+    gen.append(kind, mode, amount, density, el('span', 'bk-hint', 'seed'), seed, make, makeSet, dice, repeat, repeats); body.append(gen);
     // ready-made patterns
     item.breakPreset ??= PRESETS[0].id;
     const pre = el('div', 'bk-row'); const info = el('span', 'bk-hint', '');
@@ -122,8 +123,8 @@ export function createBreakPanel(item, { getContext, onChange = () => {} }) {
     choose.addEventListener('change', () => { item.breakPreset = choose.value; describe(); });
     const load = button('Load preset', 'primary'); load.title = 'Lay this groove on the file\'s own kicks, snares and hats (the seed picks which ones)';
     load.addEventListener('click', () => setPattern(presetPattern(item.breakPreset, { fileSteps: c.fileSteps, sliceStarts: c.sliceStarts, labels: c.labels }, g.seed)));
-    describe(); pre.append(el('span', 'bk-hint', 'preset'), choose, load, info); root.append(pre);
-    root.append(renderKeyStrip(c), renderGrid(p, c), renderInspector(p, c), renderTransport());
+    describe(); pre.append(el('span', 'bk-hint', 'preset'), choose, load, info); body.append(pre);
+    body.append(renderKeyStrip(c), renderGrid(p, c), renderInspector(p, c), renderTransport());
   }
 
   // The fixed key map: which MIDI note plays which slice (C3 = 60 ... C6 = 96; kicks, snares, hats, other).

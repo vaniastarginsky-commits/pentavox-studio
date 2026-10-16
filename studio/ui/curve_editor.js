@@ -366,7 +366,7 @@ export function openCurveEditor({ draft, destinations, destinationGroups = () =>
   function renderHeader() {
     header.replaceChildren(
       el('h2', 'ce-title', title),
-      destinationSelect(),
+      field('Parameter this loop moves', destinationSelect()),
       button('Curves', () => { state.view = state.view === 'library' ? 'edit' : 'library'; refresh(); }, { className: state.view === 'library' ? 'active' : '', title: 'Ready-made and saved curves' }),
       button('Open file', openFile, { title: 'Load a curve from a file' }),
       button('Save file', saveFile, { title: 'Download this curve as a file' }),
@@ -389,27 +389,25 @@ export function openCurveEditor({ draft, destinations, destinationGroups = () =>
     for (const tool of TOOLS) {
       const item = el('button', `ce-tool${state.tool === tool.id ? ' active' : ''}`);
       item.type = 'button'; item.title = tool.label; item.setAttribute('aria-label', tool.label.split(':')[0]); item.setAttribute('aria-pressed', String(state.tool === tool.id));
-      item.append(icon(tool.icon));
+      item.append(icon(tool.icon), el('span', 'ce-tool-name', tool.label.split(':')[0]));
       item.addEventListener('click', () => { state.tool = tool.id; refresh(); plate.focus({ preventScroll: true }); });
       tools.append(item);
     }
     const polar = button('±', () => { draft.bipolar = !draft.bipolar; draft.recordBase = 0; draft.recordedBase = undefined; refresh(); }, { className: `ce-toggle ce-polar${draft.bipolar ? ' active' : ''}`, title: draft.bipolar ? 'Bipolar: the knob shifts the curve; at noon the curve plays as drawn over the full range' : 'Unipolar: the curve only adds to the knob; the bottom means no change' });
-    polar.setAttribute('aria-pressed', String(draft.bipolar)); polar.setAttribute('aria-label', 'Bipolar');
-    tools.append(polar);
+    polar.setAttribute('aria-pressed', String(draft.bipolar)); polar.setAttribute('aria-label', 'Bipolar'); polar.textContent = '± Bipolar';
     const snap = el('div', 'ce-snap');
     const toggle = button('Snap', () => { state.snap = !state.snap; refresh(); }, { className: `ce-toggle${state.snap ? ' active' : ''}`, title: 'Hold Alt while dragging to ignore the grid' });
     toggle.setAttribute('aria-pressed', String(state.snap));
     const columns = el('select', 'ce-small'); columns.setAttribute('aria-label', draft.mode === 'sync' ? 'Grid steps per beat' : 'Grid columns');
-    for (const value of draft.mode === 'sync' ? [1, 2, 4, 8] : [4, 8, 16, 32]) option(columns, value, draft.mode === 'sync' ? `${value} per beat` : `${value} columns`);
+    for (const value of draft.mode === 'sync' ? [1, 2, 4, 8] : [4, 8, 16, 32]) option(columns, value, String(value));
     columns.value = String(draft.mode === 'sync' ? state.perBeat : state.freeCols);
     columns.addEventListener('change', () => { if (draft.mode === 'sync') state.perBeat = Number(columns.value); else state.freeCols = Number(columns.value); refresh(); });
     const rows = el('select', 'ce-small'); rows.setAttribute('aria-label', 'Grid rows');
-    for (const value of [2, 4, 8, 16]) option(rows, value, `${value} rows`);
+    for (const value of [2, 4, 8, 16]) option(rows, value, String(value));
     rows.value = String(state.rows);
     rows.addEventListener('change', () => { state.rows = Number(rows.value); refresh(); });
-    const snapGroup = el('div', 'ce-snap-group'); snapGroup.append(toggle);
-    snap.append(snapGroup, columns, rows);
-    bar.append(tools, readout, snap);
+    snap.append(field(draft.mode === 'sync' ? 'Steps per beat' : 'Columns', columns), field('Rows', rows));
+    bar.append(tools, polar, toggle, snap, readout);
     return bar;
   }
 
@@ -489,12 +487,12 @@ export function openCurveEditor({ draft, destinations, destinationGroups = () =>
       side2.replaceChildren();
       if (!item) { side2.append(el('p', 'ce-lib-hint', 'Pick a curve to preview it. Double-click one to use it right away.')); }
       else {
-        side2.append(el('h3', 'ce-lib-heading', item.name), curveThumb(item.points, { detail: 240, large: true }),
-          el('p', 'ce-lib-hint', `${item.points.length} points · ${item.category}. Using it replaces the curve in the editor; Undo brings the old one back.`));
+        side2.append(curveThumb(item.points, { detail: 240, large: true }), el('h3', 'ce-lib-heading', item.name),
+          el('p', 'ce-lib-meta', `${item.points.length} points · ${item.category}`));
         const actions = el('div', 'ce-lib-actions');
         actions.append(button('Use curve', () => use(item), { className: 'primary' }));
         if (item.user) actions.append(button('Delete', () => { writeLibrary(readLibrary().filter((saved) => saved.id !== item.id)); state.libSelection = null; renderSide(); renderGrid(); renderPreview(); }));
-        side2.append(actions);
+        side2.append(actions, el('p', 'ce-lib-hint', 'Using it replaces the curve in the editor; Undo brings the old one back.'));
       }
       const save = el('form', 'ce-lib-save');
       const name = el('input', 'ce-search'); name.placeholder = 'Name the curve in the editor'; name.setAttribute('aria-label', 'Name for the current curve');
@@ -521,7 +519,7 @@ export function openCurveEditor({ draft, destinations, destinationGroups = () =>
       for (const item of items) {
         const card = el('button', `ce-lib-item${state.libSelection === item.id ? ' selected' : ''}`); card.type = 'button';
         card.setAttribute('role', 'option'); card.setAttribute('aria-selected', String(state.libSelection === item.id));
-        card.append(el('span', 'ce-lib-name', item.name), curveThumb(item.points, { detail: 160 }));
+        card.append(curveThumb(item.points, { detail: 160 }), el('span', 'ce-lib-name', item.name));
         card.addEventListener('click', () => { state.libSelection = item.id; for (const other of grid.children) { const on = other === card; other.classList.toggle('selected', on); other.setAttribute('aria-selected', String(on)); } renderPreview(); });
         card.addEventListener('dblclick', () => use(item));
         grid.append(card);
@@ -583,7 +581,7 @@ export function openCurveEditor({ draft, destinations, destinationGroups = () =>
     renderHeader();
     body.replaceChildren();
     if (state.view === 'library') body.append(libraryView());
-    else { renderPlate(); body.append(plate, toolbar(), lengthControls()); }
+    else { renderPlate(); body.append(toolbar(), lengthControls(), plate); }
     updateReadout();
     renderFooter();
     dialog.classList.toggle('busy', state.busy);

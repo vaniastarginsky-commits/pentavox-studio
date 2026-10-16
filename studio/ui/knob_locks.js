@@ -22,6 +22,17 @@ function button(label, onClick, { className = '', disabled = false, title = '' }
 
 const percent = (value) => `${Math.round(value * 100)}%`;
 
+/** The coloured top edge of a loop card follows the owner of the parameter (Plaits 1, Plaits 2, Sampler, everything else). */
+export function groupTone(group = '') {
+  if (/^Plaits 1/i.test(group)) return 'p1';
+  if (/^Plaits 2/i.test(group)) return 'p2';
+  if (/^Plaits/i.test(group)) return 'p3';
+  if (/^Sampler/i.test(group)) return 'sam';
+  return 'fx';
+}
+
+function keycap(label) { return element('kbd', '', label); }
+
 function storedBpm() { try { return Number(localStorage.getItem(BPM_KEY)) || 120; } catch { return 120; } }
 function rememberBpm(bpm) { try { localStorage.setItem(BPM_KEY, String(bpm)); } catch { /* a convenience only */ } }
 
@@ -58,30 +69,29 @@ export function mountKnobLocks(root, { getSession, onError = () => {}, onSuccess
   }
 
   function summaryCard(entry) {
-    const card = element('article', `lock-card${entry.active ? '' : ' empty'}`);
+    const card = element('article', `lock-card${entry.active ? ` tone-${groupTone(entry.group)}` : ' empty'}`);
     const head = element('header', 'lock-head');
-    head.append(element('span', 'lock-slot', `Loop ${entry.slot + 1}`));
+    head.append(element('span', 'lock-slot', `Loop ${entry.slot + 1}`), element('span', 'lock-secs', entry.active ? `${entry.seconds.toFixed(1)} s` : 'Free'));
     if (!entry.active) {
       card.append(head, element('p', 'lock-free', 'Free. Hold B3 and move a knob to record one, or draw it here.'));
       const tools = element('div', 'lock-tools');
       tools.append(
         button('New curve', () => edit(entry.slot, newDraft({ bpm: storedBpm() })), { disabled: busy }),
         button('Curves', () => edit(entry.slot, newDraft({ bpm: storedBpm() }), { library: true }), { disabled: busy, title: 'Start from a ready-made curve' }),
-        button('Open file', () => openFileInto(entry.slot), { disabled: busy }),
+        button('Open file', () => openFileInto(entry.slot), { className: 'quiet', disabled: busy }),
       );
       card.append(tools);
       return card;
     }
     const title = element('div', 'lock-title');
     title.append(element('b', '', entry.name), element('small', '', entry.group));
-    head.append(title);
     const open = element('button', 'lock-open');
     open.type = 'button'; open.disabled = busy;
     open.title = 'Open the editor';
     open.setAttribute('aria-label', `Edit loop ${entry.slot + 1}: ${entry.group} ${entry.name}`);
     open.append(loopShape(entry.samples));
     open.addEventListener('click', () => edit(entry.slot, draftFromLoop(slotLoop(entry), { bpm: storedBpm() })));
-    card.append(head, open);
+    card.append(head, title, open);
     card.append(element('p', 'lock-facts', [`${entry.seconds.toFixed(1)} s`, `range ${percent(entry.min)}–${percent(entry.max)}`,
       entry.exit === 'Latch' ? 'latches where it stops' : 'returns to the knob', entry.clocked ? `synced, ${entry.musicalTicks / 96} beats` : 'free running'].join(' · ')));
     const tools = element('div', 'lock-tools');
@@ -103,12 +113,18 @@ export function mountKnobLocks(root, { getSession, onError = () => {}, onSuccess
     const described = describeLocks(slots ?? [], destinations());
     const used = described.filter((entry) => entry.active).length;
     const head = element('div', 'lock-toolbar');
-    head.append(element('h2', '', 'Knob record'), element('span', 'lock-count', `${used} of ${LOCK_SLOTS} loops in use`));
-    head.append(
+    const intro = element('div', 'lock-intro');
+    intro.append(element('h2', '', 'Knob record'), element('p', 'lock-lede', 'Loops recorded on the module. Hold B3 and move a knob to record one; open a loop to edit it as a curve, draw a new one, or load a ready-made curve. Changes apply to the playing module at once. The page reads the module every 2 seconds.'));
+    const actions = element('div', 'lock-actions');
+    const count = element('span', 'lock-count'); count.append(element('b', '', String(used)), ` of ${LOCK_SLOTS} loops in use`);
+    actions.append(
+      count,
       button('Refresh', () => poll(true)),
       button('Erase all', () => eraseSlots(null, 'Erased all recorded movements'), { className: 'lock-erase-all', disabled: busy || used === 0 }),
     );
-    const hint = element('p', 'lock-hint', 'Hold B3 and move a knob to record its movement as a loop, or open a loop to edit it, or start a new curve. Erase on the module with B1+B3 and a knob (hold the chord for all). Changes apply to the playing module at once.');
+    head.append(intro, actions);
+    const hint = element('p', 'lock-hint');
+    hint.append('Hold ', keycap('B3'), ' and move a knob: it records until you let go, then loops. Hold ', keycap('B1'), ' + ', keycap('B3'), ' and move a knob to erase its loop; keep holding the chord to erase every loop on the module.');
     const grid = element('div', 'lock-grid');
     for (const entry of described) grid.append(summaryCard(entry));
     root.replaceChildren(head, hint, grid);

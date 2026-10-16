@@ -76,7 +76,7 @@ export function createWaveEditor(item, { getContext, onChange = () => {}, onErro
   const time = el('output', 'we-time'); time.setAttribute('aria-label', 'Playhead time'); const length = el('output', 'we-length'); length.setAttribute('aria-label', 'Selection length');
   const zoom = el('div', 'we-zoom'); zoom.setAttribute('role', 'group'); zoom.setAttribute('aria-label', 'Zoom');
   const zoomOut = button('−', 'we-icon', 'Zoom out'); const zoomIn = button('+', 'we-icon', 'Zoom in'); const zoomSel = button('Zoom to selection'); const zoomFit = button('Fit');
-  zoom.append(zoomOut, zoomIn, zoomSel, zoomFit);
+  const zoomSeg = el('span', 'we-seg we-zoomseg'); zoomSeg.append(zoomOut, zoomIn); zoom.append(zoomSeg, zoomSel, zoomFit);
   transport.append(playButton, scope, loopButton, time, length, zoom);
   root.append(stage, overview, transport);
 
@@ -133,7 +133,6 @@ export function createWaveEditor(item, { getContext, onChange = () => {}, onErro
     ctx.setTransform(1, 0, 0, 1, 0, 0); drawWaveColumns(ctx, peaks, columns, RULER, h - RULER, view, ratio);
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     const xs = timeToX(item.trimStart, view, w); const xe = timeToX(item.trimEnd, view, w);
-    ctx.globalAlpha = 0.14; ctx.fillStyle = colours.accent; ctx.fillRect(xs, RULER, xe - xs, h - RULER);
     ctx.globalAlpha = 0.58; ctx.fillStyle = colours.bg; ctx.fillRect(0, RULER, Math.max(0, xs), h - RULER); ctx.fillRect(Math.min(w, xe), RULER, Math.max(0, w - xe), h - RULER);
     ctx.globalAlpha = 1;
   }

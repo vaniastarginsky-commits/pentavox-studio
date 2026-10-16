@@ -1,3 +1,4 @@
+import { placePopover } from './popover_place.js';
 import { learnNextMessage } from '../model/midi_learn.js';
 
 function element(tag, className, text) {
@@ -15,28 +16,30 @@ const CC_NAMES = Object.freeze({
 });
 const MODULE_KEYS = Object.freeze({ 'Plaits 1': 'p1', 'Plaits 2': 'p2', 'Plaits 3': 'p3', 'Sampler 1': 's1', 'Sampler 2': 's2', 'FX': 'fx', 'Global': 'gl' });
 export const VELOCITY = 128;
+const depthText = (value) => `${value > 0 ? '+' : value < 0 ? '\u2212' : ''}${Math.abs(value)} %`;
+const setFill = (input) => input.style.setProperty('--p', `${(Number(input.value) + 100) / 2}%`);
 export const ccLabel = (cc) => (cc === VELOCITY ? 'Note velocity' : CC_NAMES[cc] ? `CC ${cc} · ${CC_NAMES[cc]}` : `CC ${cc}`);
 
 export function mountMidiRouting(root, controller, { onError = () => {}, onUndo = null, learn = learnNextMessage } = {}) {
-  const ui = { extra: 0, used: 0, learning: null, popover: null, query: '' };   // blank rows the user asked for; a blank row that got a destination stops counting
+  root.classList.add('cc-page');
+  const ui = { extra: 0, used: 0, learning: null, popover: null, query: '', filter: 'All' };   // blank rows the user asked for; a blank row that got a destination stops counting
 
   function ccSelect(route, readOnly) {
-    const select = element('select', 'midi-cc'); select.disabled = readOnly; select.setAttribute('aria-label', `Controller of route ${route.index + 1}`);
+    const select = element('select', 'cc-ccsel'); select.disabled = readOnly; select.setAttribute('aria-label', `Controller of route ${route.index + 1}`);
     const velocity = new Option(ccLabel(VELOCITY), String(VELOCITY)); select.append(velocity);
     for (let cc = 0; cc < 128; ++cc) select.append(new Option(ccLabel(cc), String(cc)));
     select.value = String(route.cc);
     select.addEventListener('change', () => controller.updateMidiRoute(route.index, 'cc', select.value));
-    const cell = element('div', 'midi-cc-cell');
-    cell.append(select);
-    if (typeof globalThis.navigator?.requestMIDIAccess === 'function') cell.append(learnButton(route, readOnly));
-    return cell;
+    // The Learn column stays (empty) where the browser has no Web MIDI, so the table columns line up.
+    const learnCell = typeof globalThis.navigator?.requestMIDIAccess === 'function' ? learnButton(route, readOnly) : element('span');
+    return [select, learnCell];
   }
 
   function stopLearning() { ui.learning?.abort.abort(); }
 
   function learnButton(route, readOnly) {
     const active = ui.learning?.index === route.index;
-    const button = element('button', `midi-learn${active ? ' listening' : ''}`, active ? '…' : 'Learn');
+    const button = element('button', `cc-quiet cc-learn${active ? ' on' : ''}`, active ? '…' : 'Learn');
     button.type = 'button'; button.disabled = readOnly;
     button.title = active ? 'Listening: move a knob or press a key on your MIDI controller (Esc cancels)' : 'Fill controller and channel from the next MIDI message your controller sends';
     button.setAttribute('aria-label', active ? `Cancel learning for route ${route.index + 1}` : `Learn controller of route ${route.index + 1}`);
@@ -61,7 +64,7 @@ export function mountMidiRouting(root, controller, { onError = () => {}, onUndo 
   }
 
   function channelSelect(route, readOnly) {
-    const select = element('select', 'midi-ch'); select.disabled = readOnly; select.setAttribute('aria-label', `Channel of route ${route.index + 1}`);
+    const select = element('select', 'cc-chsel'); select.disabled = readOnly; select.setAttribute('aria-label', `Channel of route ${route.index + 1}`);
     select.append(new Option('Any ch', '0'));
     select.append(new Option('Voice', '17'));   // the MIDI channel chosen for the voice this parameter belongs to
     for (let channel = 1; channel <= 16; ++channel) select.append(new Option(`Ch ${channel}`, String(channel)));
@@ -74,16 +77,25 @@ export function mountMidiRouting(root, controller, { onError = () => {}, onUndo 
   // The same searchable picker as the CV routing page: a button that opens a grouped, filterable list.
   function destPicker(row, route, readOnly) {
     const entry = controller.destinations.byId(route.dest);
-    const text = route.dest === 0 ? 'Choose a parameter…' : entry ? `${entry.group} · ${entry.name}` : controller.destinations.label(route.dest);   // a removed destination stays visible
-    const button = element('button', `midi-dest-btn${route.dest === 0 ? ' empty' : ''}`, text);
-    button.type = 'button'; button.disabled = readOnly; button.title = text;
-    button.setAttribute('aria-haspopup', 'listbox'); button.setAttribute('aria-label', `Destination of route ${route.index + 1}: ${text}`);
+    const wrap = element('div', 'cc-dwrap');
+    const label = route.dest === 0 ? 'Choose a parameter…' : entry ? `${entry.group} · ${entry.name}` : controller.destinations.label(route.dest);   // a removed destination stays visible
+    const button = element('button', `cc-dbtn${route.dest === 0 ? ' empty' : ''}`); button.type = 'button'; button.disabled = readOnly; button.title = label;
+    if (route.dest === 0 || !entry) button.append(element('span', 'cc-muted', label));
+    else { const text = element('span', 'cc-dtext'); text.append(element('small', '', entry.group), element('strong', '', entry.name)); button.append(text); }
+    button.setAttribute('aria-haspopup', 'listbox'); button.setAttribute('aria-label', `Destination of route ${route.index + 1}: ${label}`);
     button.addEventListener('click', (event) => { event.stopPropagation(); ui.popover = ui.popover === route.index ? null : route.index; ui.query = ''; render(); });
-    if (ui.popover !== route.index) return [button];
-    const pop = element('div', 'dest-pop midi-pop'); pop.addEventListener('click', (event) => event.stopPropagation());
+    wrap.append(button);
+    if (ui.popover !== route.index) return wrap;
+    const pop = element('div', 'cc-pop'); pop.addEventListener('click', (event) => event.stopPropagation());
     const search = document.createElement('input'); search.type = 'search'; search.placeholder = 'Search parameters'; search.value = ui.query; search.setAttribute('aria-label', 'Search parameters');
-    const list = element('div', 'dest-list'); list.setAttribute('role', 'listbox');
-    const choose = (id) => { ui.popover = null; controller.updateMidiRoute(route.index, 'dest', id); render(); };
+    const list = element('div', 'cc-poplist'); list.setAttribute('role', 'listbox');
+    const choose = (id) => {
+      ui.popover = null;
+      // The table follows the route: a parameter of another module moves the row to that target's tab.
+      const target = tabOf(id);
+      if (ui.filter !== 'All' && target && target !== ui.filter) ui.filter = target;
+      controller.updateMidiRoute(route.index, 'dest', id); render();
+    };
     const matches = () => {
       const q = ui.query.trim().toLocaleLowerCase('en');
       return controller.destinationGroups().map((group) => ({
@@ -94,37 +106,41 @@ export function mountMidiRouting(root, controller, { onError = () => {}, onUndo 
     const fill = () => {
       list.replaceChildren();
       for (const { group, items } of matches()) {
-        const head = element('div', 'dest-head'); head.dataset.mod = MODULE_KEYS[group.group] ?? 'gl'; head.append(element('span', 'mod-dot'), element('span', '', group.group));
+        const head = element('h6', ''); head.dataset.mod = MODULE_KEYS[group.group] ?? 'gl'; head.append(element('span', 'cc-ddot'), group.group);
         list.append(head);
         for (const item of items) {
-          const choice = element('button', `dest-item${item.id === route.dest ? ' current' : ''}`, item.name); choice.type = 'button'; choice.dataset.mod = MODULE_KEYS[group.group] ?? 'gl';
+          const choice = element('button', `cc-pi${item.id === route.dest ? ' cur' : ''}`, item.name); choice.type = 'button'; choice.dataset.mod = MODULE_KEYS[group.group] ?? 'gl';
           choice.addEventListener('click', () => choose(item.id));
           list.append(choice);
         }
       }
-      if (!list.children.length) list.append(element('p', 'dest-empty', 'Nothing found'));
+      if (!list.children.length) list.append(element('p', 'cc-nf', 'Nothing found'));
     };
     search.addEventListener('input', () => { ui.query = search.value; fill(); });
     search.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') { ui.popover = null; render(); button.focus(); }
       else if (event.key === 'Enter') { const first = matches()[0]?.items[0]; if (first) choose(first.id); }
-      else if (event.key === 'ArrowDown') { event.preventDefault(); list.querySelector('.dest-item')?.focus(); }
+      else if (event.key === 'ArrowDown') { event.preventDefault(); list.querySelector('.cc-pi')?.focus(); }
     });
-    pop.append(search, list); fill();
-    queueMicrotask(() => search.focus());
-    return [button, pop];
+    pop.append(search, list); fill(); wrap.append(pop);
+    queueMicrotask(() => { placePopover(button, pop); search.focus(); });
+    return wrap;
   }
 
   function depthControl(route, readOnly) {
-    const box = element('div', 'midi-depth');
+    const box = element('div', 'cc-mdep');
     const input = document.createElement('input'); input.type = 'range'; input.min = '-100'; input.max = '100'; input.step = '1'; input.value = String(route.depth);
-    input.disabled = readOnly; input.setAttribute('aria-label', `Depth of route ${route.index + 1}`);
-    const out = element('output', '', `${route.depth > 0 ? '+' : ''}${route.depth} %`);
-    input.addEventListener('input', () => { out.textContent = `${Number(input.value) > 0 ? '+' : ''}${input.value} %`; });
+    input.disabled = readOnly; input.setAttribute('aria-label', `Depth of route ${route.index + 1}`); setFill(input);
+    const out = element('output', '', depthText(route.depth));
+    input.addEventListener('input', () => { out.textContent = depthText(Number(input.value)); setFill(input); });
     input.addEventListener('change', () => controller.updateMidiRoute(route.index, 'depth', input.value));
     box.append(input, out);
     return box;
   }
+
+  // Target tabs come from the destination groups the firmware offers; "Global" reads as "Master".
+  const tabLabel = (group) => (group === 'Global' ? 'Master' : group);
+  const tabOf = (destId) => { const entry = destId ? controller.destinations.byId(destId) : null; return entry ? tabLabel(entry.group) : null; };
 
   function render() {
     const view = controller.midiRoutesView();
@@ -133,43 +149,66 @@ export function mountMidiRouting(root, controller, { onError = () => {}, onUndo 
     if (used.length > ui.used) ui.extra = Math.max(0, ui.extra - (used.length - ui.used));
     ui.used = used.length;
     const empty = view.routes.filter((route) => route.dest === 0);
-    const visible = [...used, ...empty.slice(0, used.length === 0 ? Math.max(1, ui.extra) : ui.extra)];
-    const bar = element('div', 'page-bar');
-    bar.append(element('p', 'page-hint', 'One table for the module: a row listens to a controller (or note velocity) on a channel and adds its value times the depth to a parameter. A negative depth inverts; several rows may drive one parameter.'));
-    const tools = element('div', 'page-tools');
-    const add = element('button', 'quiet-button', '+ Add route'); add.type = 'button';
+    const blank = empty.slice(0, used.length === 0 ? Math.max(1, ui.extra) : ui.extra);   // blank rows stay visible on every tab until they get a parameter
+    const names = [...new Set(controller.destinationGroups().map((group) => tabLabel(group.group)))];
+    const tabs = ['All', ...names.filter((name) => name !== 'Master'), ...names.filter((name) => name === 'Master')];
+    if (!tabs.includes(ui.filter)) ui.filter = 'All';
+    const countOf = (tab) => (tab === 'All' ? used.length : used.filter((route) => tabOf(route.dest) === tab).length);
+    const visible = [...used.filter((route) => ui.filter === 'All' || tabOf(route.dest) === ui.filter), ...blank];
+
+    const head = element('div', 'cc-head');
+    head.append(element('p', 'cc-lead', 'One table for the module: a row listens to a controller (or note velocity) on a channel and adds its value times the depth to a parameter. A negative depth inverts; several rows may drive one parameter.'));
+    const count = element('span', 'cc-count'); count.append(element('b', '', String(used.length)), ` of ${view.slots}`);
+    head.append(count);
+
+    const card = element('section', 'cc-card');
+    const header = element('header');
+    const seg = element('div', 'cc-seg'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Show target');
+    for (const tab of tabs) {
+      const button = element('button', ui.filter === tab ? 'active' : ''); button.type = 'button'; button.setAttribute('aria-pressed', String(ui.filter === tab));
+      button.append(`${tab} `, element('small', '', String(countOf(tab))));
+      button.addEventListener('click', () => { ui.filter = tab; ui.popover = null; render(); });
+      seg.append(button);
+    }
+    const add = element('button', 'cc-btn', '+ Add route'); add.type = 'button';
     add.disabled = view.readOnly || empty.length <= ui.extra;
     add.addEventListener('click', () => { ui.extra += 1; render(); });
-    tools.append(element('span', 'midi-count', `${used.length} of ${view.slots}`), add);
-    bar.append(tools);
-    const list = element('div', 'midi-list');
-    // Column headers: one per visible table column (the list is 1, 2 or 3 columns wide depending on the window).
-    for (const cls of ['', ' col2', ' col3']) {
-      const head = element('div', `midi-head${cls}`);
-      head.setAttribute('aria-hidden', 'true');
-      for (const label of ['', 'Controller', 'Channel', 'Parameter', 'Depth', '']) head.append(element('span', '', label));
-      list.append(head);
-    }
+    header.append(seg, element('span', 'cc-sp'), add);
+    card.append(header);
+
     const perDest = new Map();
     for (const route of used) perDest.set(route.dest, (perDest.get(route.dest) ?? 0) + 1);
-    for (const route of visible) {
-      const sharedBy = route.dest === 0 ? 0 : perDest.get(route.dest);
-      const row = element('div', `midi-row${route.dest === 0 ? ' unassigned' : ''}${sharedBy > 1 ? ' shared' : ''}`);
-      if (sharedBy > 1) { row.dataset.shared = `×${sharedBy}`; row.title = `${sharedBy} routes drive this parameter; their values add up.`; }
-      const group = controller.destinations.byId(route.dest)?.group;
-      row.dataset.mod = MODULE_KEYS[group] ?? 'gl';
-      const clear = element('button', 'midi-clear', '×'); clear.type = 'button'; clear.title = 'Remove this route'; clear.disabled = view.readOnly || route.dest === 0;
-      clear.setAttribute('aria-label', `Remove route ${route.index + 1}`);
-      clear.addEventListener('click', () => {
-        const before = { ...route };
-        controller.updateMidiRoute(route.index, 'dest', 0);
-        // The row keeps its controller, channel and depth, so Undo only has to put the destination back.
-        onUndo?.(`Route ${route.index + 1} removed`, () => controller.updateMidiRoute(before.index, 'dest', before.dest));
-      });
-      row.append(element('span', 'mod-dot'), ccSelect(route, view.readOnly), channelSelect(route, view.readOnly), ...destPicker(row, route, view.readOnly), depthControl(route, view.readOnly), clear);
-      list.append(row);
+    if (!visible.length) {
+      const box = element('div', 'cc-body'); const note = element('div', 'cc-empty');
+      note.append(element('b', '', `No routes for ${ui.filter === 'All' ? 'the module' : ui.filter}`), 'Press “+ Add route” and pick a controller and a parameter.');
+      box.append(note); card.append(box);
+    } else {
+      const table = element('div', 'cc-mtable');
+      const columns = element('div', 'cc-mhead'); columns.setAttribute('aria-hidden', 'true');
+      for (const label of ['', 'Controller', '', 'Channel', 'Parameter', 'Depth', '']) columns.append(element('span', '', label));
+      table.append(columns);
+      for (const route of visible) {
+        const sharedBy = route.dest === 0 ? 0 : perDest.get(route.dest);
+        const row = element('div', `cc-mrow${route.dest === 0 ? ' unassigned' : ''}${sharedBy > 1 ? ' shared' : ''}`);
+        if (sharedBy > 1) row.title = `${sharedBy} routes drive this parameter; their values add up.`;
+        const group = controller.destinations.byId(route.dest)?.group;
+        row.dataset.mod = MODULE_KEYS[group] ?? 'gl';
+        const clear = element('button', 'cc-quiet cc-danger', '×'); clear.type = 'button'; clear.title = 'Remove this route'; clear.disabled = view.readOnly || route.dest === 0;
+        clear.setAttribute('aria-label', `Remove route ${route.index + 1}`);
+        clear.addEventListener('click', () => {
+          const before = { ...route };
+          controller.updateMidiRoute(route.index, 'dest', 0);
+          // The row keeps its controller, channel and depth, so Undo only has to put the destination back.
+          onUndo?.(`Route ${route.index + 1} removed`, () => controller.updateMidiRoute(before.index, 'dest', before.dest));
+        });
+        const depth = depthControl(route, view.readOnly);
+        if (sharedBy > 1) { const badge = element('span', 'cc-badge', `×${sharedBy}`); badge.title = `${sharedBy} routes drive this parameter; their values add up.`; badge.dataset.shared = ''; depth.append(badge); }
+        row.append(element('span', 'cc-ddot'), ...ccSelect(route, view.readOnly), channelSelect(route, view.readOnly), destPicker(row, route, view.readOnly), depth, clear);
+        table.append(row);
+      }
+      card.append(table);
     }
-    root.replaceChildren(bar, list);
+    root.replaceChildren(head, card);
   }
 
   const onKey = (event) => { if (event.key === 'Escape') stopLearning(); };
