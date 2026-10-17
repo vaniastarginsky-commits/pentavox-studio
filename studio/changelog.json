@@ -1,4 +1,6 @@
 [
+  {"date": "2026-10-18", "area": "firmware", "text": "Sampler stutter: Slice modes (Studio: Sampler stutter). The loop starts exactly on a file's cue marker and the pot picks how much of that slice repeats; files without markers use the clock grid."},
+  {"date": "2026-10-17", "area": "firmware", "text": "Field trace for the sampler and MIDI clock in the HostLink log (512 lines): note timing vs the bar, waits, launches, wraps, silence, playhead jumps, clock stalls."},
   {"date": "2026-10-17", "area": "studio", "text": "Tempo tag is written as the tempo at which the clip is exactly whole beats (a 174-named loop of 16 beats in 5.4546 s gets 176.0): the module no longer cuts the last bar off it."},
   {"date": "2026-10-17", "area": "studio", "text": "Tempo: a BPM in the file name (also mid-name, e.g. _174_) settles half/double time when the audio agrees; the note shows the audio tempo when it is a little off."},
   {"date": "2026-10-17", "area": "studio", "text": "Sampler detector: snares sit on the start of their attack (were up to 17 ms late); hats next to kicks and snares are labelled hat, not snare; the ride and soft hats are kept."},
