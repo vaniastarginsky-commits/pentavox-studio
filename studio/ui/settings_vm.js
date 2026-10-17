@@ -32,7 +32,7 @@ const GATE_ROLES = Object.freeze([1, 2]);
 // Fixed English labels for the hardware Settings page; the order is the display order.
 const SIMPLE_ITEMS = Object.freeze([
   { id: 's1.0', short: 'input', group: 'input', control: 'slider', label: 'Input level', hint: 'How much of the Audio In signal reaches the effects and the sampler recording. 0 turns the input off.' },
-  { id: 's2.1', short: 'input aux', group: 'input', control: 'slider', label: 'Input AUX / FX send', hint: 'How much of the external Audio In signal is sent through the effects. 0 % is fully dry; 100 % sends the whole input through the FX chain.' },
+  { id: 's2.1', name: 'Ext Input FX Send', short: 'input aux', group: 'input', control: 'slider', label: 'Input AUX / FX send', hint: 'How much of the external Audio In signal is sent through the effects. 0 % is fully dry; 100 % sends the whole input through the FX chain.' },
   { id: 's1.5', short: 'output', group: 'input', control: 'slider', label: 'Output level', hint: 'Final volume of the module\u2019s outputs, applied after all effects. 100 % is the original level; the control is a squared curve, so 50 % is about \u221212 dB.' },
   { id: 's0.0', short: 'brightness', group: 'input', control: 'slider', label: 'LED brightness', hint: 'Brightness of the panel LEDs. Brighter LEDs draw more power.' },
   { id: 'transport.source', group: 'clock', control: 'segmented', label: 'Clock source', hint: 'Auto prefers CV, then MIDI, then internal.', labels: ['Auto', 'Internal', 'CV', 'MIDI'] },
@@ -43,8 +43,8 @@ const SIMPLE_ITEMS = Object.freeze([
   { id: 's2.2', short: 'change', group: 'clock', control: 'segmented', label: 'Tempo change mode', hint: 'Glide bends the pitch like a tape delay when Delay Time, Rate or clock tempo changes. Crossfade blends between delay times without a pitch bend.', labels: ['Glide', 'Crossfade'] },
   { id: 's2.3', short: 'change time', group: 'clock', control: 'slider', label: 'Tempo change time', hint: 'Transition time for Delay Time, Rate and clock-tempo changes. Large Glide jumps may take longer to keep playback moving forwards. Small clock wobble is ignored.', tempoTime: true },
   { id: 's0.2', group: 'voices', control: 'segmented', label: 'Voice mode', hint: 'Split: each Plaits voice plays independently; set its MIDI channel in CV routing > Notes. Poly: the three voices share the notes. Unison: one note plays all three.', labels: ['Split', 'Poly', 'Unison'] },
-  { id: 's0.4', short: 'mute other', group: 'sampler', control: 'switch', label: 'Mute the other sampler', hint: 'While one sampler plays, the other is silenced.' },
   { id: 's0.5', short: 'threshold', group: 'sampler', control: 'segmented', label: 'Auto-record threshold', hint: 'What starts a recording after you arm it with B2: the input level, or Clock Loop, which starts on the next downbeat (J7 Reset or MIDI Start) and stops by itself after Record length.', show: [0, 1, 2, 3, 8], labels: ['Off', '−40 dB', '−30 dB', '−20 dB', 'Clock', 'Start', 'Reset', 'Reset+Stop', 'Clock Loop'] },
+  { id: 's2.1', name: 'Sampler Stutter', short: 'stutter', group: 'sampler', control: 'segmented', label: 'Sampler stutter', hint: 'Clean repeats the slice as it is. Glitch drops, reverses and bit-crushes later repeats, more with each step; the first repeat is always clean. Applies to both samplers.', labels: ['Clean', 'Glitch low', 'Glitch mid', 'Glitch high'] },
   { id: 's2.5', short: 'sleep', group: 'voices', control: 'switch', label: 'Voice sleep', hint: 'On: a voice whose note has ended and whose sound has died away (about half a second of silence) stops being computed, which frees processor time. Off: every voice is always computed. If you ever hear a click when a voice wakes after silence, switch this off.' },
   { id: 's2.4', short: 'record', group: 'sampler', control: 'segmented', label: 'Record length', hint: 'Length of a Clock Loop take, in bars. A sample slot holds 30 s: 16 bars need 128 BPM or faster, 8 bars 64 BPM.', show: [0, 1, 3, 7, 15], labels: Array.from({ length: 16 }, (_, index) => `${index + 1}`) },
 ]);
@@ -111,6 +111,7 @@ export function settingsView(table) {
   for (const spec of SIMPLE_ITEMS) {
     if (!table.has(spec.id)) continue;
     const field = table.field(spec.id);
+    if (spec.name && field.name !== spec.name) continue;   // one slot id, different meaning in the full and the compact build
     const raw = table.get(spec.id);
     const item = { id: spec.id, control: spec.control, label: spec.label, hint: spec.hint, short: spec.short ?? '', twoRows: spec.twoRows === true };
     if (spec.control === 'slider') {
