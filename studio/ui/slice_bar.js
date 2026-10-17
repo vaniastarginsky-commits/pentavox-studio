@@ -105,12 +105,13 @@ export function createSliceBar(item, { editor, onChange = () => {} }) {
         const pick = reconcileTempo(guess, hint, length, weakBpmFromName(item.name));
         if (pick) {
           item.bpm = pick.bpm; item.beats = pick.beats; item.tempoAuto = true;
-          note = pick.source === 'name' ? `tempo from file name: ${pick.bpm} BPM, ${pick.beats} beats` : `tempo guessed: ${pick.bpm} BPM, ${pick.beats} beats`;
+          note = pick.source !== 'name' ? `tempo guessed: ${pick.bpm} BPM, ${pick.beats} beats`
+            : pick.named ? `tempo from file name: ${pick.named} \u2192 ${pick.bpm} BPM, ${pick.beats} beats (the clip is exactly that many beats at ${pick.bpm}; the module cuts a bar off a clip that is not)`
+            : `tempo from file name: ${pick.bpm} BPM, ${pick.beats} beats`;
           if (pick.source === 'name') {
             // half/double time is the same tempo; a loop that plays a little off its label says so (a 174 pack loop that is really 176)
             const audio = compareAudioTempo(guess, pick.bpm);
             if (audio?.relation === 'differs') note += ` (audio said ${guess.bpm})`;
-            else if (audio?.relation === 'near') note += ` · audio measures ${audio.measured}`;
           }
           else if (pick.source === 'audio' && pick.alternatives?.length) {
             const alternative = pick.alternatives[0]; note += ` (${alternative.bpm} / ${alternative.beats} also fits)`;
