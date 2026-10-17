@@ -42,13 +42,19 @@ export function wholeBeats(bpm, length, { strict = false } = {}) {
  * otherwise the audio guess stands. Returns { bpm, beats, source: 'name' | 'audio' } or null.
  */
 export function reconcileTempo(guess, hint, length, weakHint = null) {
+  const named = (bpm, beats) => {
+    // The tag is the tempo at which the clip is EXACTLY `beats` beats: the module counts length * bpm / 60 quarters and only snaps to a whole
+    // number within 0.05, so a 15.82-beat clip tagged 174 loses its last bar (floor of 3.95 bars). A name that is a little off says 176.0 here.
+    const exact = Number((beats * 60 / length).toFixed(2));
+    return Math.abs(exact - bpm) > bpm * 0.002 ? { bpm: exact, beats, source: 'name', named: bpm } : { bpm, beats, source: 'name' };
+  };
   const beats = hint ? wholeBeats(hint, length) : null;
-  if (beats) return { bpm: hint, beats, source: 'name' };
+  if (beats) return named(hint, beats);
   if (weakHint) {
     // A bare number mid-name is a tempo only when the audio says so too (any octave), or, with no audio guess, when it fits the clip strictly.
     const agrees = guess ? [0.5, 1, 2].some((k) => Math.abs(guess.bpm * k - weakHint) <= weakHint * AGREE) : true;
     const weakBeats = agrees ? wholeBeats(weakHint, length, { strict: !guess }) : null;
-    if (weakBeats) return { bpm: weakHint, beats: weakBeats, source: 'name' };
+    if (weakBeats) return named(weakHint, weakBeats);
   }
   return guess ? { ...guess, source: 'audio' } : null;
 }
