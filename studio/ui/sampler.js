@@ -1,4 +1,4 @@
-import { bpmFromName, reconcileTempo } from '../model/tempo_hint.js';
+import { bpmFromName, reconcileTempo, weakBpmFromName } from '../model/tempo_hint.js';
 import { audioFromBuffer, encodePcm16Wav, MAX_FRAMES, prepareAudio, readWavMarkers, TARGET_SAMPLE_RATE } from '../model/wav.js';
 import { createStoreZip } from '../model/zip.js';
 import { buildPeakPyramid, cap30, computePeaks, dragHandle, fitView, MAX_CLIP_SECONDS } from '../model/wave_edit.js';
@@ -52,7 +52,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const name = file.name.replace(/\.[^.]+$/, '') || 'sample';
     let bpm = marks?.bpm > 0 ? String(Number(marks.bpm.toFixed(2))) : ''; let beats = marks?.beats > 0 ? String(marks.beats) : '';
     let tempoAuto = false;   // true while bpm/beats came from the file name or a guess, so Detect may redo them
-    if (!bpm && !beats) { const named = reconcileTempo(null, bpmFromName(name), duration); if (named) { bpm = String(named.bpm); beats = String(named.beats); tempoAuto = true; } }
+    if (!bpm && !beats) { const named = reconcileTempo(null, bpmFromName(name), duration, weakBpmFromName(name)); if (named) { bpm = String(named.bpm); beats = String(named.beats); tempoAuto = true; } }
     return { name, audio, duration, trimStart: 0, trimEnd: duration, normalize: true, channelMode: audio.channels.length > 1 ? 'stereo' : 'mono', bpm, beats, tempoAuto, slot: 0,
       slices: marks && marks.sampleRate > 0 && marks.slices.length > 1 ? new SliceModel(duration, { markers: marks.slices.filter((frame) => frame > 0).map((frame) => frame / marks.sampleRate), oneShot: marks.oneShot, playMode: marks.playMode, step: marks.step, playFilter: marks.playFilter, labels: marks.labels }) : new SliceModel(duration),
       pyramid: buildPeakPyramid(audio.channels, audio.sampleRate), view: fitView(duration), playhead: 0, scope: 'selection', loop: false,

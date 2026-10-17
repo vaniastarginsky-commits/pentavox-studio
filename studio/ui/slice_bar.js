@@ -1,5 +1,5 @@
 import { beatMarkers, evenMarkers, MAX_MARKERS } from '../model/slices.js';
-import { bpmFromName, reconcileTempo } from '../model/tempo_hint.js';
+import { bpmFromName, compareAudioTempo, reconcileTempo, weakBpmFromName } from '../model/tempo_hint.js';
 import { PLAY_FILTERS, PLAY_MODES, PLAY_STEPS } from '../model/wav.js';
 import { detectOnsets, estimateTempo } from '../model/onsets.js';
 import { classifyHits } from '../model/classify.js';
@@ -102,11 +102,16 @@ export function createSliceBar(item, { editor, onChange = () => {} }) {
         onsets.forEach((time, index) => { if (time >= item.trimStart && time < item.trimEnd) { tempoOnsets.push(time - item.trimStart); tempoLabels.push(sliceLabels[index + 1]); } });
         const guess = estimateTempo(tempoOnsets, length, { labels: tempoLabels });
         const hint = bpmFromName(item.name);
-        const pick = reconcileTempo(guess, hint, length);
+        const pick = reconcileTempo(guess, hint, length, weakBpmFromName(item.name));
         if (pick) {
           item.bpm = pick.bpm; item.beats = pick.beats; item.tempoAuto = true;
           note = pick.source === 'name' ? `tempo from file name: ${pick.bpm} BPM, ${pick.beats} beats` : `tempo guessed: ${pick.bpm} BPM, ${pick.beats} beats`;
-          if (pick.source === 'name' && guess && Math.abs(guess.bpm - pick.bpm) > pick.bpm * 0.03) note += ` (audio said ${guess.bpm})`;
+          if (pick.source === 'name') {
+            // half/double time is the same tempo; a loop that plays a little off its label says so (a 174 pack loop that is really 176)
+            const audio = compareAudioTempo(guess, pick.bpm);
+            if (audio?.relation === 'differs') note += ` (audio said ${guess.bpm})`;
+            else if (audio?.relation === 'near') note += ` · audio measures ${audio.measured}`;
+          }
           else if (pick.source === 'audio' && pick.alternatives?.length) {
             const alternative = pick.alternatives[0]; note += ` (${alternative.bpm} / ${alternative.beats} also fits)`;
           }
