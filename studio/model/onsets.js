@@ -168,17 +168,26 @@ export function detectOnsets(channels, sampleRate, { sensitivity = 0.5, maxOnset
   const spaced = [];
   for (const pick of picks) {
     const last = spaced[spaced.length - 1];
-    if (last && (pick.frame - last.frame) * hop < MIN_SPACING) { if (pick.strength > last.strength) spaced[spaced.length - 1] = pick; }
+    if (last && (pick.frame - last.frame) * hop < MIN_SPACING) {
+      // The hat pass normalises to its own maximum, so next to a snare its strength is inflated and its position (the rise of the >6 kHz band,
+      // 10-17 ms after the snare begins) is late: it must never replace a full-band or kick-band pick, only compete with its own kind.
+      // The loser is kept as `alt`: if the winner turns out not to be a real hit (it fails the level check below) the other one is used.
+      if (pick.hat === last.hat) { if (pick.strength > last.strength) { pick.alt = last.alt; spaced[spaced.length - 1] = pick; } }
+      else if (!pick.hat) { pick.alt = last; spaced[spaced.length - 1] = pick; }
+      else last.alt = pick;
+    }
     else spaced.push(pick);
   }
   const strongest = spaced.sort((a, b) => b.strength - a.strength).slice(0, Math.max(0, maxOnsets)).sort((a, b) => a.frame - b.frame);
   // A hat pick is placed on the energy rise of the HIGH band, not of the full signal: under a kick the full-band RMS
   // wobbles with the bass and the steepest step lands up to a frame away from the hat.
-  const bright = strongest.some((pick) => pick.hat) ? highPass(mono, sampleRate) : null;
+  const bright = strongest.some((pick) => pick.hat || pick.alt?.hat) ? highPass(mono, sampleRate) : null;
   // Slice 0 already starts at the file boundary. Treat that boundary as an
   // implicit onset, otherwise refinement of the opening hit can add a second
   // marker a few milliseconds into the very same kick.
-  const times = strongest.map((pick) => { const signal = pick.hat ? bright : mono; return sharpen(signal, sampleRate, refine(signal, sampleRate, pick.frame)); }).filter((t) => t >= MIN_SPACING && t < duration - 0.005 && levelRiseDb(mono, sampleRate, t) >= MIN_LEVEL_RISE_DB);
+  const place = (pick) => { const signal = pick.hat ? bright : mono; return sharpen(signal, sampleRate, refine(signal, sampleRate, pick.frame)); };
+  const real = (t) => t >= MIN_SPACING && t < duration - 0.005 && levelRiseDb(mono, sampleRate, t) >= MIN_LEVEL_RISE_DB;
+  const times = strongest.map((pick) => { const t = place(pick); if (real(t) || !pick.alt) return t; const other = place(pick.alt); return real(other) ? other : t; }).filter(real);
   const out = [];
   for (const t of times) if (!out.length || t - out[out.length - 1] >= MIN_SPACING) out.push(t);
   return out;
