@@ -51,7 +51,7 @@
 .cc-seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
 .cc-seg button:disabled { cursor: not-allowed; opacity: .6; }
 .cc-seg button small { color: var(--muted); font-size: 10.5px; margin-left: 2px; }
-.cc-seg.two { flex-wrap: wrap; max-width: 420px; }
+.cc-seg.two { display: grid; grid-template-columns: repeat(4, auto); max-width: 100%; }   /* eight long labels: two rows of four */
 
 .cc-sw { width: 38px; height: 22px; border-radius: 11px; border: 1px solid var(--line); background: var(--surface-2); position: relative; padding: 0; flex: none; cursor: pointer; }
 .cc-sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .12s; }
