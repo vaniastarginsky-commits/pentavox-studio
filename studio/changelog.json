@@ -1,4 +1,5 @@
 [
+  { "date": "2026-10-17", "area": "studio", "text": "Sampler detector: markers sit at the true start of the hit (sample accurate, just before it); no markers on the click at the end of a kick; markers move in 20 us steps instead of 1 ms." },
   { "date": "2026-10-17", "area": "firmware", "text": "Sampler stutter mode now lives in the old Sampler Choke settings slot: stored presets stay valid (the first glitch build reset them)." },
   { "date": "2026-10-17", "area": "studio", "text": "Sampler detector: hats (also right after a snare) are no longer labelled snare; quiet ghost kicks are found." },
   { "date": "2026-10-17", "area": "firmware", "commit": "621b8c1", "text": "Sampler stutter: glitch layer, later repeats drop, reverse and bit-crush. Pick Clean / Glitch low / mid / high in Settings > Sampler." },

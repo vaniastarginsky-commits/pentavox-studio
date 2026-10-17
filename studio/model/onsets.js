@@ -76,6 +76,46 @@ function refine(mono, sampleRate, frameIndex) {
   return (positions[onset] ?? frameIndex * HOP) / sampleRate;
 }
 
+// Sample-accurate start of a sharp attack. The flux/RMS refinement above works in 1 ms blocks and can land a few ms away from the first sample of
+// the hit. Look for the place where the peak envelope (0.1 ms hold) jumps by at least SHARP_RISE over the previous millisecond, in a window
+// around the coarse time; the strongest such jump is the beginning of the attack (the sample before it is the quietest). Then walk to the first
+// sample that reaches a few per cent of the attack's peak and step back PRE_ROLL, so the click is never cut. A soft onset (a hat swelling out of
+// a tail, a cymbal over a wash) has no such jump: its coarse time is kept.
+export const SHARP_RISE = 4;               // x4 = +12 dB over the previous 1 ms
+export const SHARP_BACK_SECONDS = 0.008;   // how far before the coarse time the attack may start
+export const SHARP_FORWARD_SECONDS = 0.002;
+export const PRE_ROLL_SECONDS = 0.00025;   // a marker sits this long before the first sample of the attack
+function sharpen(signal, sampleRate, time) {
+  const hold = Math.max(1, Math.round(0.0001 * sampleRate)); const lookback = Math.max(hold, Math.round(0.001 * sampleRate));
+  const first = Math.max(lookback, Math.round((time - SHARP_BACK_SECONDS) * sampleRate)); const last = Math.min(signal.length - lookback - 1, Math.round((time + SHARP_FORWARD_SECONDS) * sampleRate));
+  if (!(last > first)) return time;
+  // envelope on a 0.1 ms grid over [first - lookback, last + lookback]
+  const base = first - lookback; const cells = Math.floor((last + lookback - base) / hold) + 1; const env = new Float32Array(cells);
+  for (let c = 0; c < cells; c += 1) { let m = 0; const from = base + c * hold; for (let n = from; n < from + hold && n < signal.length; n += 1) { const v = Math.abs(signal[n]); if (v > m) m = v; } env[c] = m; }
+  const back = Math.round(lookback / hold); let best = -1; let bestRatio = SHARP_RISE;
+  for (let c = back; c < cells - back; c += 1) {
+    let before = 0; for (let k = c - back; k < c; k += 1) if (env[k] > before) before = env[k];
+    let after = 0; for (let k = c; k < c + back && k < cells; k += 1) if (env[k] > after) after = env[k];
+    const ratio = after / (before + 1e-6); if (ratio > bestRatio) { bestRatio = ratio; best = c; }
+  }
+  if (best < 0) return time;
+  let peak = 0; for (let k = best; k < Math.min(cells, best + back); k += 1) if (env[k] > peak) peak = env[k];
+  const level = peak * 0.05; let onset = base + best * hold;
+  for (let n = base + best * hold; n < base + (best + back + 1) * hold && n < signal.length; n += 1) if (Math.abs(signal[n]) >= level) { onset = n; break; }   // the jump may be anywhere in the next ms
+  return Math.max(0, onset / sampleRate - PRE_ROLL_SECONDS);
+}
+
+// A hit makes the signal louder. The flux detector also fires on things that do not: the abrupt end of a gated kick, a click inside a tail.
+// Those leave the level where it was (-1..+1 dB over 10 ms), real hits, even soft hats and a ride, rise by 2.5 dB or more.
+export const MIN_LEVEL_RISE_DB = 2;
+export const LEVEL_WINDOW_SECONDS = 0.01;
+function levelRiseDb(mono, sampleRate, time) {
+  const w = Math.max(1, Math.round(LEVEL_WINDOW_SECONDS * sampleRate)); const at = Math.round(time * sampleRate);
+  if (at < w || at + w > mono.length) return Infinity;   // too close to an edge to compare
+  let before = 0; let after = 0; for (let i = 0; i < w; i += 1) { before += mono[at - w + i] * mono[at - w + i]; after += mono[at + i] * mono[at + i]; }
+  return 10 * Math.log10((after + 1e-12) / (before + 1e-12));
+}
+
 // Adaptive-threshold peak picking on one flux curve. Strength is normalised by the curve's own maximum, so a quiet
 // band (hats) competes fairly with a loud one (kick).
 function pickPeaks(flux, sensitivity, hopSeconds, { multSpan = 2.8, floorSpan = 0.3, minTop = 1e-6 } = {}, flag = false) {
@@ -138,7 +178,7 @@ export function detectOnsets(channels, sampleRate, { sensitivity = 0.5, maxOnset
   // Slice 0 already starts at the file boundary. Treat that boundary as an
   // implicit onset, otherwise refinement of the opening hit can add a second
   // marker a few milliseconds into the very same kick.
-  const times = strongest.map((pick) => refine(pick.hat ? bright : mono, sampleRate, pick.frame)).filter((t) => t >= MIN_SPACING && t < duration - 0.005);
+  const times = strongest.map((pick) => { const signal = pick.hat ? bright : mono; return sharpen(signal, sampleRate, refine(signal, sampleRate, pick.frame)); }).filter((t) => t >= MIN_SPACING && t < duration - 0.005 && levelRiseDb(mono, sampleRate, t) >= MIN_LEVEL_RISE_DB);
   const out = [];
   for (const t of times) if (!out.length || t - out[out.length - 1] >= MIN_SPACING) out.push(t);
   return out;

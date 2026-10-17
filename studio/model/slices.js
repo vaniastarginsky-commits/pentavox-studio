@@ -4,13 +4,15 @@ import { snapTime } from './wave_edit.js';
 
 export const MAX_SLICES = 32;                 // firmware limit, slice 0 included
 export const MAX_MARKERS = MAX_SLICES - 1;    // interior boundaries only; slice 0 always starts at the beginning
+export const MARKER_SNAP = 0.00002;            // markers snap to 20 us, less than one sample at 48 kHz (selection handles keep their 1 ms)
+const snapMarker = (time) => snapTime(time, MARKER_SNAP);
 export const MIN_GAP = 0.001;                 // seconds between markers, and between a marker and either edge
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
 export function normalizeMarkers(markers, duration) {
   const out = [];
-  const sorted = markers.filter(Number.isFinite).map((t) => snapTime(t))
+  const sorted = markers.filter(Number.isFinite).map((t) => snapMarker(t))
     .filter((t) => t >= MIN_GAP - 1e-9 && t <= duration - MIN_GAP + 1e-9).sort((a, b) => a - b);
   for (const t of sorted) if (!out.length || t - out[out.length - 1] >= MIN_GAP - 1e-9) out.push(t);
   return out.slice(0, MAX_MARKERS);
@@ -130,7 +132,7 @@ export class SliceModel {
     return this.#commit(this.#snapshot(), this.#markers.filter((_, i) => i !== index), this.#labels.filter((_, i) => i !== index + 1), this.#oneShot);
   }
   add(t) {
-    const target = snapTime(t);
+    const target = snapMarker(t);
     const next = normalizeMarkers([...this.#markers, target], this.#duration);
     if (next.length !== this.#markers.length + 1) return -1;
     const index = next.indexOf(target); const labels = this.#labels.slice(); labels.splice(index + 1, 0, 'other');
@@ -149,7 +151,7 @@ export class SliceModel {
     if (!this.#drag || this.#drag.index !== index) return;
     const lo = (this.#markers[index - 1] ?? 0) + MIN_GAP; const hi = (this.#markers[index + 1] ?? this.#duration) - MIN_GAP;
     if (lo > hi) return;
-    const value = snapTime(clamp(t, lo, hi));
+    const value = snapMarker(clamp(t, lo, hi));
     if (value === this.#markers[index]) return;
     this.#markers[index] = value; this.#emit();
   }
