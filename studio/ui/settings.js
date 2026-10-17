@@ -1,3 +1,6 @@
+import { builtAt, loadLatestCloudMeta } from '../build_flow.js';
+import { changelogEntries, firmwareRows, loadChangelog } from '../firmware_info.js';
+
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -6,7 +9,8 @@ function element(tag, className, text) {
 }
 
 export function mountSettings(root, controller) {
-  const ui = { open: new Set(['input', 'clock']) };
+  const ui = { open: new Set(['input', 'clock']), logAll: false };
+  const firmware = { latest: null, builtAtMs: null, log: [] };
   root.classList.add('cc-page');
 
   function segmented(item, readOnly) {
@@ -62,6 +66,34 @@ export function mountSettings(root, controller) {
     return line;
   }
 
+  /** When the firmware in the module and the latest cloud build were made, and the short change log. */
+  function firmwareCard() {
+    const card = element('section', 'cc-card cc-fwcard');
+    card.append(element('h3', '', 'Firmware'));
+    const rows = firmwareRows({ info: controller.session?.info, latest: firmware.latest, builtAtMs: firmware.builtAtMs });
+    for (const entry of rows) {
+      const line = element('p', entry.state ? `cc-fwrow ${entry.state}` : 'cc-fwrow');
+      line.append(element('b', '', entry.label), element('span', '', entry.text));
+      card.append(line);
+    }
+    const entries = changelogEntries(firmware.log, ui.logAll ? 50 : 6);
+    if (entries.length) {
+      const list = element('ul', 'cc-fwlog');
+      for (const entry of entries) {
+        const item = element('li');
+        item.append(element('time', '', entry.date ?? ''), element('span', `cc-fwarea ${entry.area ?? ''}`, entry.area ?? ''), element('span', '', entry.text));
+        list.append(item);
+      }
+      card.append(list);
+      if (firmware.log.length > 6) {
+        const more = element('button', 'cc-fwmore', ui.logAll ? 'Show fewer' : 'Show all'); more.type = 'button';
+        more.addEventListener('click', () => { ui.logAll = !ui.logAll; render(); });
+        card.append(more);
+      }
+    }
+    return card;
+  }
+
   function render() {
     root.replaceChildren();
     const view = controller.view();
@@ -69,6 +101,7 @@ export function mountSettings(root, controller) {
     const groups = controller.settingsView();
     if (!groups.length) { root.append(element('p', 'cc-muted', 'This module firmware has no settings fields.')); return; }
     root.append(element('p', 'cc-lead', 'The same list as the module’s own Settings page (hold B2 + B3). Changes are heard at once; Save to slot keeps them.'));
+    root.append(firmwareCard());
     const list = element('div', 'cc-setlist');
     for (const group of groups) {
       const open = ui.open.has(group.key);
@@ -83,7 +116,10 @@ export function mountSettings(root, controller) {
     root.append(list);
   }
 
+  let disposed = false;
+  loadChangelog().then((log) => { if (!disposed) { firmware.log = log; render(); } });
+  loadLatestCloudMeta().then((meta) => { if (!disposed && meta) { firmware.latest = meta; firmware.builtAtMs = builtAt(meta); render(); } });
   const unsubscribe = controller.subscribe(render);
   render();
-  return () => { unsubscribe(); root.replaceChildren(); };
+  return () => { disposed = true; unsubscribe(); root.replaceChildren(); };
 }

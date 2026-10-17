@@ -391,3 +391,16 @@
   .cc-page > .cc-head h2, #presets-root .page-title, #locks-root .lock-intro h2 { font-size: 17px; }
   .cc-lead, #presets-root .page-hint, #locks-root .lock-lede { font-size: 12.5px; line-height: 1.4; }
 }
+
+/* Settings > Firmware: module build date, latest cloud build, short change log */
+.cc-fwcard { margin: 10px 0 12px; padding: 12px 14px; display: grid; gap: 4px; }
+.cc-fwcard h3 { margin: 0 0 4px; font-size: 14px; }
+.cc-fwrow { margin: 0; display: flex; gap: 10px; font-size: 13px; line-height: 1.5; }
+.cc-fwrow b { min-width: 9.5em; color: var(--muted); font-weight: 600; }
+.cc-fwrow.older span { color: var(--warn, #d9a441); }
+.cc-fwlog { list-style: none; margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--line, rgba(128,128,128,.25)); display: grid; gap: 3px; font-size: 12.5px; line-height: 1.45; }
+.cc-fwlog li { display: grid; grid-template-columns: 6.5em 5.5em 1fr; gap: 8px; }
+.cc-fwlog time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.cc-fwarea { color: var(--muted); text-transform: uppercase; font-size: 10.5px; letter-spacing: .06em; padding-top: 1px; }
+.cc-fwmore { justify-self: start; margin-top: 4px; background: none; border: 0; padding: 2px 0; color: var(--accent, #7a8cff); cursor: pointer; font: inherit; font-size: 12.5px; }
+@media (max-width: 640px) { .cc-fwrow { display: grid; gap: 0; } .cc-fwlog li { grid-template-columns: 1fr; gap: 0; } }

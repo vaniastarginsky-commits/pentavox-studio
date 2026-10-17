@@ -157,6 +157,17 @@ export class CloudBuild {
   }
 
   /** The build the workflow published last (whatever its request), to flash without building again; null when there is none. */
+  /** The meta.json of the latest published build, without downloading the image (null when none, or the last one failed). */
+  async latestMeta() {
+    try {
+      const meta = JSON.parse(await (await this.resultText('meta.json')).text());
+      return meta.ok ? meta : null;
+    } catch (error) {
+      if (error instanceof CloudBuildError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
   async latest() {
     let meta;
     try { meta = JSON.parse(await (await this.resultText('meta.json')).text()); } catch (error) {

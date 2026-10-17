@@ -43,6 +43,12 @@ export async function loadLatestCloudBuild({ token = githubToken(() => ''), sett
   try { return await makeBuilder({ token, ...settings, onUnauthorized: forgetGithubToken }).latest(); } catch { return null; }
 }
 
+/** Only the meta.json of the latest cloud build (no image), for showing its date; null without a token, a build or a network. */
+export async function loadLatestCloudMeta({ token = githubToken(() => ''), settings = cloudSettings(), makeBuilder = (options) => new CloudBuild(options) } = {}) {
+  if (!token) return null;
+  try { return await makeBuilder({ token, ...settings, onUnauthorized: forgetGithubToken }).latestMeta(); } catch { return null; }
+}
+
 /** When a published build was made: meta.built_at, or the time Studio put in the request id (base 36) for builds from before that field. */
 export function builtAt(meta) {
   const stamp = Date.parse(meta?.built_at ?? '');
