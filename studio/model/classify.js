@@ -25,6 +25,7 @@ export const HAT_HIGH_MINUS_MID_DB = -4;          // hat: the >6 kHz band is at 
 export const HAT_ON_TAIL_BRIGHTER_DB = 6;         // a hit that only looks like a kick/snare because of a ringing tail: what it ADDED is brighter than that...
 export const HAT_ON_TAIL_HIGH_RISE_DB = 6;        // ...its >6 kHz band rose by this much, and more than its mid band did (kick/snare: mid rises more) -> a hat on the tail
 export const HAT_BRIGHT_HIGH_MINUS_MID_DB = 3.5;  // hat, whatever its decay: hats that ring or are marked a little early show a decay ratio of 0.9-2.9, so decay cannot be required. Hand-labelled break (tests/fixtures/drum_loop_174_marked.wav): hats +5..+8 dB, snares -8..-9, kicks -12..-15, ghost kick +1.8
+export const HAT_STRONG_HIGH_MINUS_MID_DB = 10;   // hat, with no further condition: a hat right after a snare has the snare's tail still ringing in the mid band, so its top does not out-rise the middle (hats +13..+14 there, synthetic snares +2..+8, real snares -8..-13)
 export const HAT_HIGH_OVER_MID_RISE_DB = 0;        // ...and its >6 kHz band rose at least as much as its mid band (real hats +3..+9, snares -8..-13)
 export const HAT_MAX_DECAY = 0.56;                // hat: last third of the window / first third (RMS), snares ring longer
 export const SNARE_MIN_MID_DB = -999;             // reserved: a snare is whatever mid-heavy hit is neither kick nor hat
@@ -146,7 +147,8 @@ export function classifyHit(channels, sampleRate, time, limitTime) {
   const lowIsNew = f.lowRise >= KICK_ABS_MIN_LOW_RISE_DB || !Number.isFinite(f.lowRise) || f.midRise >= KICK_ABS_MIN_MID_RISE_DB;
   if ((f.lowMinusBright >= KICK_LOW_MINUS_BRIGHT_DB && lowIsNew) || kickByRise) return hatOnTail ? 'hat' : 'kick';
   // A plain hat adds more at the top than in the middle; a snare (with or without a hat under it) the other way round. With no tail before the hit (the start of the clip) there is nothing to compare and the spectrum alone decides.
-  const hatBySpectrum = f.highMinusMid >= HAT_BRIGHT_HIGH_MINUS_MID_DB && !(f.highRise - f.midRise < HAT_HIGH_OVER_MID_RISE_DB);
+  const hatBySpectrum = f.highMinusMid >= HAT_STRONG_HIGH_MINUS_MID_DB
+    || (f.highMinusMid >= HAT_BRIGHT_HIGH_MINUS_MID_DB && !(f.highRise - f.midRise < HAT_HIGH_OVER_MID_RISE_DB));
   if (f.highMinusMid >= HAT_HIGH_MINUS_MID_DB && (f.decay <= HAT_MAX_DECAY || hatBySpectrum)) return 'hat';
   if (f.midDb >= SNARE_MIN_MID_DB) return hatOnTail ? 'hat' : 'snare';
   return 'other';
