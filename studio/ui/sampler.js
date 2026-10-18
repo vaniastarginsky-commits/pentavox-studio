@@ -13,14 +13,19 @@ import { pcm16FromWav, SampleUploadClient } from '../model/sample_upload.js';
 import { beginLinkJob } from '../model/link_jobs.js';
 import { SdFilesClient, describeFsError, describeTransfer } from '../model/sd_files.js';
 import { samplerFolders, cardSummary, formatSize, sortEntries } from './sdcard_vm.js';
+import { LOOP_DIR, LOOP_SLOTS, LoopIoClient, describeLoopError, loopFileName, loopFiles, renumberProblem } from '../model/loop_io.js';
 
 function el(tag, className, text) { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; }
 function button(text, className = '') { const node = el('button', className, text); node.type = 'button'; return node; }
 function seconds(value) { return `${value.toFixed(value < 10 ? 2 : 1)} s`; }
 function download(bytes, name, type) { const url = URL.createObjectURL(new Blob([bytes], { type })); const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 
-export function mountSampler(root, { onError = (error) => console.error(error), onSuccess = () => {}, getClient = () => null, getInfo = () => null, getSampleSlotCount = () => 4, onOpenSdTab = () => {} } = {}) {
+export function mountSampler(root, { onError = (error) => console.error(error), onSuccess = () => {}, getClient = () => null, getInfo = () => null, getSampleSlotCount = () => 4, getLoopIo = () => false, onOpenSdTab = () => {} } = {}) {
   const state = { items: [], starts: [null, null, null, null], importing: false, exporting: false, selected: null, upload: null, card: null, cardInfo: null, cardFiles: [[], [], [], []], cardLoading: false, cardProblem: '', confirming: null, generation: 0 };
+  // The looper image keeps its loops in /LOOPS (two loop slots, files numbered by the module) instead of the sampler's SLOT folders.
+  const looper = () => Boolean(getLoopIo());
+  const loop = { files: [], busy: false, message: '', failed: false };
+  const loopClient = () => { const client = getClient(); return client ? new LoopIoClient(client) : null; };
   let audioContext; let editor = null; let sliceBar = null; let breakPanel = null; let refreshQueued = false; let hooks = { fields: () => {}, status: () => {} };
   const context = () => { audioContext ??= new AudioContext(); return audioContext; };
   const slotCount = () => Math.max(2, Math.min(4, Number(getSampleSlotCount()) || 4));
@@ -34,6 +39,11 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     state.cardLoading = true; state.cardProblem = ''; refreshSide();
     try {
       const info = await client.cardInfo();
+      if (looper()) {
+        const listing = await client.list(LOOP_DIR).catch((error) => { if (error?.status === 12) return []; throw error; });
+        if (generation !== state.generation) return;
+        state.cardInfo = info; loop.files = loopFiles(sortEntries(listing)); state.cardLoading = false; refreshSide(); return;
+      }
       const entries = await Promise.all(samplerFolders(slotCount()).map(async (path) => { try { return await client.list(path); } catch (error) { if (error?.status === 12) return []; throw error; } }));
       if (generation !== state.generation) return;
       state.cardInfo = info; state.cardFiles = entries.map((slot) => sortEntries(slot).filter((entry) => !entry.directory && /\.wav$/i.test(entry.name)));
@@ -154,7 +164,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
 
   async function deleteCardFile(entry) {
     const client = files(); if (!client || state.card) return;
-    try { await client.remove(entry.path); onSuccess(`${entry.name} deleted from the card`); }
+    try { await client.remove(entry.path); if (looper()) await client.rescanLibraries().catch(() => {}); onSuccess(`${entry.name} deleted from the card`); }
     catch (error) { onError(new Error(describeFsError(error), { cause: error })); }
     await loadCard();
   }
@@ -402,7 +412,77 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   }
 
   // ---------------------------------------------------------------- live SD card panel
+  async function saveLoop() {
+    const loops = loopClient(); if (!loops || loop.busy) return;
+    loop.busy = true; loop.failed = false; loop.message = 'Saving the loop that plays now…'; refreshSide();
+    const endJob = beginLinkJob('Saving a loop');
+    try {
+      await loops.save();
+      const status = await loops.finish({ onStatus: (now) => { if (now.state === 'working') { loop.message = 'Saving the loop that plays now…'; } } });
+      if (status.state === 'failed') { loop.failed = true; loop.message = 'The module could not save the loop (card full or removed?)'; onError(new Error(loop.message)); }
+      else { loop.message = `Saved ${loopFileName(status.lastNumber)} · ${(status.frames / 48000).toFixed(1)} s in ${(status.ms / 1000).toFixed(1)} s`; onSuccess(loop.message); }
+    } catch (error) { if (error?.name !== 'AbortError') { loop.failed = true; loop.message = describeLoopError(error); onError(new Error(loop.message, { cause: error })); } }
+    finally { endJob(); loop.busy = false; await loadCard(); }
+  }
+
+  async function loadLoop(file, slot) {
+    const loops = loopClient(); if (!loops || loop.busy) return;
+    loop.busy = true; loop.failed = false; loop.message = `Loading ${file.name} into loop ${slot + 1}…`; refreshSide();
+    const endJob = beginLinkJob(`Loading ${file.name}`);
+    try {
+      await loops.load(slot, file.number);
+      const status = await loops.finish();
+      if (status.state === 'failed') { loop.failed = true; loop.message = `The module could not load ${file.name} (not a loop it can use?)`; onError(new Error(loop.message)); }
+      else { loop.message = `${file.name} is loop ${slot + 1} now · it starts at the next bar line`; onSuccess(loop.message); }
+    } catch (error) { if (error?.name !== 'AbortError') { loop.failed = true; loop.message = describeLoopError(error); onError(new Error(loop.message, { cause: error })); } }
+    finally { endJob(); loop.busy = false; refreshSide(); }
+  }
+
+  async function renumberLoop(file) {
+    const client = files(); if (!client || loop.busy || state.card) return;
+    const answer = prompt(`New number for ${file.name} (1-9999)`, String(file.number)); if (answer === null) return;
+    const problem = renumberProblem(loop.files, file.number, answer);
+    if (problem) return onError(new Error(problem));
+    if (Number(answer) === file.number) return;
+    try { await client.rename(file.path, `${LOOP_DIR}/${loopFileName(Number(answer))}`); onSuccess(`${file.name} is now ${loopFileName(Number(answer))}`); await client.rescanLibraries().catch(() => {}); }
+    catch (error) { onError(new Error(describeFsError(error), { cause: error })); }
+    await loadCard();
+  }
+
+  function renderLoopPlan() {
+    const pageY = window.scrollY; planPanel.replaceChildren();
+    const card = el('section', 'sx-card sd-card loop-card'); const top = el('header', 'sx-chead sd-card-head'); top.append(el('h3', '', 'Loops on the SD card'));
+    if (state.cardInfo) {
+      const chip = el('span', 'sx-chip ok'); chip.append(el('span', 'sx-dotled'), document.createTextNode(cardSummary(state.cardInfo).split(' · ')[0])); top.append(chip);
+    }
+    top.append(el('span', 'sp'));
+    const refresh = button(state.cardLoading ? 'Refreshing…' : 'Refresh', 'quiet-button'); refresh.disabled = state.cardLoading || loop.busy || !files(); refresh.addEventListener('click', loadCard); top.append(refresh);
+    const all = button('Browse all files…', 'quiet-button'); all.addEventListener('click', onOpenSdTab); top.append(all);
+    const body = el('div', 'sd-card-body');
+    const save = button(loop.busy ? 'Working…' : 'Save loop', 'primary'); save.disabled = loop.busy || state.cardLoading || !loopClient() || !state.cardInfo;
+    save.title = 'Save the loop that plays now to the next free /LOOPS/NNNN.WAV (the same as B1 + hold B2 on the module)'; save.addEventListener('click', saveLoop);
+    const hint = el('small', loop.failed ? 'error' : '', loop.message || (state.cardInfo ? 'Save the loop that plays now, or load a file into one of the two loops.' : state.cardProblem || (state.cardLoading ? 'Reading the card…' : 'Connect the module to see its loops')));
+    body.append(el('div', 'sd-live-actions', ''), hint); body.firstChild.append(save);
+    const rows = el('div', 'sd-files loop-files');
+    for (const file of loop.files) {
+      const row = el('div', 'sd-file card-file'); const info = el('div', 'sd-file-info'); info.append(el('code', '', file.name), el('span', '', `${file.seconds.toFixed(1)} s · ${formatSize(file.size)}`));
+      const actions = el('div', 'sd-file-actions');
+      for (let slot = 0; slot < LOOP_SLOTS; slot += 1) { const load = button(`Load → ${slot + 1}`, 'quiet-button'); load.title = `Put this loop into loop slot ${slot + 1}`; load.disabled = loop.busy || Boolean(state.card); load.addEventListener('click', () => loadLoop(file, slot)); actions.append(load); }
+      const get = button('Download', 'quiet-button'); get.disabled = Boolean(state.card) || loop.busy; get.addEventListener('click', () => downloadCardFile(file));
+      const number = button('Renumber…', 'quiet-button'); number.disabled = Boolean(state.card) || loop.busy; number.addEventListener('click', () => renumberLoop(file));
+      const confirming = state.confirming === file.path;
+      const remove = button(confirming ? 'Delete?' : 'Delete', `quiet-button danger${confirming ? ' confirming' : ''}`); remove.disabled = Boolean(state.card) || loop.busy || file.locked;
+      remove.addEventListener('click', () => { if (confirming) { state.confirming = null; deleteCardFile(file); } else { state.confirming = file.path; renderPlan(); } });
+      actions.append(get, number, remove); row.append(info, actions); rows.append(row);
+    }
+    if (!loop.files.length) rows.append(el('span', 'sd-empty', state.cardInfo ? 'No loops on the card yet' : 'No files to show'));
+    const total = loop.files.reduce((sum, file) => sum + file.size, 0);
+    card.append(top, body, rows, el('footer', '', `${loop.files.length} loops on the card · ${formatSize(total)} · numbering is the module's (next file is ${loopFileName((loop.files.at(-1)?.number ?? 0) + 1)})`));
+    planPanel.append(card); window.scrollTo(window.scrollX, pageY);
+  }
+
   function renderPlan() {
+  if (looper()) { renderLoopPlan(); return; }
     const currentPlan = plan(); const checked = validation(); const groups = mergeSamplerSlots(currentPlan, state.cardFiles, slotCount()); const defaults = nextStartNumbers(state.cardFiles, slotCount());
     // Rebuilding the panel collapses the page for a moment, which used to throw the scroll position to the top.
     const pageX = window.scrollX, pageY = window.scrollY; const listScroll = [...planPanel.querySelectorAll('.sd-files')].map((node) => node.scrollTop);

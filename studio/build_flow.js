@@ -19,11 +19,11 @@ export async function localServerUp(apiFetch, timeoutMs = 1500) {
  * Build in the cloud. onStatus gets the same shape the server's /api/status has ({ state, stage, image, margins, log }).
  * Resolves { image: Uint8Array, meta }; rejects after reporting a failed status.
  */
-export async function runCloudBuild({ recipe, compact, onStatus, signal, token = githubToken(), settings = cloudSettings(), makeBuilder = (options) => new CloudBuild(options) }) {
+export async function runCloudBuild({ recipe, compact, looper = false, onStatus, signal, token = githubToken(), settings = cloudSettings(), makeBuilder = (options) => new CloudBuild(options) }) {
   if (!token) throw new Error('A GitHub token is needed to build in the cloud (see the Studio README)');
   const builder = makeBuilder({ token, ...settings, onUnauthorized: forgetGithubToken });
   try {
-    const result = await builder.build(recipe, { onStatus, compact, signal });
+    const result = await builder.build(recipe, { onStatus, compact, looper, signal });
     const kb = (result.image.byteLength / 1024).toFixed(0);
     onStatus({ state: 'built', image: 'cloud', stage: `done: ${(result.meta.commit ?? '').slice(0, 7)} · ${kb} KB`, margins: result.meta.margins ?? '', log: [] });
     return result;
