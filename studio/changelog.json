@@ -1,4 +1,5 @@
 [
+  {"date": "2026-10-19", "area": "studio", "text": "SD card: the transfer bar (\"Reading …· 100%\" with Cancel) no longer stays on screen after a download finishes and blocks the next one."},
   {"date": "2026-10-18", "area": "firmware", "text": "Sampler stutter: Slice repeat and Slice roll read the sample directly on its cue markers: instant, locked to the break, the pot's note value changes live; roll shortens every repeat."},
   {"date": "2026-10-18", "area": "firmware", "text": "Sampler stutter: Slice modes (Studio: Sampler stutter). The loop starts exactly on a file's cue marker and the pot picks how much of that slice repeats; files without markers use the clock grid."},
   {"date": "2026-10-17", "area": "firmware", "text": "Field trace for the sampler and MIDI clock in the HostLink log (512 lines): note timing vs the bar, waits, launches, wraps, silence, playhead jumps, clock stalls."},

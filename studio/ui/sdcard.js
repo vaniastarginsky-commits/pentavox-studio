@@ -47,7 +47,7 @@ export function mountSdCard(root, { onError = (error) => console.error(error), o
     const endJob = beginLinkJob(label);
     try { await task(controller.signal, (progress) => { if (state.transfer?.controller === controller) { state.transfer.progress = progress; renderTransfer(); } }); return true; }
     catch (error) { if (error?.name !== 'AbortError') onError(new Error(describeFsError(error), { cause: error })); return false; }
-    finally { endJob(); if (state.transfer?.controller === controller) state.transfer = null; }
+    finally { endJob(); if (state.transfer?.controller === controller) { state.transfer = null; render(); } }   // a download ends without a reload, so the bar must be redrawn here
   }
 
   async function uploadFiles(list) {
