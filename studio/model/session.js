@@ -1,3 +1,4 @@
+import { loopIoVersion } from './loop_io.js';
 import { indexDescriptor } from './blob.js';
 import { eraseLocks, findLockComponent, lockBytes, readLocks, withLockBytes, writeLockSlot } from './knob_locks.js';
 import { merge3 } from './merge.js';
@@ -36,6 +37,7 @@ export class StudioSession {
     this.tapeEnabled = true;
     this.samplerVoices = 2;
     this.sampleSlotCount = 4;
+    this.loopIo = false;
     this.editedKeys = new Set();
   }
 
@@ -88,6 +90,7 @@ export class StudioSession {
     const describedSampleSlots = [...index.values()].filter((field) =>
       field?.comp === 'settings' && /^Sample Library \d+$/.test(field?.name ?? '')).length;
     this.sampleSlotCount = describedSampleSlots || 4;
+    this.loopIo = loopIoVersion(descriptor) >= 1;   // the looper image: loops live in /LOOPS and the module has the loop commands
     this.readOnly = readOnly;
     this.reason = reason;
     this.dirty = false;

@@ -86,13 +86,13 @@ export class CloudBuild {
   }
 
   /** Start a build; resolves with the request id that names the run. */
-  async start(recipe, { compact = true } = {}) {
+  async start(recipe, { compact = true, looper = false } = {}) {
     const encodedRecipe = toBase64(JSON.stringify(recipe));
     if (encodedRecipe.length > 60000) throw new CloudBuildError('This recipe is too large for cloud Build. Remove some custom wave/terrain banks, or download recipe.json and build with the local Studio server.');
     const request = `${this.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const response = await this.api(`/repos/${this.repo}/actions/workflows/${DEFAULTS.workflow}/dispatches`, {
       method: 'POST',
-      body: { ref: DEFAULTS.workflowRef, inputs: { ref: this.buildRef, recipe_b64: encodedRecipe, compact: String(compact), request } },
+      body: { ref: DEFAULTS.workflowRef, inputs: { ref: this.buildRef, recipe_b64: encodedRecipe, compact: String(compact), looper: String(looper), request } },
     });
     if (response.status === 404) throw new CloudBuildError(`The workflow ${DEFAULTS.workflow} was not found in ${this.repo} (is it on ${DEFAULTS.workflowRef}, and does the token have Actions: write?)`, { status: 404 });
     if (response.status !== 204) throw new CloudBuildError(`GitHub did not start the build (${response.status}): ${(await response.text()).slice(0, 200)}`, { status: response.status });
@@ -182,10 +182,10 @@ export class CloudBuild {
    * Run a whole build. onStatus({ state: 'building', stage }) as it progresses. Resolves { image, meta, log }; rejects CloudBuildError
    * (with .log) when the workflow fails or times out.
    */
-  async build(recipe, { onStatus = () => {}, compact = true, pollMs = 5000, timeoutMs = 50 * 60 * 1000, signal } = {}) {
+  async build(recipe, { onStatus = () => {}, compact = true, looper = false, pollMs = 5000, timeoutMs = 50 * 60 * 1000, signal } = {}) {
     if (signal?.aborted) throw new BuildCancelledError();
     onStatus({ state: 'building', stage: 'starting the cloud build' });
-    const request = await this.start(recipe, { compact });
+    const request = await this.start(recipe, { compact, looper });
     const deadline = this.now() + timeoutMs;
     let run = null;
     let cancelSent = false;

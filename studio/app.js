@@ -179,6 +179,7 @@ samplerMount = mountSampler(document.querySelector('#sampler-root'), {
   getClient: () => client,
   getInfo: () => session?.info,
   getSampleSlotCount: () => session?.sampleSlotCount ?? 4,
+  getLoopIo: () => Boolean(session?.loopIo),
   onOpenSdTab: () => openSdDialog(),
 });
 
@@ -202,6 +203,7 @@ const sdcardMount = mountSdCard(document.querySelector('#sdcard-root'), {
   getClient: () => client,
   getInfo: () => session?.info,
   getSampleSlotCount: () => session?.sampleSlotCount ?? 4,
+  getLoopIo: () => Boolean(session?.loopIo),
 });
 
 const manualMount = mountManual(document.querySelector('#manual-root'), {

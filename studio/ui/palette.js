@@ -613,7 +613,14 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   let fullLog = '';
   let cloudResult = null;   // the image of the last cloud build (hosted page without a local build server): flashed over WebUSB
   copyLog.addEventListener('click', async () => { try { await navigator.clipboard.writeText(fullLog); copyLog.textContent = 'Saved'; setTimeout(() => { copyLog.textContent = 'Copy log'; }, 2000); } catch (error) { onError(error); } });
-  actions.append(build, el('span', 'eg-arrow', '→'), flash, dfu, copyLog, suggestButton);
+  // Which firmware the Build makes: the compact module's third voice is a sampler or a looper (the looper image is a separate build).
+  const variant = document.createElement('select'); variant.setAttribute('aria-label', 'Firmware variant'); variant.title = 'Sampler voice or looper in the built firmware';
+  for (const [value, label] of [['sampler', 'Sampler'], ['looper', 'Looper']]) { const option = document.createElement('option'); option.value = value; option.textContent = label; variant.append(option); }
+  try { if (localStorage.getItem('pentavox.palette.variant') === 'looper') variant.value = 'looper'; } catch { /* optional */ }
+  const wantLooper = () => variant.value === 'looper' && isCompact();
+  const syncVariant = () => { const compactModule = isCompact(); variant.disabled = !compactModule || state.phase === 'building'; if (!compactModule) variant.value = 'sampler'; };
+  variant.addEventListener('change', () => { try { localStorage.setItem('pentavox.palette.variant', variant.value); } catch { /* optional */ } });
+  actions.append(variant, build, el('span', 'eg-arrow', '→'), flash, dfu, copyLog, suggestButton);
   $('.eg-meter').append(progress);
   // Demo mode (a simulated module): nothing may be built or flashed, so the three buttons stay off with an explanation.
   const DEMO_HINT = 'Not available in demo mode: there is no real module';
@@ -622,6 +629,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   let operation = null;
   let operationVersion = 0;
   function updateActions(view = memoryView(model.summary(), { compact: isCompact() })) {
+    syncVariant();
     const action = buildButtonView({ phase: state.phase, cancelling: operation?.cancelRequested || state.cancelPending, ...view });
     build.textContent = `1 · ${action.label}`; build.disabled = action.disabled; build.title = action.title;
     applyDemoLock();
@@ -687,19 +695,19 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     const op = { controller: new AbortController(), route: 'starting', started: false, cancelRequested: false };
     operationVersion += 1;
     operation = op; cloudResult = null; state.touched = true;
-    const recipe = model.recipe(); const compact = isCompact();
+    const recipe = model.recipe(); const compact = isCompact(); const looper = wantLooper();
     renderBuild({ state: 'building', stage: 'starting the build' });
     try {
       const cloud = !servedLocally() && !(await localServerUp(apiFetch));
       if (op.cancelRequested) { renderBuild({ state: 'cancelled', stage: 'build cancelled' }); return; }
       if (cloud) {
         op.route = 'cloud';
-        const result = await runCloudBuild({ recipe, compact, onStatus: renderBuild, signal: op.controller.signal });
+        const result = await runCloudBuild({ recipe, compact, looper, onStatus: renderBuild, signal: op.controller.signal });
         if (result) cloudResult = result;
         return;
       }
       op.route = 'local';
-      const response = await apiFetch('/api/build', { method: 'POST', body: JSON.stringify(recipe) });
+      const response = await apiFetch(looper ? '/api/build?variant=looper' : '/api/build', { method: 'POST', body: JSON.stringify(recipe) });
       const result = await response.json();
       if (!response.ok || result.error) throw new Error(result.error || `Build failed (${response.status})`);
       op.id = result.build_id;
