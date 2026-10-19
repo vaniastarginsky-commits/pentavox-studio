@@ -13,11 +13,18 @@ function storage() { try { return globalThis.localStorage ?? null; } catch { ret
 function read(key) { try { return storage()?.getItem(key) ?? null; } catch { return null; } }
 function write(key, value) { try { storage()?.setItem(key, value); } catch { /* a convenience only */ } }
 
+// The workflow refuses every other branch, so a stale override saved in the browser must not reach it.
+const BUILDABLE_REFS = ['compact-cleanup', 'main'];
+function buildableRef(key, fallback) {
+  const value = read(key);
+  return BUILDABLE_REFS.includes(value) ? value : fallback;
+}
+
 export function cloudSettings() {
   return {
     repo: read('pentavox.cloud.repo') || DEFAULTS.repo,
-    buildRef: read('pentavox.cloud.ref') || DEFAULTS.buildRef,
-    workflowRef: read('pentavox.cloud.workflowRef') || DEFAULTS.workflowRef,
+    buildRef: buildableRef('pentavox.cloud.ref', DEFAULTS.buildRef),
+    workflowRef: buildableRef('pentavox.cloud.workflowRef', DEFAULTS.workflowRef),
   };
 }
 
@@ -99,7 +106,7 @@ export class CloudBuild {
       body: { ref: this.workflowRef, inputs: { ref: this.buildRef, recipe_b64: encodedRecipe, compact: String(compact), ...(looper ? { looper: 'true' } : {}), request } },
     });
     if (response.status === 422 && looper) {
-      throw new CloudBuildError(`The looper image cannot be built in the cloud yet: the workflow on ${this.workflowRef} has no looper option. Merge the looper branch, or set pentavox.cloud.ref and pentavox.cloud.workflowRef (browser storage) to it; or build locally.`, { status: 422 });
+      throw new CloudBuildError(`The looper image cannot be built in the cloud yet: the workflow on ${this.workflowRef} has no looper option. Build it locally.`, { status: 422 });
     }
     if (response.status === 404) throw new CloudBuildError(`The workflow ${DEFAULTS.workflow} was not found in ${this.repo} (is it on ${this.workflowRef}, and does the token have Actions: write?)`, { status: 404 });
     if (response.status !== 204) throw new CloudBuildError(`GitHub did not start the build (${response.status}): ${(await response.text()).slice(0, 200)}`, { status: response.status });
