@@ -41,7 +41,22 @@ export function renumberProblem(files, from, to) {
   return '';
 }
 
-/** The reply of the status command: status byte, u8 io, u8 active slot, u16 files, u16 last number, u32 ms, u32 frames, u32 longest control-loop gap (ms). */
+/** Why a save or a load failed (the firmware's LoopFailure), as a sentence. 0 and unknown numbers read as the generic line. */
+export const LOOP_FAILURES = Object.freeze({
+  1: 'There is no loop in the active slot to save',
+  2: 'No SD card in the module',
+  3: 'The looper is busy (recording, overdubbing or another transfer): try again when it plays',
+  4: 'The card refused the write (full or taken out)',
+  5: 'The file ended before its header says: it is damaged or not finished',
+  6: 'That file is not a loop the module can use (it needs a 48 kHz WAV with a tempo)',
+  7: 'That file is longer than a loop can be',
+  8: 'The module did not answer in time',
+  9: 'The card would not open the file',
+  10: 'All loop numbers up to 9999 are used',
+});
+export const describeLoopFailure = (reason, fallback) => LOOP_FAILURES[reason] ?? fallback;
+
+/** The reply of the status command: status byte, u8 io, u8 active slot, u16 files, u16 last number, u32 ms, u32 frames, u32 longest control-loop gap (ms), u8 failure reason (newer firmware). */
 export function parseLoopStatus(body) {
   if (!(body instanceof Uint8Array) || body.length < 18) throw new HostLinkError('LOOP_STATUS: the reply is too short', { code: 'BAD_STATUS' });
   const view = new DataView(body.buffer, body.byteOffset, body.byteLength);
@@ -49,6 +64,7 @@ export function parseLoopStatus(body) {
   return {
     io, state: STATE[io] ?? 'idle', activeSlot: body[1], files: view.getUint16(2, true), lastNumber: view.getUint16(4, true),
     ms: view.getUint32(6, true), frames: view.getUint32(10, true), stallMs: view.getUint32(14, true),
+    reason: body.length >= 19 ? body[18] : 0,
   };
 }
 

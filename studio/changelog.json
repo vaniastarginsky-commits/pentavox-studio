@@ -1,4 +1,5 @@
 [
+  {"date": "2026-10-19", "area": "studio", "text": "Looper image: a converted file can be saved to /LOOPS or put straight into loop 1 / 2; a failed save or load says why (no loop in the slot, no card, busy, write error)."},
   {"date": "2026-10-19", "area": "studio", "text": "Cloud build: the looper input is sent only for a looper build, so the ordinary build works again on a workflow without it; a looper build says what is missing."},
   {"date": "2026-10-19", "area": "studio", "text": "Firmware card: a module built after the latest cloud build (a local build) no longer reads \"a newer cloud build exists\"; it says it runs a newer build."},
   {"date": "2026-10-19", "area": "studio", "text": "Looper image: CV and MIDI routing offer the looper's four destinations (Level, Aux send, Overdub feedback, Loop length) instead of the sampler's start, end, cutoff, transpose and slot."},

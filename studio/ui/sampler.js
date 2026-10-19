@@ -13,7 +13,7 @@ import { pcm16FromWav, SampleUploadClient } from '../model/sample_upload.js';
 import { beginLinkJob } from '../model/link_jobs.js';
 import { SdFilesClient, describeFsError, describeTransfer } from '../model/sd_files.js';
 import { samplerFolders, cardSummary, formatSize, sortEntries } from './sdcard_vm.js';
-import { LOOP_DIR, LOOP_SLOTS, LoopIoClient, describeLoopError, loopFileName, loopFiles, renumberProblem } from '../model/loop_io.js';
+import { LOOP_DIR, LOOP_SLOTS, LoopIoClient, describeLoopError, describeLoopFailure, loopFileName, loopFiles, renumberProblem } from '../model/loop_io.js';
 
 function el(tag, className, text) { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; }
 function button(text, className = '') { const node = el('button', className, text); node.type = 'button'; return node; }
@@ -129,6 +129,34 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     } catch (error) {
       if (error?.name !== 'AbortError') onError(new Error(describeFsError(error), { cause: error }));
     } finally { endJob(); state.card = null; renderCardBar(); updateHeading(); if (written) await loadCard(); }
+  }
+
+  // A converted file becomes a loop: written to the next free /LOOPS/NNNN.WAV, and optionally put into a loop slot straight away.
+  async function putInLoops(item, slot = null) {
+    const fsClient = files(); const loops = loopClient();
+    if (!fsClient || !loops || loop.busy || state.card) return;
+    const number = loop.files.reduce((top, file) => Math.max(top, file.number), 0) + 1;
+    if (number > 9999) { onError(new Error('All loop numbers up to 9999 are used: erase some loops first')); return; }
+    const path = `${LOOP_DIR}/${loopFileName(number)}`;
+    const controller = new AbortController();
+    loop.busy = true; loop.failed = false; loop.message = `Writing ${item.name} to ${path}…`;
+    state.card = { label: `Writing ${item.name} to ${path}`, progress: 0, controller }; renderCardBar(); updateHeading(); refreshSide();
+    const endJob = beginLinkJob('Writing a loop to the card');
+    try {
+      const bytes = await wavFor(item); state.card.size = bytes.length; state.card.startedAt = performance.now();
+      await fsClient.upload(path, bytes, { overwrite: false, signal: controller.signal, onProgress: (progress) => { if (state.card) { state.card.progress = progress; renderCardBar(); } } });
+      try { await fsClient.rescanLibraries(); } catch { /* older firmware: the list is read at the next power-up */ }
+      loop.message = `${loopFileName(number)} is on the card`;
+      if (slot !== null) {
+        state.card = null; renderCardBar(); updateHeading();
+        await loops.load(slot, number);
+        const status = await loops.finish();
+        if (status.state === 'failed') { loop.failed = true; loop.message = `${loopFileName(number)} is on the card, but ${describeLoopFailure(status.reason, 'the module could not load it')}`; onError(new Error(loop.message)); }
+        else { loop.message = `${loopFileName(number)} is loop ${slot + 1} now · it starts at the next bar line`; onSuccess(loop.message); }
+      } else onSuccess(loop.message);
+    } catch (error) {
+      if (error?.name !== 'AbortError') { loop.failed = true; loop.message = error?.status ? describeFsError(error) : describeLoopError(error); onError(new Error(loop.message, { cause: error })); }
+    } finally { endJob(); state.card = null; renderCardBar(); updateHeading(); loop.busy = false; await loadCard(); }
   }
 
   async function downloadCardFile(entry) {
@@ -328,7 +356,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const endInput = numberInput(item.trimEnd.toFixed(3), 0, item.duration, .001, (value) => { if (Number.isFinite(value)) editor.setSelection(dragHandle('end', value, selection(), item.duration)); hooks.fields(); refreshSide(); }, 'Trim end');
     controls.append(field('Start, s', startInput), field('End, s', endInput));
     const mode = document.createElement('select'); for (const [value, label] of [['mono', 'Mono'], ['stereo', 'Stereo']]) { const option = el('option', '', label); option.value = value; option.selected = item.channelMode === value; if (value === 'stereo' && item.audio.channels.length === 1) option.disabled = true; mode.append(option); } mode.addEventListener('change', () => { item.channelMode = mode.value; refreshSide(); }); controls.append(field('Channels', mode));
-    const slot = document.createElement('select'); for (let index = 0; index < slotCount(); index += 1) { const option = el('option', '', `Slot ${index + 1}`); option.value = index; option.selected = item.slot === index; slot.append(option); } slot.addEventListener('change', () => { item.slot = Number(slot.value); refreshSide(); }); controls.append(field('SD folder', slot));
+    const slot = document.createElement('select'); for (let index = 0; index < slotCount(); index += 1) { const option = el('option', '', `Slot ${index + 1}`); option.value = index; option.selected = item.slot === index; slot.append(option); } slot.addEventListener('change', () => { item.slot = Number(slot.value); refreshSide(); }); if (!looper()) controls.append(field('SD folder', slot));   // the looper image keeps loops in /LOOPS, not in sampler slots
     const normalize = el('label', 'check-field'); const check = document.createElement('input'); check.type = 'checkbox'; check.checked = item.normalize; check.addEventListener('change', () => { item.normalize = check.checked; }); normalize.append(check, el('span', '', 'Normalize to −1 dBFS'));
     const bpmInput = numberInput(item.bpm, 1, 999, .01, (value) => { item.bpm = value > 0 ? value : ''; item.tempoAuto = false; updateStretch(); refreshSide(); }, 'Tempo in BPM');
     const beatsInput = numberInput(item.beats, 1, 99999, 1, (value) => { item.beats = Number.isInteger(value) && value > 0 ? value : ''; item.tempoAuto = false; updateTempoButtons(); refreshSide(); }, 'Beat count');
@@ -409,17 +437,33 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
         else note.append(el('span', '', item.stretchStatus || `${planned.fileName} · after conversion ${seconds(trimmedDuration)} / 48 kHz`));
         footer.append(note);
         const row = el('div', 'se-actions');
-        const toCard = button('Write to SD card', 'primary'); toCard.disabled = !getClient() || !getInfo() || trimmedDuration > MAX_CLIP_SECONDS || Boolean(state.card) || !checked.valid; toCard.addEventListener('click', () => writeToCard([item]));
-        const wav = button('Download WAV only'); wav.disabled = trimmedDuration > MAX_CLIP_SECONDS; wav.addEventListener('click', async () => { try { download(await wavFor(item), planned.fileName, 'audio/wav'); } catch (error) { onError(error); } }); row.append(toCard, wav, el('span', 'sx-dot', '·'));
-        const connected = Boolean(getClient() && getInfo()); const tooLong = trimmedDuration > MAX_CLIP_SECONDS; const active = state.upload;
-        const actions = el('div', 'sample-send-actions');
-        actions.append(el('span', 'send-label', connected ? 'Play on the module:' : 'Connect the module (top right) to play this on it'));
-        for (let voice = 0; voice < 2; voice += 1) {
-          const send = button(`Send to voice ${voice + 1}`, 'send-button'); send.disabled = !connected || tooLong || Boolean(active);
-          send.title = !connected ? 'Connect the module first' : tooLong ? 'The selection is longer than 30 seconds' : active ? 'Another sample upload is in progress' : `Send the current selection to sampler voice ${voice + 1}`;
-          send.addEventListener('click', () => sendToVoice(item, voice)); actions.append(send);
+        if (looper()) {
+          // The looper image has no sampler slots: the converted file becomes a loop in /LOOPS, and can go straight into a loop slot.
+          const ready = Boolean(getClient() && getInfo() && loopClient()) && trimmedDuration <= MAX_CLIP_SECONDS && !state.card && !loop.busy;
+          const toLoops = button('Save to /LOOPS', 'primary'); toLoops.disabled = !ready; toLoops.title = 'Write the converted file to the next free /LOOPS/NNNN.WAV (it keeps the tempo and the beats)';
+          toLoops.addEventListener('click', () => putInLoops(item));
+          const wav = button('Download WAV only'); wav.disabled = trimmedDuration > MAX_CLIP_SECONDS; wav.addEventListener('click', async () => { try { download(await wavFor(item), planned.fileName, 'audio/wav'); } catch (error) { onError(error); } });
+          row.append(toLoops, wav, el('span', 'sx-dot', '·'));
+          const actions = el('div', 'sample-send-actions');
+          actions.append(el('span', 'send-label', ready ? 'Save and play on the module:' : 'Connect the module (top right) to put this in a loop'));
+          for (let slot = 0; slot < LOOP_SLOTS; slot += 1) {
+            const into = button(`Into loop ${slot + 1}`, 'send-button'); into.disabled = !ready; into.title = `Save to /LOOPS and put it into loop ${slot + 1} (it starts at the next bar line)`;
+            into.addEventListener('click', () => putInLoops(item, slot)); actions.append(into);
+          }
+          row.append(actions); footer.append(row);
+        } else {
+          const toCard = button('Write to SD card', 'primary'); toCard.disabled = !getClient() || !getInfo() || trimmedDuration > MAX_CLIP_SECONDS || Boolean(state.card) || !checked.valid; toCard.addEventListener('click', () => writeToCard([item]));
+          const wav = button('Download WAV only'); wav.disabled = trimmedDuration > MAX_CLIP_SECONDS; wav.addEventListener('click', async () => { try { download(await wavFor(item), planned.fileName, 'audio/wav'); } catch (error) { onError(error); } }); row.append(toCard, wav, el('span', 'sx-dot', '·'));
+          const connected = Boolean(getClient() && getInfo()); const tooLong = trimmedDuration > MAX_CLIP_SECONDS; const active = state.upload;
+          const actions = el('div', 'sample-send-actions');
+          actions.append(el('span', 'send-label', connected ? 'Play on the module:' : 'Connect the module (top right) to play this on it'));
+          for (let voice = 0; voice < 2; voice += 1) {
+            const send = button(`Send to voice ${voice + 1}`, 'send-button'); send.disabled = !connected || tooLong || Boolean(active);
+            send.title = !connected ? 'Connect the module first' : tooLong ? 'The selection is longer than 30 seconds' : active ? 'Another sample upload is in progress' : `Send the current selection to sampler voice ${voice + 1}`;
+            send.addEventListener('click', () => sendToVoice(item, voice)); actions.append(send);
+          }
+          row.append(actions); footer.append(row);
         }
-        row.append(actions); footer.append(row);
         if (active?.item === item) {
           const progress = el('div', 'sample-upload-progress'); const meter = document.createElement('progress'); meter.max = 1; meter.value = active.progress;
           const cancel = button('Cancel', 'quiet-button'); cancel.addEventListener('click', () => active.controller.abort());
@@ -438,7 +482,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     try {
       await loops.save();
       const status = await loops.finish({ onStatus: (now) => { if (now.state === 'working') { loop.message = 'Saving the loop that plays now…'; } } });
-      if (status.state === 'failed') { loop.failed = true; loop.message = 'The module could not save the loop (card full or removed?)'; onError(new Error(loop.message)); }
+      if (status.state === 'failed') { loop.failed = true; loop.message = describeLoopFailure(status.reason, 'The module could not save the loop'); onError(new Error(loop.message)); }
       else { loop.message = `Saved ${loopFileName(status.lastNumber)} · ${(status.frames / 48000).toFixed(1)} s in ${(status.ms / 1000).toFixed(1)} s`; onSuccess(loop.message); }
     } catch (error) { if (error?.name !== 'AbortError') { loop.failed = true; loop.message = describeLoopError(error); onError(new Error(loop.message, { cause: error })); } }
     finally { endJob(); loop.busy = false; await loadCard(); }
@@ -451,7 +495,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     try {
       await loops.load(slot, file.number);
       const status = await loops.finish();
-      if (status.state === 'failed') { loop.failed = true; loop.message = `The module could not load ${file.name} (not a loop it can use?)`; onError(new Error(loop.message)); }
+      if (status.state === 'failed') { loop.failed = true; loop.message = `${file.name}: ${describeLoopFailure(status.reason, 'the module could not load it (not a loop it can use?)')}`; onError(new Error(loop.message)); }
       else { loop.message = `${file.name} is loop ${slot + 1} now · it starts at the next bar line`; onSuccess(loop.message); }
     } catch (error) { if (error?.name !== 'AbortError') { loop.failed = true; loop.message = describeLoopError(error); onError(new Error(loop.message, { cause: error })); } }
     finally { endJob(); loop.busy = false; refreshSide(); }
