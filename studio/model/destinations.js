@@ -3,7 +3,7 @@
 const MASTER_PAGE_SYMBOLS = /^(Voice[12]Filter|Voice[12]FilterRes|GlobalOutputLevel|GlobalInputAux|FxDrive|Voice[12]XMod|FxDelayDamp|FxDelaySpace|FxDelayReverse|FxDelayPingPong)$/;
 // The compact build has no Stutter on any page, so nothing there can be routed to it.
 const STUTTER_SYMBOLS = /^FxStutter/;
-const DEPRECATED_SYMBOLS = /^(Voice[123]Balance|FxStutterChance|FxReverbShimmer)$/;
+const DEPRECATED_SYMBOLS = /^(Voice[123]Balance|FxStutterChance|FxReverbShimmer|FxDrive|FxChebAmount|FxFoldAmount)$/;
 
 // On the looper image the sampler voice is the looper: only these four sampler destinations do anything there, under the looper's own names.
 const LOOPER_DESTINATIONS = Object.freeze({

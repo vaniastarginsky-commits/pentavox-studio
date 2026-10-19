@@ -78,10 +78,10 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     refreshSide();
   }
 
-  async function wavFor(item) {
+  async function wavFor(item, extra = {}) {
     const audio = await prepareAudio(item.audio, item);
     const cut = item.slices ? exportSlices(item.slices.markers, item.slices.labels, item.trimStart, item.trimEnd, TARGET_SAMPLE_RATE) : { frames: [], labels: [] };
-    return encodePcm16Wav(audio, { bpm: Number(item.bpm), beats: Number(item.beats), slices: cut.frames, labels: cut.labels, oneShot: item.slices?.oneShot ?? false, playMode: item.slices?.playMode ?? 0, step: item.slices?.step ?? 0, playFilter: item.slices?.playFilter ?? 0, breakBank: hasBreakPatterns(item.breakBank) ? item.breakBank : null });
+    return encodePcm16Wav(audio, { bpm: Number(item.bpm), beats: Number(item.beats), slices: cut.frames, labels: cut.labels, oneShot: item.slices?.oneShot ?? false, playMode: item.slices?.playMode ?? 0, step: item.slices?.step ?? 0, playFilter: item.slices?.playFilter ?? 0, breakBank: hasBreakPatterns(item.breakBank) ? item.breakBank : null, ...extra });
   }
 
   async function sendToVoice(item, voice) {
@@ -143,7 +143,8 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     state.card = { label: `Writing ${item.name} to ${path}`, progress: 0, controller }; renderCardBar(); updateHeading(); refreshSide();
     const endJob = beginLinkJob('Writing a loop to the card');
     try {
-      const bytes = await wavFor(item); state.card.size = bytes.length; state.card.startedAt = performance.now();
+      const bytes = await wavFor(item, { origin: 2 });   // origin 2: the module's loop picker marks it as made by Studio
+      state.card.size = bytes.length; state.card.startedAt = performance.now();
       await fsClient.upload(path, bytes, { overwrite: false, signal: controller.signal, onProgress: (progress) => { if (state.card) { state.card.progress = progress; renderCardBar(); } } });
       try { await fsClient.rescanLibraries(); } catch { /* older firmware: the list is read at the next power-up */ }
       loop.message = `${loopFileName(number)} is on the card`;

@@ -98,7 +98,7 @@ export function acidFlags({ hasCue, oneShot, playMode = 0, step = 0, filter = 0 
   if (hasCue && modeOk && (mode >= 1 || only >= 1)) flags |= SLICE_PLAY_VALID | (mode << 8) | (code << 11) | (only << 15);
   return flags;
 }
-export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, slices = [], oneShot = false, playMode = 0, step = 0, playFilter = 0, labels = [], breakBank = null } = {}) {
+export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, slices = [], oneShot = false, playMode = 0, step = 0, playFilter = 0, labels = [], breakBank = null, origin = 0 } = {}) {
   const channels = audio.channels.length;
   if (channels !== 1 && channels !== 2) throw new RangeError('A WAV file must have one or two channels');
   const frames = audio.channels[0]?.length ?? 0;
@@ -121,7 +121,8 @@ export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, slices = [], 
   const bankSize = bankBytes ? 8 + ((bankBytes.length + 1) & ~1) : 0;
   const hasAcid = hasTempo || hasCue;
   const cueSize = hasCue ? 12 + 24 * cue.length : 0;
-  const headerSize = 12 + 24 + (hasAcid ? 32 : 0) + cueSize + typesSize + bankSize + 8;
+  const originSize = origin === 1 || origin === 2 ? 10 : 0;   // `pvxo`: where the file came from (2 = Studio, 1 = recorded on the module), for the module's loop picker
+  const headerSize = 12 + 24 + (hasAcid ? 32 : 0) + originSize + cueSize + typesSize + bankSize + 8;
   const dataBytes = frames * channels * 2;
   const bytes = new Uint8Array(headerSize + dataBytes);
   const view = new DataView(bytes.buffer);
@@ -136,6 +137,10 @@ export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, slices = [], 
     view.setUint32(offset + 16, 0, true); view.setUint32(offset + 20, hasTempo ? Number(beats) : 0, true);
     view.setUint16(offset + 24, 4, true); view.setUint16(offset + 26, 4, true); view.setFloat32(offset + 28, hasTempo ? Number(bpm) : 0, true);
     offset += 32;
+  }
+  if (originSize) {
+    writeTag(bytes, offset, 'pvxo'); view.setUint32(offset + 4, 2, true); bytes[offset + 8] = 1; bytes[offset + 9] = origin;
+    offset += originSize;
   }
   if (hasCue) {
     writeTag(bytes, offset, 'cue '); view.setUint32(offset + 4, 4 + 24 * cue.length, true); view.setUint32(offset + 8, cue.length, true);
