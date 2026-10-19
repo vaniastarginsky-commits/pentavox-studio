@@ -427,7 +427,8 @@ assetsPromise.then(() => { if (paletteMount) asPage(paletteMount.waves.dialog, (
     settings: ['Settings', 'Tempo, levels, voices'], manual: ['Manual', 'Using Studio'],
   };
   const title = document.getElementById('page-title'); const crumb = document.getElementById('page-crumb');
-  const show = (tab) => { const [t, c] = TITLES[tab] || [tab, '']; title.textContent = t; crumb.textContent = c; };
+  // The slot, Save to slot and Discard controls belong to the module's stored settings; an engine set is a build, so the Engines page has none of them.
+  const show = (tab) => { const [t, c] = TITLES[tab] || [tab, '']; title.textContent = t; crumb.textContent = c; document.documentElement.dataset.studioTab = tab; };
   for (const tab of document.querySelectorAll('[data-tab]')) tab.addEventListener('click', () => show(tab.dataset.tab));
   show(activeTab);
 }

@@ -100,6 +100,18 @@ export class PaletteModel {
     for (const target of targets) { assertVoice(target); this.voices[target] = build(); }
   }
 
+  /** One voice's 24 slots in recipe form, for saving them as a set of the player's own. */
+  voiceRecipeSlots(voice) {
+    assertVoice(voice);
+    return this.recipe().voices[voice].slots;
+  }
+
+  /** Loads recipe-form slots (24) into one voice. All-or-nothing: a bad set leaves the voice as it was. */
+  loadVoice(voice, recipeSlots) {
+    assertVoice(voice);
+    this.voices[voice] = this.#parseSet(recipeSlots, `voice ${voice + 1}`);
+  }
+
   move(voice, index, delta) {
     assertVoice(voice);
     assertSlot(index);

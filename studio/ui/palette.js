@@ -1,5 +1,6 @@
 import { setDifferences, adoptModuleSet } from '../model/module_set.js';
 import { BANK_LETTERS, PaletteModel, libraryEntries } from '../model/palette.js';
+import { EnginePresetStore, isUserKey } from '../model/engine_presets.js';
 import { EngineAudition } from '../audition.js';
 import { bankCardsView, buildButtonView, categoriesView, isCompactModule, libraryRowsView, memoryView, voiceTabCount } from './palette_vm.js';
 import { lcdLabel, lcdSvg } from './lcd.js';
@@ -117,7 +118,9 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   HELP = help;
   const model = new PaletteModel(catalog, sets, measured);
   const waveEditor = mountWaveResourcesEditor({ getResources: () => model.resources, onChange: (resources) => { model.setResources(resources); changed(); }, model, catalog, onError });
-  try { const saved = JSON.parse(localStorage.getItem('pentavox.palette.recipe')); if (saved) model.importRecipe(migrateStockBankOrder(saved)); } catch { /* invalid local state falls back to stock */ }
+  const presetStore = new EnginePresetStore();
+  let hadSavedRecipe = false;
+  try { const saved = JSON.parse(localStorage.getItem('pentavox.palette.recipe')); if (saved) { model.importRecipe(migrateStockBankOrder(saved)); hadSavedRecipe = true; } } catch { /* invalid local state falls back to stock */ }
   const audition = new EngineAudition(catalog.engines);
   const entries = libraryEntries(catalog);
   // view: 0..2 shows one voice (large rows), 'both' stacks every voice in the dense table. voice = the voice that receives clicks and library picks.
@@ -145,18 +148,85 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   const diffButton = button('Compare voices'); diffButton.setAttribute('aria-pressed', 'false');
   diffButton.title = 'Mark the engines that are in only one voice';
   diffButton.addEventListener('click', () => { state.diff = !state.diff; renderBoard(); });
-  const setPick = document.createElement('select'); setPick.setAttribute('aria-label', 'Ready-made set'); setPick.append(new Option('Ready-made set…', ''));
-  for (const [key, label] of PRESETS) setPick.append(new Option(label, key));
+  const setPick = document.createElement('select'); setPick.setAttribute('aria-label', 'Engine set');
   const setTarget = document.createElement('select'); setTarget.setAttribute('aria-label', 'Apply to');
   const setApply = button('Apply');
-  setApply.addEventListener('click', () => {
-    if (!setPick.value) { setPick.focus(); return; }
+  const setSave = button('Save as…'); setSave.title = 'Keep the engines of the voice you apply to as a set of your own';
+  const setRename = button('Rename'); const setUpdate = button('Update'); const setDelete = button('Delete');
+  setUpdate.title = 'Replace this set with the engines the voice has now';
+  const setDefault = button('Make default'); setDefault.title = 'The set this voice (or every voice) starts from when Studio has no recipe of its own, and what “Use defaults” loads';
+  const setUseDefaults = button('Use defaults');
+  const setNote = el('span', 'eg-src eg-setnote');
+  const labelOfKey = (key) => (isUserKey(key) ? presetStore.get(key)?.name ?? '' : PRESET_LABEL[key] ?? '');
+  function fillSetPick(keep = '') {
+    setPick.replaceChildren(new Option('Engine set…', ''));
+    const builtIn = document.createElement('optgroup'); builtIn.label = 'Built in (read only)';
+    for (const [key, label] of PRESETS) builtIn.append(new Option(label, key));
+    setPick.append(builtIn);
+    const mine = presetStore.list();
+    if (mine.length) { const group = document.createElement('optgroup'); group.label = 'My sets'; for (const set of mine) group.append(new Option(set.name, set.key)); setPick.append(group); }
+    setPick.value = [...setPick.options].some((option) => option.value === keep) ? keep : '';
+  }
+  function renderSetControls() {
+    const mine = isUserKey(setPick.value);
+    setRename.hidden = setUpdate.hidden = setDelete.hidden = !mine;
+    const defaults = [0, 1, 2].slice(0, Math.max(1, voiceTotal())).map((voice) => { const key = presetStore.defaultFor(voice, model.sets); return key ? `${voice + 1}: ${labelOfKey(key)}` : null; }).filter(Boolean);
+    setNote.textContent = [setPick.value && !mine ? 'built in, read only' : '', defaults.length ? `defaults · ${defaults.join(' · ')}` : ''].filter(Boolean).join(' — ');
+    setNote.hidden = !setNote.textContent;
+  }
+  // The key of a set (built in or the player's own) onto one voice, or onto all of them (voice === null).
+  function applySetKey(key, voice) {
+    if (isUserKey(key)) {
+      const set = presetStore.get(key); if (!set) throw new RangeError('That set is gone');
+      for (const target of voice === null ? [0, 1, 2] : [voice]) model.loadVoice(target, set.slots);
+    } else model.loadPreset(key, voice);
+  }
+  function applyTo(key) {
     const all = setTarget.value === 'all'; const voice = Number(setTarget.value);
-    try { model.loadPreset(setPick.value, all ? null : voice); } catch (error) { onError(error); return; }
+    try { applySetKey(key, all ? null : voice); } catch (error) { onError(error); return false; }
     if (all) state.selected = [0, 0, 0]; else state.selected[voice] = 0;
-    changed();
+    return true;
+  }
+  const sourceVoice = () => (setTarget.value === 'all' ? Math.min(state.voice, 2) : Number(setTarget.value));
+  setPick.addEventListener('change', renderSetControls);
+  setApply.addEventListener('click', () => { if (!setPick.value) { setPick.focus(); return; } if (applyTo(setPick.value)) changed(); });
+  setSave.addEventListener('click', () => {
+    const name = globalThis.prompt?.(`Name for the engines of voice ${sourceVoice() + 1}:`, '');
+    if (name === null || name === undefined) return;
+    try { const key = presetStore.add(name, model.voiceRecipeSlots(sourceVoice())); fillSetPick(key); renderSetControls(); } catch (error) { onError(error); }
   });
-  const setGroup = el('span', 'eg-setgroup'); setGroup.append(setPick, setTarget, setApply);
+  setRename.addEventListener('click', () => {
+    const name = globalThis.prompt?.('New name:', labelOfKey(setPick.value));
+    if (name === null || name === undefined) return;
+    try { const key = setPick.value; presetStore.rename(key, name); fillSetPick(key); renderSetControls(); } catch (error) { onError(error); }
+  });
+  setUpdate.addEventListener('click', () => {
+    if (!confirm(`Replace “${labelOfKey(setPick.value)}” with the engines of voice ${sourceVoice() + 1}?`)) return;
+    try { presetStore.update(setPick.value, model.voiceRecipeSlots(sourceVoice())); renderSetControls(); } catch (error) { onError(error); }
+  });
+  setDelete.addEventListener('click', () => {
+    if (!confirm(`Delete “${labelOfKey(setPick.value)}”?`)) return;
+    try { presetStore.remove(setPick.value); fillSetPick(''); renderSetControls(); } catch (error) { onError(error); }
+  });
+  setDefault.addEventListener('click', () => {
+    if (!setPick.value) { setPick.focus(); return; }
+    const voices = setTarget.value === 'all' ? [0, 1, 2].slice(0, Math.max(1, voiceTotal())) : [Number(setTarget.value)];
+    for (const voice of voices) presetStore.setDefault(voice, setPick.value);
+    renderSetControls();
+  });
+  // Every voice with a default takes it; the others stay as they are.
+  function applyDefaults() {
+    let applied = false;
+    for (const voice of [0, 1, 2]) {
+      const key = presetStore.defaultFor(voice, model.sets);
+      if (!key) continue;
+      try { applySetKey(key, voice); state.selected[voice] = 0; applied = true; } catch (error) { onError(error); }
+    }
+    return applied;
+  }
+  setUseDefaults.addEventListener('click', () => { if (applyDefaults()) changed(); else onError(new Error('No defaults yet: pick a set and press Make default')); });
+  fillSetPick('');
+  const setGroup = el('span', 'eg-setgroup'); setGroup.append(setPick, setTarget, setApply, setSave, setRename, setUpdate, setDelete, setDefault, setUseDefaults, setNote);
   // recipe files and the editors that used to be buttons beside Build
   const more = el('details', 'eg-more'); more.append(el('summary', '', 'Recipe & editors'));
   const moreList = el('div', 'eg-more-list'); more.append(moreList);
@@ -742,7 +812,8 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     });
   }
 
-  function changed() { persist(); renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); }
+  function changed() { persist(); renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); renderSetControls(); }
+  if (!hadSavedRecipe) applyDefaults();   // a first visit, or a cleared browser: every voice starts from the set chosen as its default
   changed();
   return { waves: waveEditor, refreshLive() { renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); }, dispose() { waveEditor.destroy(); if (state.polling) clearInterval(state.polling); root.replaceChildren(); } };
 }

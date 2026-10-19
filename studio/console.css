@@ -152,3 +152,6 @@ button.primary, .primary { border-radius: 6px; }
   .content > .app-header .connection-status { padding: 3px 4px; }
   .content > .app-header .theme-toggle { margin-left: auto; }
 }
+
+/* The Engines page is a build recipe, not the module's stored settings: no slot picker, Save to slot or Discard there (the Presets page has them). */
+html[data-studio-tab="palette"] #session-footer { display: none !important; }
