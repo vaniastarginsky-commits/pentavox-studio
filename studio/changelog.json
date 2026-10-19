@@ -1,4 +1,7 @@
 [
+  {"date": "2026-10-19", "area": "studio", "text": "Cloud build: the looper input is sent only for a looper build, so the ordinary build works again on a workflow without it; a looper build says what is missing."},
+  {"date": "2026-10-19", "area": "studio", "text": "Firmware card: a module built after the latest cloud build (a local build) no longer reads \"a newer cloud build exists\"; it says it runs a newer build."},
+  {"date": "2026-10-19", "area": "studio", "text": "Looper image: CV and MIDI routing offer the looper's four destinations (Level, Aux send, Overdub feedback, Loop length) instead of the sampler's start, end, cutoff, transpose and slot."},
   {"date": "2026-10-19", "area": "studio", "text": "Looper image: Settings no longer show the sampler auto-record, stutter and record-length controls; the input and clock texts speak of the looper."},
   {"date": "2026-10-19", "area": "studio", "text": "Loops on the SD card: each file is a clear two-line row (name and size, then Load, Download, Renumber, Delete); Erase all… asks first. The next number follows the highest file on the card."},
   {"date": "2026-10-19", "area": "studio", "text": "SD card: the transfer bar (\"Reading …· 100%\" with Cancel) no longer stays on screen after a download finishes and blocks the next one."},

@@ -5,6 +5,15 @@ const MASTER_PAGE_SYMBOLS = /^(Voice[12]Filter|Voice[12]FilterRes|GlobalOutputLe
 const STUTTER_SYMBOLS = /^FxStutter/;
 const DEPRECATED_SYMBOLS = /^(Voice[123]Balance|FxStutterChance|FxReverbShimmer)$/;
 
+// On the looper image the sampler voice is the looper: only these four sampler destinations do anything there, under the looper's own names.
+const LOOPER_DESTINATIONS = Object.freeze({
+  Sampler1Level: 'Level',
+  Sampler1Balance: 'Aux send',
+  Sampler1Decay: 'Overdub feedback',
+  Sampler1Attack: 'Loop length',
+});
+const looperEntry = (item) => (LOOPER_DESTINATIONS[item.symbol] ? Object.freeze({ ...item, group: 'Looper', name: LOOPER_DESTINATIONS[item.symbol] }) : null);
+
 class DestinationCatalog {
   constructor(json) {
     if (!Number.isInteger(json.count) || json.entries?.length !== json.count) {
@@ -26,8 +35,12 @@ class DestinationCatalog {
     });
   }
 
+  /** Set while the connected firmware is a looper image (see StudioSession.loopIo): the sampler destinations are the looper's. */
+  looper = false;
+
   byId(id) {
-    return this.entries[id];
+    const item = this.entries[id];
+    return this.looper && item ? (looperEntry(item) ?? item) : item;
   }
 
   // Voice[123]Balance stay in the catalog (ids are stable, saved routes may still name them) but are
@@ -47,13 +60,18 @@ class DestinationCatalog {
       if (plaits && Number(plaits[1]) > plaitsVoices) continue;
       const sampler = /^Sampler (\d+)$/.exec(item.group);
       if (sampler && Number(sampler[1]) > samplerVoices) continue;
-      let group = byName.get(item.group);
+      let shown = item;
+      if (this.looper && sampler) {
+        shown = looperEntry(item);
+        if (!shown) continue;    // Start, End, Cutoff, Resonance, Transpose, Slot: nothing to do for a loop
+      }
+      let group = byName.get(shown.group);
       if (!group) {
-        group = { group: item.group, items: [] };
-        byName.set(item.group, group);
+        group = { group: shown.group, items: [] };
+        byName.set(shown.group, group);
         groups.push(group);
       }
-      group.items.push(item);
+      group.items.push(shown);
     }
     return groups;
   }

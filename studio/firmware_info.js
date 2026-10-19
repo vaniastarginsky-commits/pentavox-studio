@@ -12,12 +12,16 @@ export function formatStamp(ms, locale) {
   return new Date(ms).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-/** 'same' (the module runs the latest cloud build), 'older' (a newer build exists) or 'unknown' (no module hash or no build to compare). */
-export function compareWithBuild(moduleHash, buildCommit) {
+/**
+ * 'same' (the module runs the latest cloud build), 'older' (a newer build exists), 'newer' (the module's commit is later than the whole cloud
+ * build, a local build) or 'unknown' (no module hash or no build to compare). Hashes cannot tell older from newer, so the dates do when both are known.
+ */
+export function compareWithBuild(moduleHash, buildCommit, moduleDateMs = null, builtAtMs = null) {
   const mine = String(moduleHash ?? '').trim().toLowerCase();
   const built = String(buildCommit ?? '').trim().toLowerCase();
   if (!mine || mine === 'unknown' || !built) return 'unknown';
-  return built.startsWith(mine) || mine.startsWith(built) ? 'same' : 'older';
+  if (built.startsWith(mine) || mine.startsWith(built)) return 'same';
+  return Number.isFinite(moduleDateMs) && Number.isFinite(builtAtMs) && moduleDateMs !== null && builtAtMs !== null && moduleDateMs > builtAtMs ? 'newer' : 'older';
 }
 
 /** Rows for the Firmware card. `latest` is the meta.json of the latest cloud build, or null when it cannot be read. */
@@ -33,8 +37,10 @@ export function firmwareRows({ info, latest, builtAtMs = null, locale } = {}) {
     const when = builtAtMs === null ? 'time unknown' : `built ${formatStamp(builtAtMs, locale)}`;
     rows.push({ label: 'Latest cloud build', text: `${String(latest.commit ?? '').slice(0, 7) || 'unknown'} · ${when}` });
     if (info) {
-      const state = compareWithBuild(parseFwGit(info.fwGit).hash, latest.commit);
+      const mod = parseFwGit(info.fwGit);
+      const state = compareWithBuild(mod.hash, latest.commit, mod.date, builtAtMs);
       if (state === 'same') rows.push({ label: 'Status', text: 'the module runs the latest cloud build', state });
+      else if (state === 'newer') rows.push({ label: 'Status', text: 'the module runs a newer build than the latest cloud build', state });
       else if (state === 'older') rows.push({ label: 'Status', text: 'a newer cloud build exists (Engines > Flash)', state });
     }
   }

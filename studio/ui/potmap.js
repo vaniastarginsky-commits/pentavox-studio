@@ -10,7 +10,7 @@ function element(tag, className, text) {
 
 const MODULE_KEYS = Object.freeze({
   'Plaits 1': 'p1', 'Plaits 2': 'p2', 'Plaits 3': 'p3',
-  'Sampler 1': 's1', 'Sampler 2': 's2', 'FX': 'fx', 'Global': 'gl',
+  'Sampler 1': 's1', 'Sampler 2': 's2', 'Looper': 's1', 'FX': 'fx', 'Global': 'gl',
 });
 const moduleKey = (group) => MODULE_KEYS[group] ?? 'gl';
 

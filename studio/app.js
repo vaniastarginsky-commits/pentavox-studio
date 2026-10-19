@@ -324,7 +324,7 @@ async function connect({ demo = false } = {}) {
     if (!session.table || !session.voices) throw new Error(result.reason ?? 'This firmware has no live fields');
     client.onDisconnect(markDisconnected);
     session.onBusy = (busy) => document.body.classList.toggle('studio-busy', busy);
-    controller?.dispose(); controller = new RoutingController(session, load(assets.destinations), { onError: showError });
+    controller?.dispose(); controller = new RoutingController(session, session.destinations, { onError: showError });
     unmountRouting?.(); unmountPotMap?.(); unmountSettings?.(); unmountPresets?.(); unmountMidi?.(); unmountFooter?.(); unmountVoices.forEach((dispose) => dispose()); unsubscribePaletteLive?.(); unsubscribeDraft?.();
     routingRoot.classList.remove('disconnected'); unmountRouting = mountRouting(routingRoot, controller, { potMapHost: potMapRoot });
     unmountPotMap = mountPotMap(potMapRoot, controller);

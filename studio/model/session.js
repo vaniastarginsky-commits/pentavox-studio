@@ -91,6 +91,7 @@ export class StudioSession {
       field?.comp === 'settings' && /^Sample Library \d+$/.test(field?.name ?? '')).length;
     this.sampleSlotCount = describedSampleSlots || 4;
     this.loopIo = loopIoVersion(descriptor) >= 1;   // the looper image: loops live in /LOOPS and the module has the loop commands
+    if (this.destinations) this.destinations.looper = this.loopIo;   // its sampler destinations are the looper's
     this.readOnly = readOnly;
     this.reason = reason;
     this.dirty = false;

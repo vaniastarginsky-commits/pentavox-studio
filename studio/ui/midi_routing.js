@@ -14,7 +14,7 @@ const CC_NAMES = Object.freeze({
   71: 'Resonance', 72: 'Release', 73: 'Attack', 74: 'Brightness', 75: 'Sound 6', 76: 'Sound 7', 77: 'Sound 8', 78: 'Sound 9', 79: 'Sound 10',
   91: 'Effects send', 93: 'Chorus send',
 });
-const MODULE_KEYS = Object.freeze({ 'Plaits 1': 'p1', 'Plaits 2': 'p2', 'Plaits 3': 'p3', 'Sampler 1': 's1', 'Sampler 2': 's2', 'FX': 'fx', 'Global': 'gl' });
+const MODULE_KEYS = Object.freeze({ 'Plaits 1': 'p1', 'Plaits 2': 'p2', 'Plaits 3': 'p3', 'Sampler 1': 's1', 'Sampler 2': 's2', 'Looper': 's1', 'FX': 'fx', 'Global': 'gl' });
 export const VELOCITY = 128;
 const depthText = (value) => `${value > 0 ? '+' : value < 0 ? '\u2212' : ''}${Math.abs(value)} %`;
 const setFill = (input) => input.style.setProperty('--p', `${(Number(input.value) + 100) / 2}%`);

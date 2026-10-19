@@ -17,6 +17,7 @@ export function cloudSettings() {
   return {
     repo: read('pentavox.cloud.repo') || DEFAULTS.repo,
     buildRef: read('pentavox.cloud.ref') || DEFAULTS.buildRef,
+    workflowRef: read('pentavox.cloud.workflowRef') || DEFAULTS.workflowRef,
   };
 }
 
@@ -48,10 +49,11 @@ export class BuildCancelledError extends Error {
 }
 
 export class CloudBuild {
-  constructor({ token, repo, buildRef, fetchImpl = globalThis.fetch?.bind(globalThis), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), now = () => Date.now(), onUnauthorized = () => {} } = {}) {
+  constructor({ token, repo, buildRef, workflowRef, fetchImpl = globalThis.fetch?.bind(globalThis), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), now = () => Date.now(), onUnauthorized = () => {} } = {}) {
     this.token = token;
     this.repo = repo ?? DEFAULTS.repo;
     this.buildRef = buildRef ?? DEFAULTS.buildRef;
+    this.workflowRef = workflowRef ?? DEFAULTS.workflowRef;
     this.fetch = fetchImpl;
     this.sleep = sleep;
     this.now = now;
@@ -92,9 +94,14 @@ export class CloudBuild {
     const request = `${this.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const response = await this.api(`/repos/${this.repo}/actions/workflows/${DEFAULTS.workflow}/dispatches`, {
       method: 'POST',
-      body: { ref: DEFAULTS.workflowRef, inputs: { ref: this.buildRef, recipe_b64: encodedRecipe, compact: String(compact), looper: String(looper), request } },
+      // The looper input is sent only for a looper build: a workflow that predates it refuses an input it does not declare (422), which must
+      // not break the ordinary sampler build.
+      body: { ref: this.workflowRef, inputs: { ref: this.buildRef, recipe_b64: encodedRecipe, compact: String(compact), ...(looper ? { looper: 'true' } : {}), request } },
     });
-    if (response.status === 404) throw new CloudBuildError(`The workflow ${DEFAULTS.workflow} was not found in ${this.repo} (is it on ${DEFAULTS.workflowRef}, and does the token have Actions: write?)`, { status: 404 });
+    if (response.status === 422 && looper) {
+      throw new CloudBuildError(`The looper image cannot be built in the cloud yet: the workflow on ${this.workflowRef} has no looper option. Merge the looper branch, or set pentavox.cloud.ref and pentavox.cloud.workflowRef (browser storage) to it; or build locally.`, { status: 422 });
+    }
+    if (response.status === 404) throw new CloudBuildError(`The workflow ${DEFAULTS.workflow} was not found in ${this.repo} (is it on ${this.workflowRef}, and does the token have Actions: write?)`, { status: 404 });
     if (response.status !== 204) throw new CloudBuildError(`GitHub did not start the build (${response.status}): ${(await response.text()).slice(0, 200)}`, { status: response.status });
     return request;
   }
