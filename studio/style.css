@@ -556,7 +556,7 @@ input[type="search"], .library-tools > input { background: var(--surface); color
 @keyframes build-slide { from { left: 0; } to { left: 60%; } }
 .palette-build { grid-template-columns: minmax(0, 1fr) auto; }
 
-.confirm-dialog { max-width: 540px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); padding: 20px; }
+.confirm-dialog { max-width: 540px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); padding: 20px; max-height: 85vh; overflow: auto; }
 .confirm-dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .confirm-text { margin: 0 0 16px; white-space: pre-wrap; font: inherit; line-height: 1.45; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }

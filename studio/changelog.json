@@ -1,4 +1,5 @@
 [
+  {"date": "2026-10-20", "area": "studio", "text": "Flash confirm: it now lists what is new in the firmware you are about to flash (the merged changes since the firmware in the module, or the recent firmware changelog entries when GitHub cannot say)."},
   {"date": "2026-10-19", "area": "firmware", "text": "USB audio out: a looper build (Studio cloud build, Looper) sends the mix before the Output Level to the computer as a USB audio input, 24 bit / 48 kHz; the analog level is separate."},
   {"date": "2026-10-19", "area": "firmware", "text": "Looper: both loops play at once; the middle left pot is their crossfader and the side it is on records. Each loop has its own stutter, and the Master sampler filter works on the loop mix."},
   {"date": "2026-10-19", "area": "studio", "text": "Build status line: the text under the build bar is no longer cut at 260 px; it is shown in full where there is room."},

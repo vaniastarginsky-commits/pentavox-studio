@@ -6,7 +6,8 @@ import { bankCardsView, buildButtonView, categoriesView, isCompactModule, librar
 import { lcdLabel, lcdSvg } from './lcd.js';
 import { lastBackupInfo } from '../model/preset_backup.js';
 import { apiFetch, servedLocally } from '../site.js';
-import { describeBuild, loadLatestCloudBuild, localServerUp, runCloudBuild, runWebFlash } from '../build_flow.js';
+import { describeBuild, loadChangesForFlash, loadLatestCloudBuild, localServerUp, recentFirmwareChanges, runCloudBuild, runWebFlash } from '../build_flow.js';
+import { lastModuleFirmware, loadChangelog, parseFwGit } from '../firmware_info.js';
 import { mountWaveResourcesEditor } from './wave_resources_editor.js';
 import { activeLinkJob, linkBusyMessage } from '../model/link_jobs.js';
 
@@ -791,7 +792,13 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   });
   flash.addEventListener('click', async () => {
     if (cloudResult) {
-      const about = cloudResult.meta ? `${describeBuild(cloudResult.meta, model.recipe())}\n\n` : '';
+      let about = '';
+      if (cloudResult.meta) {
+        // What is new in this firmware: the commits since the one in the module (connected now, or the last one seen), else the changelog.
+        const moduleHash = parseFwGit(getController?.()?.session?.info?.fwGit).hash || lastModuleFirmware()?.hash || '';
+        const [changes, entries] = await Promise.all([loadChangesForFlash({ moduleHash, meta: cloudResult.meta }), loadChangelog()]);
+        about = `${describeBuild(cloudResult.meta, model.recipe(), { changes, recent: changes ? [] : recentFirmwareChanges(entries) })}\n\n`;
+      }
       if (!(await confirmDialog(about + flashWarning(), 'Flash'))) return;
       try { await runWebFlash({ image: cloudResult.image, onStatus: renderBuild, onFlashState: (flashState) => globalThis.dispatchEvent?.(new CustomEvent('pentavox-flash', { detail: flashState })) }); } catch (error) { onError(error); }
       return;

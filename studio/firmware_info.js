@@ -62,3 +62,20 @@ export async function loadChangelog(fetchImpl = globalThis.fetch?.bind(globalThi
     return response.ok ? await response.json() : [];
   } catch { return []; }
 }
+
+const FW_KEY = 'pentavox.lastFwGit';
+
+/** Remembers the firmware the connected module runs (its commit), so the Flash confirm can say what is new even when the module is in DFU and not connected. */
+export function rememberModuleFirmware(info, storage = globalThis.localStorage) {
+  const mod = parseFwGit(info?.fwGit);
+  if (!mod.hash || mod.hash.toLowerCase() === 'unknown') return;
+  try { storage?.setItem(FW_KEY, JSON.stringify({ hash: mod.hash, date: mod.date })); } catch { /* storage may be blocked */ }
+}
+
+/** The firmware commit the module reported when it was last connected: { hash, date } or null. */
+export function lastModuleFirmware(storage = globalThis.localStorage) {
+  try {
+    const value = JSON.parse(storage?.getItem(FW_KEY) ?? 'null');
+    return value && typeof value.hash === 'string' && value.hash ? { hash: value.hash, date: Number.isFinite(value.date) ? value.date : null } : null;
+  } catch { return null; }
+}

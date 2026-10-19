@@ -47,6 +47,24 @@ export function toBase64(text) {
   return btoa(binary);
 }
 
+/**
+ * What a GitHub compare result says in a few lines: the titles of the merged pull requests (the body of a "Merge pull request" commit), or, when
+ * the range has no merges, the subjects of its commits; newest first. `status` is GitHub's (ahead, behind, identical, diverged).
+ */
+export function summariseChanges(data, limit = 10) {
+  const commits = Array.isArray(data?.commits) ? data.commits : [];
+  const noise = /^(co-authored-by|claude-session|🤖|https?:)/i;
+  const title = (commit) => {
+    const lines = String(commit?.commit?.message ?? '').split('\n').map((line) => line.trim());
+    if (/^merge (pull request|branch)/i.test(lines[0] ?? '')) return lines.slice(1).find((line) => line && !noise.test(line)) ?? '';
+    return lines[0] ?? '';
+  };
+  const merges = commits.filter((commit) => (commit.parents?.length ?? 1) > 1);
+  const chosen = (merges.length ? merges : commits).map(title).filter(Boolean).reverse();
+  const titles = [...new Set(chosen)];
+  return { status: data?.status ?? 'unknown', total: titles.length, titles: titles.slice(0, limit) };
+}
+
 export class CloudBuildError extends Error {
   constructor(message, { status = 0, log = '' } = {}) { super(message); this.name = 'CloudBuildError'; this.status = status; this.log = log; }
 }
@@ -180,6 +198,12 @@ export class CloudBuild {
       if (error instanceof CloudBuildError && error.status === 404) return null;
       throw error;
     }
+  }
+
+  /** What changed between two firmware commits (the module's and a build's), from GitHub's compare; throws when GitHub cannot say. */
+  async changesSince(baseCommit, headCommit, { limit = 10 } = {}) {
+    const data = await this.json(`/repos/${this.repo}/compare/${encodeURIComponent(baseCommit)}...${encodeURIComponent(headCommit)}`);
+    return summariseChanges(data, limit);
   }
 
   async latest() {

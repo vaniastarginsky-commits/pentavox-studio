@@ -20,6 +20,7 @@ import { mountManual } from './ui/manual.js';
 import { mountPanelDock } from './ui/panel_dock.js';
 import { renderConnectionEmptyStates } from './ui/connection_empty.js';
 import { apiFetch, siteUrl } from './site.js';
+import { rememberModuleFirmware } from './firmware_info.js';
 import { pairedDfuDevices } from './webdfu.js';
 
 const connectButton = document.querySelector('#connect-button');
@@ -319,6 +320,7 @@ async function connect({ demo = false } = {}) {
     client = new HostLinkClient(await transport);
     session = new StudioSession(client, load(assets.destinations), { paletteCatalog: assets.paletteCatalog, composerCatalog: assets.composerCatalog });
     const result = await session.connect();
+    rememberModuleFirmware(session.info);
     // Connecting never writes to the module: an old draft would overwrite what the module holds now (a voice engine changed on the panel,
     // a loaded preset), so it is dropped (persistDraft below clears it) instead of being restored and flushed.
     if (!session.table || !session.voices) throw new Error(result.reason ?? 'This firmware has no live fields');

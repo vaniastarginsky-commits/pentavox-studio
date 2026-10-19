@@ -66,7 +66,7 @@ function ago(ms) {
 }
 
 /** The text that says which firmware is about to be flashed (shown in the confirm before Flash). */
-export function describeBuild(meta, currentRecipe, { now = Date.now(), locale } = {}) {
+export function describeBuild(meta, currentRecipe, { now = Date.now(), locale, changes = null, recent = [] } = {}) {
   const at = builtAt(meta);
   const lines = ['Firmware to flash (the last cloud build):'];
   lines.push(`Built: ${at === null ? 'unknown time' : `${new Date(at).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })} (${ago(now - at)})`}`);
@@ -75,7 +75,39 @@ export function describeBuild(meta, currentRecipe, { now = Date.now(), locale } 
   if (meta.recipe === undefined) lines.push('Settings: not recorded for this build');
   else if (JSON.stringify(meta.recipe) === JSON.stringify(currentRecipe)) lines.push('Settings: the same as the engines chosen now in Studio');
   else lines.push('Settings: DIFFERENT from the engines chosen now in Studio (it was built from other ones; press Build to get the current ones)');
+  lines.push(...describeChanges(changes, recent));
   return lines.join('\n');
+}
+
+/** The lines about what is new in the firmware to flash: from the commits since the module's (`changes`), else the changelog's recent firmware entries. */
+export function describeChanges(changes, recent = []) {
+  if (changes?.status === 'identical') return ['', 'The module already runs this build.'];
+  if (changes?.status === 'behind') return ['', 'The module runs a newer firmware than this build: flashing it goes back.'];
+  if (changes?.titles?.length) {
+    const lines = ['', `What changed since the firmware in the module (${changes.base}):`, ...changes.titles.map((title) => `• ${title}`)];
+    if (changes.total > changes.titles.length) lines.push(`… and ${changes.total - changes.titles.length} more`);
+    return lines;
+  }
+  if (recent.length) return ['', 'Recent firmware changes:', ...recent.map((entry) => `• ${entry.date ? `${entry.date}: ` : ''}${entry.text}`)];
+  return [];
+}
+
+/** The newest firmware entries of the changelog (what the confirm shows when the commits since the module's cannot be read). */
+export function recentFirmwareChanges(entries, limit = 5) {
+  return (Array.isArray(entries) ? entries : []).filter((entry) => entry?.area === 'firmware' && typeof entry.text === 'string')
+    .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))).slice(0, limit);
+}
+
+/** The commits between the module's firmware and the build to flash; null when the module's commit is unknown, there is no token or GitHub does not answer in time. */
+export async function loadChangesForFlash({ moduleHash, meta, token = githubToken(() => ''), settings = cloudSettings(), makeBuilder = (options) => new CloudBuild(options), timeoutMs = 6000 } = {}) {
+  const head = String(meta?.commit ?? '').trim();
+  const base = String(moduleHash ?? '').trim();
+  if (!token || !head || !base || base.toLowerCase() === 'unknown') return null;
+  try {
+    const builder = makeBuilder({ token, ...settings, onUnauthorized: forgetGithubToken });
+    const result = await Promise.race([builder.changesSince(base, head), new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs))]);
+    return result ? { ...result, base: base.slice(0, 7) } : null;
+  } catch { return null; }
 }
 
 /** Flash an image over WebUSB DFU. Must be called from a click (the device chooser needs a user gesture). */
