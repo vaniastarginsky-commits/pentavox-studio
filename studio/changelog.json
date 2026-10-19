@@ -1,4 +1,5 @@
 [
+  {"date": "2026-10-19", "area": "firmware", "text": "Looper: both loops play at once; the middle left pot is their crossfader and the side it is on records. Each loop has its own stutter, and the Master sampler filter works on the loop mix."},
   {"date": "2026-10-19", "area": "studio", "text": "Build status line: the text under the build bar is no longer cut at 260 px; it is shown in full where there is room."},
   {"date": "2026-10-19", "area": "studio", "text": "Looper image: Settings has a Looper group with the stutter character (Clean, Glitch low / mid / high), which the loop stutter on the two top pots uses."},
   {"date": "2026-10-19", "area": "firmware", "text": "Drive (Chebyshev, Fold) is removed from the Compact module: B1 over Output Level does nothing and the Drive destinations are gone from CV and MIDI routing."},
