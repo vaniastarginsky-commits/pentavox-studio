@@ -52,6 +52,7 @@ const SIMPLE_ITEMS = Object.freeze([
 // What the looper image says differently: the loop records the input and the Plaits voices, and with no clock at all it makes its own bar grid.
 function looperHint(spec) {
   if (spec.id === 's1.0') return 'How much of the Audio In signal reaches the effects and the looper recording. 0 turns the input off.';
+  if (spec.id === 's0.4') return 'The sound of the loop stutter (the two top pots): Clean repeats the loop as it is on the clock; Glitch drops, reverses and bit-crushes later repeats, more with each step.';
   if (spec.id === 'transport.source') return 'Auto prefers CV, then MIDI, then internal. With no clock the looper runs on the internal tempo, and the first B2 tap starts its bar grid.';
   return spec.hint;
 }
@@ -113,14 +114,15 @@ export function noteSourceRows(table, labels = {}) {
   return rows;
 }
 
-// `looper`: the looper image has no sampler recording, so the Sampler group (auto-record, stutter, record length) is left out and the texts
-// that speak of the sampler speak of the looper.
+// `looper`: the looper image has no sampler recording, so the Sampler group is left out except the stutter character (Clean / Glitch), which
+// the loop stutter uses too, and the texts that speak of the sampler speak of the looper.
 export function settingsView(table, { looper = false } = {}) {
   const groups = new Map(GROUP_DEFS.map((def) => [def.key, { ...def, items: [], summary: '' }]));
+  if (looper) groups.get('sampler').title = 'Looper';
   for (const spec of SIMPLE_ITEMS) {
     if (!table.has(spec.id)) continue;
     const field = table.field(spec.id);
-    if (looper && spec.group === 'sampler') continue;
+    if (looper && spec.group === 'sampler' && spec.id !== 's0.4') continue;   // only the stutter character is a looper setting
     if (spec.name && field.name !== spec.name) continue;   // one slot id, different meaning in the full and the compact build (s0.4: Sampler Choke / Sampler Stutter)
     const raw = table.get(spec.id);
     const item = { id: spec.id, control: spec.control, label: spec.label, hint: looper ? looperHint(spec) : spec.hint, short: spec.short ?? '', twoRows: spec.twoRows === true };
@@ -149,7 +151,8 @@ export function settingsView(table, { looper = false } = {}) {
       item.value = raw !== 0;
     } else {
       // `show` trims the choices to the ones worth offering; a value the module already holds (an old preset, a hand-set mode) stays visible.
-      item.options = options(spec.labels, Number(field.zones)).filter((option) => !spec.show || spec.show.includes(option.value) || option.value === raw);
+      const show = looper && spec.id === 's0.4' ? [0, 1, 2, 3] : spec.show;   // a loop has no cue markers: no slice repeat / roll
+      item.options = options(spec.labels, Number(field.zones)).filter((option) => !show || show.includes(option.value) || option.value === raw);
       item.value = raw;
     }
     groups.get(spec.group).items.push(item);
