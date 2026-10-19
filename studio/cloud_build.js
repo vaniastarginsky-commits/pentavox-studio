@@ -7,7 +7,7 @@
 
 const API = 'https://api.github.com';
 const NETWORK_ATTEMPTS = 4;
-const DEFAULTS = { repo: 'vaniastarginsky-commits/PENTAVOX', buildRef: 'compact-cleanup', workflow: 'studio-build.yml', workflowRef: 'main', resultBranch: 'studio-builds' };
+const DEFAULTS = { repo: 'vaniastarginsky-commits/PENTAVOX', buildRef: 'compact-cleanup', workflow: 'studio-build.yml', workflowRef: 'compact-cleanup', resultBranch: 'studio-builds' };
 
 function storage() { try { return globalThis.localStorage ?? null; } catch { return null; } }
 function read(key) { try { return storage()?.getItem(key) ?? null; } catch { return null; } }
