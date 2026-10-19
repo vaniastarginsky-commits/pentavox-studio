@@ -1,4 +1,6 @@
 [
+  {"date": "2026-10-19", "area": "studio", "text": "Looper image: Settings no longer show the sampler auto-record, stutter and record-length controls; the input and clock texts speak of the looper."},
+  {"date": "2026-10-19", "area": "studio", "text": "Loops on the SD card: each file is a clear two-line row (name and size, then Load, Download, Renumber, Delete); Erase all… asks first. The next number follows the highest file on the card."},
   {"date": "2026-10-19", "area": "studio", "text": "SD card: the transfer bar (\"Reading …· 100%\" with Cancel) no longer stays on screen after a download finishes and blocks the next one."},
   {"date": "2026-10-18", "area": "studio", "text": "Looper image: the SD card block lists /LOOPS with Save loop, Load into loop 1 or 2, Download, Renumber and Delete (needs firmware that advertises loopIo)."},
   {"date": "2026-10-18", "area": "firmware", "text": "Looper: B1 + hold B2 saves the playing loop to /LOOPS; B2's LED shows working (cyan), done (green) or failed (pink-red); the first and third pots pick a file for loop 1 / 2."},

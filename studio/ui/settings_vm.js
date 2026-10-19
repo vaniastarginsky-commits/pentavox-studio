@@ -49,6 +49,13 @@ const SIMPLE_ITEMS = Object.freeze([
   { id: 's2.4', short: 'record', group: 'sampler', control: 'segmented', label: 'Record length', hint: 'Length of a Clock Loop take, in bars. A sample slot holds 30 s: 16 bars need 128 BPM or faster, 8 bars 64 BPM.', show: [0, 1, 3, 7, 15], labels: Array.from({ length: 16 }, (_, index) => `${index + 1}`) },
 ]);
 
+// What the looper image says differently: the loop records the input and the Plaits voices, and with no clock at all it makes its own bar grid.
+function looperHint(spec) {
+  if (spec.id === 's1.0') return 'How much of the Audio In signal reaches the effects and the looper recording. 0 turns the input off.';
+  if (spec.id === 'transport.source') return 'Auto prefers CV, then MIDI, then internal. With no clock the looper runs on the internal tempo, and the first B2 tap starts its bar grid.';
+  return spec.hint;
+}
+
 const options = (labels, count = labels.length) => Array.from({ length: count }, (_, value) => ({ value, label: labels[value] ?? String(value) }));
 
 function scaleOf(field) {
@@ -106,14 +113,17 @@ export function noteSourceRows(table, labels = {}) {
   return rows;
 }
 
-export function settingsView(table) {
+// `looper`: the looper image has no sampler recording, so the Sampler group (auto-record, stutter, record length) is left out and the texts
+// that speak of the sampler speak of the looper.
+export function settingsView(table, { looper = false } = {}) {
   const groups = new Map(GROUP_DEFS.map((def) => [def.key, { ...def, items: [], summary: '' }]));
   for (const spec of SIMPLE_ITEMS) {
     if (!table.has(spec.id)) continue;
     const field = table.field(spec.id);
+    if (looper && spec.group === 'sampler') continue;
     if (spec.name && field.name !== spec.name) continue;   // one slot id, different meaning in the full and the compact build (s0.4: Sampler Choke / Sampler Stutter)
     const raw = table.get(spec.id);
-    const item = { id: spec.id, control: spec.control, label: spec.label, hint: spec.hint, short: spec.short ?? '', twoRows: spec.twoRows === true };
+    const item = { id: spec.id, control: spec.control, label: spec.label, hint: looper ? looperHint(spec) : spec.hint, short: spec.short ?? '', twoRows: spec.twoRows === true };
     if (spec.control === 'slider') {
       if (spec.bpm) {
         Object.assign(item, { min: 20, max: 300, step: 1, unit: ' BPM', value: raw });

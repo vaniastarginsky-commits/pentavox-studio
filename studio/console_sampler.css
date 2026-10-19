@@ -411,3 +411,20 @@
 #sampler-root .sl-wave { background: #f3f5f9; color: #1f9d5f; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #sampler-root .sl-wave { background: var(--lcd, #10140d); color: #7fd29a; } }
 :root[data-theme="dark"] #sampler-root .sl-wave { background: var(--lcd, #10140d); color: #7fd29a; }
+
+/* Loops on the SD card (looper image): a row is name + size on top, loads on the left and file tools on the right below it */
+#sampler-root .loop-card .sd-files.loop-files { max-height: 380px; border-top: 1px solid var(--line); }
+#sampler-root .loop-file { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "info info" "load tools"; gap: 6px 8px; padding: 9px 12px; }
+#sampler-root .loop-file-info { grid-area: info; justify-content: space-between; flex-wrap: nowrap; }
+#sampler-root .loop-file-info code { flex: 0 1 auto; font-size: 13px; color: var(--text); }
+#sampler-root .loop-file-info span { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+#sampler-root .loop-file-load { grid-area: load; display: flex; gap: 6px; }
+#sampler-root .loop-file-tools { grid-area: tools; display: flex; gap: 2px; justify-content: flex-end; }
+#sampler-root .loop-file .loop-file-load button.load { padding: 3px 9px; font-size: 12px; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); background: transparent; border-radius: 4px; }
+#sampler-root .loop-file .loop-file-load button.load:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+#sampler-root .loop-file .loop-file-tools button { padding: 3px 6px; font-size: 12px; }
+#sampler-root .loop-erase { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; justify-content: flex-end; }
+#sampler-root .loop-erase-q { flex: 1 1 14rem; font-size: 12px; color: var(--bad); }
+#sampler-root .loop-erase button.danger.confirming { border-color: var(--bad); color: var(--bad); }
+#sampler-root .loop-foot { padding: 9px 14px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); line-height: 1.45; background: var(--panel, transparent); position: relative; }
+@media (max-width: 760px) { #sampler-root .loop-file { grid-template-columns: minmax(0, 1fr); grid-template-areas: "info" "load" "tools"; } #sampler-root .loop-file-tools { justify-content: flex-start; } }

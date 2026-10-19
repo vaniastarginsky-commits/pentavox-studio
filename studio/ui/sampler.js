@@ -24,7 +24,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   const state = { items: [], starts: [null, null, null, null], importing: false, exporting: false, selected: null, upload: null, card: null, cardInfo: null, cardFiles: [[], [], [], []], cardLoading: false, cardProblem: '', confirming: null, generation: 0 };
   // The looper image keeps its loops in /LOOPS (two loop slots, files numbered by the module) instead of the sampler's SLOT folders.
   const looper = () => Boolean(getLoopIo());
-  const loop = { files: [], busy: false, message: '', failed: false };
+  const loop = { files: [], busy: false, message: '', failed: false, confirmErase: false };
   const loopClient = () => { const client = getClient(); return client ? new LoopIoClient(client) : null; };
   let audioContext; let editor = null; let sliceBar = null; let breakPanel = null; let refreshQueued = false; let hooks = { fields: () => {}, status: () => {} };
   const context = () => { audioContext ??= new AudioContext(); return audioContext; };
@@ -167,6 +167,25 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     try { await client.remove(entry.path); if (looper()) await client.rescanLibraries().catch(() => {}); onSuccess(`${entry.name} deleted from the card`); }
     catch (error) { onError(new Error(describeFsError(error), { cause: error })); }
     await loadCard();
+  }
+
+  // Erase every loop in /LOOPS. The card's own listing is the source; a locked file stays.
+  async function eraseAllLoops() {
+    const client = files(); if (!client || loop.busy || state.card) return;
+    const targets = loop.files.filter((file) => !file.locked); if (!targets.length) return;
+    loop.busy = true; loop.failed = false; loop.confirmErase = false; let done = 0;
+    const endJob = beginLinkJob('Erasing loops');
+    try {
+      for (const file of targets) {
+        loop.message = `Erasing loops… ${done} of ${targets.length}`; refreshSide();
+        await client.remove(file.path); done += 1;
+      }
+      loop.message = `Erased ${done} loops from the card`; onSuccess(loop.message);
+    } catch (error) {
+      loop.failed = true; loop.message = `Stopped after ${done} of ${targets.length}: ${describeFsError(error)}`; onError(new Error(loop.message, { cause: error }));
+    } finally {
+      endJob(); loop.busy = false; await client.rescanLibraries().catch(() => {}); await loadCard();
+    }
   }
 
   async function eraseSlot(group) {
@@ -463,21 +482,38 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     save.title = 'Save the loop that plays now to the next free /LOOPS/NNNN.WAV (the same as B1 + hold B2 on the module)'; save.addEventListener('click', saveLoop);
     const hint = el('small', loop.failed ? 'error' : '', loop.message || (state.cardInfo ? 'Save the loop that plays now, or load a file into one of the two loops.' : state.cardProblem || (state.cardLoading ? 'Reading the card…' : 'Connect the module to see its loops')));
     body.append(el('div', 'sd-live-actions', ''), hint); body.firstChild.append(save);
+    const erasable = loop.files.filter((file) => !file.locked).length;
+    if (erasable) {
+      const erase = el('div', 'loop-erase');
+      if (loop.confirmErase && !loop.busy) {
+        const sure = button(`Erase all ${erasable}`, 'quiet-button danger confirming'); sure.addEventListener('click', eraseAllLoops);
+        const cancel = button('Cancel', 'quiet-button'); cancel.addEventListener('click', () => { loop.confirmErase = false; renderPlan(); });
+        erase.append(el('span', 'loop-erase-q', `Erase all ${erasable} loops from /LOOPS? This cannot be undone.`), cancel, sure);
+      } else {
+        const start = button('Erase all…', 'quiet-button danger'); start.disabled = loop.busy || Boolean(state.card) || state.cardLoading || !files();
+        start.title = 'Delete every loop file in /LOOPS (asks first)'; start.addEventListener('click', () => { loop.confirmErase = true; renderPlan(); });
+        erase.append(start);
+      }
+      body.append(erase);
+    }
     const rows = el('div', 'sd-files loop-files');
     for (const file of loop.files) {
-      const row = el('div', 'sd-file card-file'); const info = el('div', 'sd-file-info'); info.append(el('code', '', file.name), el('span', '', `${file.seconds.toFixed(1)} s · ${formatSize(file.size)}`));
-      const actions = el('div', 'sd-file-actions');
-      for (let slot = 0; slot < LOOP_SLOTS; slot += 1) { const load = button(`Load → ${slot + 1}`, 'quiet-button'); load.title = `Put this loop into loop slot ${slot + 1}`; load.disabled = loop.busy || Boolean(state.card); load.addEventListener('click', () => loadLoop(file, slot)); actions.append(load); }
+      const row = el('div', 'sd-file card-file loop-file'); const info = el('div', 'sd-file-info loop-file-info');
+      info.append(el('code', '', file.name), el('span', '', `${file.seconds.toFixed(1)} s · ${formatSize(file.size)}`));
+      const load = el('div', 'loop-file-load');
+      for (let slot = 0; slot < LOOP_SLOTS; slot += 1) { const b = button(`Load → ${slot + 1}`, 'quiet-button load'); b.title = `Put this loop into loop slot ${slot + 1}`; b.disabled = loop.busy || Boolean(state.card); b.addEventListener('click', () => loadLoop(file, slot)); load.append(b); }
+      const tools = el('div', 'loop-file-tools');
       const get = button('Download', 'quiet-button'); get.disabled = Boolean(state.card) || loop.busy; get.addEventListener('click', () => downloadCardFile(file));
       const number = button('Renumber…', 'quiet-button'); number.disabled = Boolean(state.card) || loop.busy; number.addEventListener('click', () => renumberLoop(file));
       const confirming = state.confirming === file.path;
       const remove = button(confirming ? 'Delete?' : 'Delete', `quiet-button danger${confirming ? ' confirming' : ''}`); remove.disabled = Boolean(state.card) || loop.busy || file.locked;
       remove.addEventListener('click', () => { if (confirming) { state.confirming = null; deleteCardFile(file); } else { state.confirming = file.path; renderPlan(); } });
-      actions.append(get, number, remove); row.append(info, actions); rows.append(row);
+      tools.append(get, number, remove); row.append(info, load, tools); rows.append(row);
     }
     if (!loop.files.length) rows.append(el('span', 'sd-empty', state.cardInfo ? 'No loops on the card yet' : 'No files to show'));
     const total = loop.files.reduce((sum, file) => sum + file.size, 0);
-    card.append(top, body, rows, el('footer', '', `${loop.files.length} loops on the card · ${formatSize(total)} · numbering is the module's (next file is ${loopFileName((loop.files.at(-1)?.number ?? 0) + 1)})`));
+    const next = loopFileName(loop.files.reduce((top2, file) => Math.max(top2, file.number), 0) + 1);
+    card.append(top, body, rows, el('footer', 'loop-foot', `${loop.files.length} loops · ${formatSize(total)} · the module numbers them, the next is ${next}`));
     planPanel.append(card); window.scrollTo(window.scrollX, pageY);
   }
 
