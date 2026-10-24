@@ -246,3 +246,5 @@
 :root[data-theme="dark"] { --ico-bg: var(--lcd, #10140d); --ico-l: 62%; }
 .eg .engine-icon, .eg .lcd-tile { background: var(--ico-bg); }
 .eg .lcd-tile { color: hsl(var(--h, 150) 70% var(--ico-l)); }
+
+.firmware-diagnostic { display: inline-flex; align-items: center; gap: 5px; font: 12px var(--mono); color: var(--muted); white-space: nowrap; }

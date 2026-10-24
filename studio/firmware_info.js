@@ -29,17 +29,18 @@ export function firmwareRows({ info, latest, builtAtMs = null, locale } = {}) {
   const rows = [];
   if (info) {
     const mod = parseFwGit(info.fwGit);
-    const parts = [info.fwVersion, mod.hash].filter(Boolean);
+    const parts = [info.fwVersion, mod.hash,info.firmwareProfile].filter(Boolean);
     const when = mod.date === null ? 'build date unknown (older firmware)' : `made ${formatStamp(mod.date, locale)}`;
     rows.push({ label: 'In the module', text: `${parts.join(' · ')} · ${when}` });
   }
   if (latest) {
     const when = builtAtMs === null ? 'time unknown' : `built ${formatStamp(builtAtMs, locale)}`;
-    rows.push({ label: 'Latest cloud build', text: `${String(latest.commit ?? '').slice(0, 7) || 'unknown'} · ${when}` });
+    rows.push({ label: 'Latest cloud build', text: `${String(latest.commit ?? '').slice(0, 7) || 'unknown'} · ${when}${latest.profile ? ` · ${latest.profile} (${latest.diagnostic?'diagnostic':'normal'})` : ''}` });
     if (info) {
       const mod = parseFwGit(info.fwGit);
       const state = compareWithBuild(mod.hash, latest.commit, mod.date, builtAtMs);
-      if (state === 'same') rows.push({ label: 'Status', text: 'the module runs the latest cloud build', state });
+      if(state==='same' && info.firmwareProfile && latest.profile && info.firmwareProfile!==latest.profile) rows.push({label:'Status',text:'the cloud image is a different firmware variant',state:'different'});
+      else if (state === 'same') rows.push({ label: 'Status', text: 'the module runs the latest cloud build', state });
       else if (state === 'newer') rows.push({ label: 'Status', text: 'the module runs a newer build than the latest cloud build', state });
       else if (state === 'older') rows.push({ label: 'Status', text: 'a newer cloud build exists (Engines > Flash)', state });
     }

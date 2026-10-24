@@ -1,7 +1,10 @@
+import { describedFirmware } from './firmware_profiles.js';
 const FIELD_SIZES = Object.freeze({ enum: 1, f32: 4 });
 
 export function indexDescriptor(descriptor) {
   const index = new Map();
+  const firmware=describedFirmware(descriptor);
+  if(firmware) Object.defineProperty(index,'firmware',{value:firmware});
   const counts = new Map();
   for (const component of descriptor.components ?? []) {
     const local = new Set();

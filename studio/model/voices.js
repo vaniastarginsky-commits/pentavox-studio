@@ -49,7 +49,8 @@ export class VoiceTable {
     // The firmware says how many Plaits voices it has: 3 in the full build, 2 in the lighter one without the third.
     let voiceCount = 0;
     while (voiceCount < MAX_VOICES && index.has(fieldId(voiceCount, 'engine'))) voiceCount += 1;
-    if (voiceCount < 2) throw new Error('descriptor has no complete palette voice fields: voice.0.engine');
+    voiceCount = Math.min(voiceCount, Number(index.firmware?.activePlaits) || voiceCount);
+    if (voiceCount < 1) throw new Error('descriptor has no complete palette voice fields: voice.0.engine');
     const required = [];
     for (let voice = 0; voice < voiceCount; ++voice) {
       for (const key of ['engine', 'stereo', 'sync_in', 'balance']) required.push(fieldId(voice, key));

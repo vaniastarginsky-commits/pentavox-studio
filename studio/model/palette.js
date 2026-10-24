@@ -255,14 +255,14 @@ export class PaletteModel {
     return total;
   }
 
-  unionIds() {
+  unionIds(voiceCount = this.voices.length) {
     const ids = new Set();
-    for (const slots of this.voices) for (const slot of slots) ids.add(slot.id);
+    for (const slots of this.voices.slice(0,voiceCount)) for (const slot of slots) ids.add(slot.id);
     return ids;
   }
 
-  estimatedBytes() {
-    return this.bytesOfIds(this.unionIds());
+  estimatedBytes(voiceCount = this.voices.length) {
+    return this.bytesOfIds(this.unionIds(voiceCount));
   }
 
   stockUnionBytes() {
@@ -287,13 +287,13 @@ export class PaletteModel {
     return null;
   }
 
-  summary() {
-    const union = this.unionIds();
+  summary(voiceCount = this.voices.length) {
+    const union = this.unionIds(voiceCount);
     const unionBytes = this.bytesOfIds(union);
     const budget = this.budgetBytes();
     const margin = budget - unionBytes;
     return {
-      perVoice: this.voices.map((slots) => ({ filled: slots.length, unique: new Set(slots.map((slot) => slot.id)).size })),
+      perVoice: this.voices.slice(0,voiceCount).map((slots) => ({ filled: slots.length, unique: new Set(slots.map((slot) => slot.id)).size })),
       unionClasses: union.size,
       unionBytes,
       budgetBytes: budget,

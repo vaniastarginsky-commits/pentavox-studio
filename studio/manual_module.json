@@ -45,7 +45,7 @@
      "name": "Timbre",
      "page": 0,
      "pot": 2,
-     "help": "B1:- B2:engine/bank",
+     "help": "B1:Sidechain EQ B2:engine/bank",
      "def": 0.5
     },
     {
@@ -87,7 +87,7 @@
      "name": "Timbre",
      "page": 1,
      "pot": 2,
-     "help": "B1:- B2:engine/bank",
+     "help": "B1:Sidechain EQ B2:engine/bank",
      "def": 0.5
     },
     {
@@ -123,7 +123,7 @@
      "page": 2,
      "pot": 1,
      "help": "B1:- B2:slot/record",
-     "def": 0
+     "def": 0.5
     },
     {
      "name": "End",
@@ -157,8 +157,8 @@
      "name": "Stutter Time",
      "page": 3,
      "pot": 0,
-     "help": "Left reverse / right forward; center shortest. B1:Reverse B2:stutter",
-     "def": 0.55
+     "help": "B1:Reverse B2:stutter",
+     "def": 0.5
     },
     {
      "name": "Filter",
@@ -212,7 +212,7 @@
     {
      "gesture": "hold",
      "label": "Shift layer",
-     "help": "Voice pages: Level is a stereo VU; moving Level shows its value briefly. B2 top shows that voice's incoming MIDI/CV notes. While held: Plaits Cross FM (Freq pot: how much the other Plaits modulates this one), Attack and Aux send; all sampler shifts; Live Space/Filter Resonance/Delay Damp/Reverb Damp/Delay Feedback; Master filter resonances, Phaser Rate, Input To Aux and Chebyshev/Fold drive; Granular Scatter/Spread/Reverse; Tone Center/CV amount."
+     "help": "Voice pages: Level is a stereo VU; moving Level shows its value briefly. B2 top shows that voice's incoming MIDI/CV notes. While held: Plaits Cross FM (Freq pot: how much the other Plaits modulates this one), Attack and Aux send; all sampler shifts; Live Reverse/Filter Resonance/Delay Damp/Reverb Damp/Delay Feedback; Master filter resonances, Phaser Rate and Input To Aux; Granular Scatter/Spread/Reverse; Tone Center/CV amount."
     }
    ],
    "see": [
@@ -355,12 +355,12 @@
    {
     "id": "fx-live",
     "title": "FX Live",
-    "body": "Pots 0-5, top row first, left to right: Stutter Time (left pink reverse / right green forward, center shortest with white bottom pip; B1: Reverse), Filter (centre bypass; B1: Resonance), Delay Mix (B1: Damp), Reverb Mix (B1: Damp), Delay Time (1-4000 ms exponential; B1: Feedback), Reverb Size. Hold **B2** to stutter. The stutter division lengths mirror on both sides and increase toward the ends. Clocked Delay Time has13 steps:8/4/2 bars,1 bar,1/2,1/4,1/8,1/8T,1/16,1/16T,1/32,1/32T,1/64; each has one LED position. The buffer holds32 seconds. Reverse and Ping-pong are independent CV/MIDI destinations. Reverb Size no longer changes Damp: set the two separately."
+    "body": "Pots 0-5, top row first, left to right: Stutter Time (B1: Reverse), Filter (centre bypass; B1: Resonance), Delay Mix (B1: Damp), Reverb Mix (B1: Damp), Delay Time (1-4000 ms exponential; B1: Feedback, left pink ping-pong / right blue stereo, white bottom pip at zero), Reverb Size. Hold **B2** to stutter. Stutter Time is bipolar: left pink reverse, right green forward, shortest at the center white bottom pip, longer toward either end; clock divisions mirror on both sides. Clocked Delay Time has13 steps:8/4/2 bars,1 bar,1/2,1/4,1/8,1/8T,1/16,1/16T,1/32,1/32T,1/64; each has one LED position. The buffer holds32 seconds. Reverse and Ping-pong are independent CV/MIDI destinations. Reverb Size no longer changes Damp: set the two separately."
    },
    {
     "id": "master",
     "title": "Master",
-    "body": "On the second FX page, top row first: Plaits 1 DJ filter, Phaser Mix (B1: Rate), Plaits 2 DJ filter, Input Level (B1: Input To Aux, the share sent to the effects), Sampler DJ filter and Output Level (B1: Drive). The DJ filters have a centre bypass and a resonance under B1. Input Level and Output Level show a stereo peak meter that grows from the top of the ring, left channel to the left; turning the pot shows its value for a second. Drive raises the Chebyshev shaper to full at the centre, then adds the wavefolder. Phaser Depth and Feedback are set in Studio."
+    "body": "On the second FX page, top row first: Plaits 1 DJ filter, Phaser Mix (B1: Rate), Plaits 2 DJ filter, Input Level (B1: Input To Aux, the share sent to the effects), Sampler DJ filter and Output Level. The DJ filters have a centre bypass and a resonance under B1. Input Level and Output Level show a stereo peak meter that grows from the top of the ring, left channel to the left; turning the pot shows its value for a second. Phaser Depth and Feedback are set in Studio."
    },
    {
     "id": "midi-clock",

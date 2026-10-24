@@ -73,9 +73,9 @@ export class StudioSession {
     let settings;
     try { settings = SettingsTable.fromBlob(live, index); } catch { /* firmware without Settings fields: the tab stays empty */ }
     let potMap;
-    try { potMap = PotMapTable.fromBlob(live, index); } catch { /* older firmware: the tab stays empty */ }
+    try { potMap = PotMapTable.fromBlob(live, index, descriptor); } catch { /* older firmware: the tab stays empty */ }
 
-    this.info = info;
+    this.info = index.firmware ? {...info,firmwareProfile:index.firmware.profile} : info;
     this.index = index;
     this.lockComponent = findLockComponent(descriptor.components);
     this.descriptor = descriptor;   // the Manual tab reads the firmware's own pages, buttons and jacks from it
@@ -91,7 +91,7 @@ export class StudioSession {
       field?.comp === 'settings' && /^Sample Library \d+$/.test(field?.name ?? '')).length;
     this.sampleSlotCount = describedSampleSlots || 4;
     this.loopIo = loopIoVersion(descriptor) >= 1;   // the looper image: loops live in /LOOPS and the module has the loop commands
-    if (this.destinations) this.destinations.looper = this.loopIo;   // its sampler destinations are the looper's
+    if (this.destinations) { this.destinations.looper = this.loopIo; this.destinations.firmware=index.firmware??null; }   // its sampler destinations are the looper's
     this.readOnly = readOnly;
     this.reason = reason;
     this.dirty = false;
@@ -121,7 +121,7 @@ export class StudioSession {
     this.table = RouteTable.fromBlob(bytes, this.index);
     this.voices = VoiceTable.fromBlob(bytes, this.index, this.engineCatalogs);
     if (this.settings) this.settings = SettingsTable.fromBlob(bytes, this.index);
-    if (this.potMap) this.potMap = PotMapTable.fromBlob(bytes, this.index);
+    if (this.potMap) this.potMap = PotMapTable.fromBlob(bytes, this.index, this.descriptor);
     this.editedKeys = new Set(owned.filter((key) => this.index.has(key)));
     this.#editGeneration += 1;
     this.dirty = true;
@@ -206,14 +206,15 @@ export class StudioSession {
     this.table = RouteTable.fromBlob(output, this.index);
     this.voices = VoiceTable.fromBlob(output, this.index, this.engineCatalogs);
     if (this.settings) this.settings = SettingsTable.fromBlob(output, this.index);
-    if (this.potMap) this.potMap = PotMapTable.fromBlob(output, this.index);
+    if (this.potMap) this.potMap = PotMapTable.fromBlob(output, this.index, this.descriptor);
     this.pending = false;
   }
 
   /** Destinations this firmware can actually route to, grouped for pickers (voice counts, FX blocks and the compact Master page follow the descriptor). */
   destinationGroups() {
-    const compact = this.voices?.voiceCount === 2 && this.samplerVoices === 1 && !this.granularEnabled && !this.tapeEnabled;
+    const compact = this.voices?.voiceCount <= 2 && this.samplerVoices === 1 && !this.granularEnabled && !this.tapeEnabled;
     return this.destinations.groups({
+      ...(this.potMap?.capabilities??{}),
       destCount: this.table?.destCount ?? this.destinations.count,
       masterPage: compact,
       stutter: !compact,
@@ -283,7 +284,7 @@ export class StudioSession {
     this.table = table;
     this.voices = voices;
     if (this.settings) this.settings = SettingsTable.fromBlob(live, this.index);
-    if (this.potMap) this.potMap = PotMapTable.fromBlob(live, this.index);
+    if (this.potMap) this.potMap = PotMapTable.fromBlob(live, this.index, this.descriptor);
     this.dirty = false;
     this.pending = false;
     this.editedKeys.clear();

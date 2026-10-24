@@ -2,7 +2,7 @@
 // It reads the same pager as the Manual tab (the connected module's descriptor, or the compact firmware's snapshot while nothing is connected),
 // shows what each knob does on each page, and points from a control to the tab that sets it.
 import { baseCvFunction } from '../model/panel_pots.js';
-import { POT_POSITIONS, buttonCards, gestureLabel, jackLabel, jackList, panelPages } from './manual_vm.js';
+import { POT_POSITIONS, buttonCards, gestureLabel, isCompactBuild, jackLabel, jackList, panelPages } from './manual_vm.js';
 import { drawPanel, paintLivePots, paintPots } from './panel_drawing.js';
 import { PanelLive, decodePerf, percentText, perfFieldMap, perfKey } from './panel_live.js';
 
@@ -120,9 +120,10 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
       const entry = page?.pots[id];
       title(`${POT_POSITIONS[id]} · ${page?.name ?? ''}`, entry?.name || 'Not used on this page');
       const list = el('dl', 'dock-facts');
-      list.append(el('dt', '', 'Hold B1'), el('dd', '', entry?.shift || 'unchanged'));
+      list.append(el('dt', '', 'Hold B1'), el('dd', '', entry?.shift || (isCompactBuild(panelPages(descriptor)) ? 'Not used' : 'unchanged')));
       if (entry?.b2) list.append(el('dt', '', 'B2'), el('dd', '', entry.b2));
       out.append(list);
+      if (entry?.live === false) out.append(el('p', 'dock-note', 'Use the physical pot. This firmware does not expose its live value to Studio.'));
       goto('Set in CV routing', 'routing');
       return;
     }
@@ -137,7 +138,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     }
     if (control === 'usb') {
       title('Front panel', 'USB-C');
-      out.append(el('p', 'dock-note', 'Studio talks to the module over this cable, it carries USB-MIDI, and new firmware goes in here in DFU mode.'));
+      out.append(el('p', 'dock-note', 'Studio, USB-MIDI and DFU firmware updates use this cable. USB-audio builds also send the stereo mix and the two audio inputs to the computer.'));
       goto('Read in the manual', 'manual');
       return;
     }

@@ -7,14 +7,14 @@
 
 const API = 'https://api.github.com';
 const NETWORK_ATTEMPTS = 4;
-const DEFAULTS = { repo: 'vaniastarginsky-commits/PENTAVOX', buildRef: 'compact-cleanup', workflow: 'studio-build.yml', workflowRef: 'compact-cleanup', resultBranch: 'studio-builds' };
+const DEFAULTS = { repo: 'vaniastarginsky-commits/PENTAVOX', buildRef: 'experiment/single-plaits-20261024', workflow: 'studio-build.yml', workflowRef: 'experiment/single-plaits-20261024', resultBranch: 'studio-builds' };
 
 function storage() { try { return globalThis.localStorage ?? null; } catch { return null; } }
 function read(key) { try { return storage()?.getItem(key) ?? null; } catch { return null; } }
 function write(key, value) { try { storage()?.setItem(key, value); } catch { /* a convenience only */ } }
 
 // The workflow refuses every other branch, so a stale override saved in the browser must not reach it.
-const BUILDABLE_REFS = ['compact-cleanup', 'main'];
+const BUILDABLE_REFS = ['experiment/single-plaits-20261024'];
 function buildableRef(key, fallback) {
   const value = read(key);
   return BUILDABLE_REFS.includes(value) ? value : fallback;
@@ -113,7 +113,7 @@ export class CloudBuild {
   }
 
   /** Start a build; resolves with the request id that names the run. */
-  async start(recipe, { compact = true, looper = false } = {}) {
+  async start(recipe, { compact = true, looper = false, profile, diagnostic = false } = {}) {
     const encodedRecipe = toBase64(JSON.stringify(recipe));
     if (encodedRecipe.length > 60000) throw new CloudBuildError('This recipe is too large for cloud Build. Remove some custom wave/terrain banks, or download recipe.json and build with the local Studio server.');
     const request = `${this.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -121,7 +121,7 @@ export class CloudBuild {
       method: 'POST',
       // The looper input is sent only for a looper build: a workflow that predates it refuses an input it does not declare (422), which must
       // not break the ordinary sampler build.
-      body: { ref: this.workflowRef, inputs: { ref: this.buildRef, recipe_b64: encodedRecipe, compact: String(compact), ...(looper ? { looper: 'true' } : {}), request } },
+      body: { ref: this.workflowRef, inputs: { ref: this.buildRef, recipe_b64: encodedRecipe, compact: String(compact), ...(looper ? { looper: 'true' } : {}), ...(profile ? {profile,diagnostic:String(diagnostic)} : {}), request } },
     });
     if (response.status === 422 && looper) {
       throw new CloudBuildError(`The looper image cannot be built in the cloud yet: the workflow on ${this.workflowRef} has no looper option. Build it locally.`, { status: 422 });
@@ -220,10 +220,10 @@ export class CloudBuild {
    * Run a whole build. onStatus({ state: 'building', stage }) as it progresses. Resolves { image, meta, log }; rejects CloudBuildError
    * (with .log) when the workflow fails or times out.
    */
-  async build(recipe, { onStatus = () => {}, compact = true, looper = false, pollMs = 5000, timeoutMs = 50 * 60 * 1000, signal } = {}) {
+  async build(recipe, { onStatus = () => {}, compact = true, looper = false, profile, diagnostic = false, pollMs = 5000, timeoutMs = 50 * 60 * 1000, signal } = {}) {
     if (signal?.aborted) throw new BuildCancelledError();
     onStatus({ state: 'building', stage: 'starting the cloud build' });
-    const request = await this.start(recipe, { compact, looper });
+    const request = await this.start(recipe, { compact, looper, profile, diagnostic });
     const deadline = this.now() + timeoutMs;
     let run = null;
     let cancelSent = false;

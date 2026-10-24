@@ -1,3 +1,4 @@
+import { FIRMWARE_PROFILES, firmwareProfile, recipeForProfile } from '../model/firmware_profiles.js';
 import { setDifferences, adoptModuleSet } from '../model/module_set.js';
 import { BANK_LETTERS, PaletteModel, libraryEntries } from '../model/palette.js';
 import { EnginePresetStore, isUserKey } from '../model/engine_presets.js';
@@ -125,7 +126,8 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   const audition = new EngineAudition(catalog.engines);
   const entries = libraryEntries(catalog);
   // view: 0..2 shows one voice (large rows), 'both' stacks every voice in the dense table. voice = the voice that receives clicks and library picks.
-  const state = { selected: [0, 0, 0], search: '', category: '', stereo: false, sync: false, absent: false, expanded: null, polling: null, voice: 0, busy: false, suggest: false, view: 'both', tab: 'browse', diff: false, hl: null, hover: null, drag: null };
+  let initialProfile='sampler';try { const saved=localStorage.getItem('pentavox.palette.variant');if(FIRMWARE_PROFILES.some(p=>p.id===saved)) initialProfile=saved; } catch {}
+  const state = { profile:initialProfile, selected: [0, 0, 0], search: '', category: '', stereo: false, sync: false, absent: false, expanded: null, polling: null, voice: 0, busy: false, suggest: false, view: 'both', tab: 'browse', diff: false, hl: null, hover: null, drag: null };
 
   root.innerHTML = `
     <div class="eg">
@@ -177,10 +179,11 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   }
   // The key of a set (built in or the player's own) onto one voice, or onto all of them (voice === null).
   function applySetKey(key, voice) {
-    if (isUserKey(key)) {
-      const set = presetStore.get(key); if (!set) throw new RangeError('That set is gone');
-      for (const target of voice === null ? [0, 1, 2] : [voice]) model.loadVoice(target, set.slots);
-    } else model.loadPreset(key, voice);
+    const targets=voice===null?Array.from({length:voiceTotal()},(_,i)=>i):[voice];
+    for(const target of targets) {
+      if(isUserKey(key)) { const set=presetStore.get(key);if(!set)throw new RangeError('That set is gone');model.loadVoice(target,set.slots); }
+      else model.loadPreset(key,target);
+    }
   }
   function applyTo(key) {
     const all = setTarget.value === 'all'; const voice = Number(setTarget.value);
@@ -248,7 +251,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
 
   function persist() { try { localStorage.setItem('pentavox.palette.recipe', JSON.stringify(model.recipe())); } catch { /* optional */ } }
   function preview(id, stereo) { audition.preview(id, stereo).catch(onError); }
-  function voiceTotal() { return voiceTabCount(getVoiceTable()); }
+  function voiceTotal() { return firmwareProfile(state.profile).plaitsVoices; }
   function shownVoices() { const total = voiceTotal(); return state.view === 'both' ? Array.from({ length: total }, (_, v) => v) : [Math.min(state.view, total - 1)]; }
   function kb(bytes) { return (bytes / 1024).toFixed(1); }
 
@@ -288,15 +291,16 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   function renderSeg() {
     const seg = $('.eg-seg'); seg.replaceChildren();
     const total = voiceTotal();
+    diffButton.hidden=total<2;
     if (state.view !== 'both' && state.view >= total) state.view = 'both';
     if (state.voice >= total) state.voice = 0;
-    const choices = [...Array.from({ length: total }, (_, v) => [v, `Voice ${v + 1}`]), ['both', 'Both']];
+    const choices = total===1 ? [['both','Voice 1']] : [...Array.from({ length: total }, (_, v) => [v, `Voice ${v + 1}`]), ['both', 'Both']];
     for (const [value, label] of choices) {
       const item = button(label); item.dataset.voices = String(value); item.setAttribute('aria-pressed', String(state.view === value));
       item.addEventListener('click', () => { state.view = value; if (value !== 'both') state.voice = value; renderSeg(); renderBoard(); renderDock(); });
       seg.append(item);
     }
-    const targets = [...Array.from({ length: total }, (_, v) => [String(v), `to Voice ${v + 1}`]), ['all', 'to all voices']];
+    const targets = [...Array.from({ length: total }, (_, v) => [String(v), `to Voice ${v + 1}`]), ...(total>1?[['all', 'to all voices']]:[])];
     const kept = setTarget.value; setTarget.replaceChildren(...targets.map(([value, label]) => new Option(label, value)));
     setTarget.value = targets.some(([value]) => value === kept) ? kept : String(state.voice);
   }
@@ -318,7 +322,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     const chip = (html, tone = '') => { const node = el('span', `eg-chip ${tone}`.trim()); node.innerHTML = html; holder.append(node); };
     chip(`${SVG_STEREO}Stereo <b>${stereoOn}/${stereoCan}</b>`);
     chip(`${SVG_SYNC}Sync In <b>${syncOn}/${syncCan}</b>`);
-    chip(`classes <b>${model.summary().unionClasses}</b>`);
+    chip(`classes <b>${model.summary(voiceTotal()).unionClasses}</b>`);
     chip(`repeats <b>${repeats}</b>`, repeats ? 'warn' : 'ok');
     for (let v = 0; v < total; ++v) {
       const others = new Set(keys.flatMap((set, other) => (other === v ? [] : [...set])));
@@ -340,7 +344,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
 
   async function assignActiveVoice(slotIndex) {
     const controller = getController();
-    if (!controller || controller.view().readOnly) return;
+    if (!controller || controller.view().readOnly || state.voice >= (getVoiceTable()?.voiceCount??0)) return;
     try { await controller.assignVoiceEngine(state.voice, slotIndex); } catch (error) { onError(error); }
   }
 
@@ -625,13 +629,13 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   function ghostBytes() {
     const item = state.hover; if (!item) return 0;
     const ids = new Set();
-    model.voices.forEach((slots, v) => slots.forEach((slot, i) => ids.add(v === state.voice && i === state.selected[v] ? item.id : slot.id)));
-    return model.bytesOfIds(ids) - model.estimatedBytes();
+    model.voices.slice(0,voiceTotal()).forEach((slots, v) => slots.forEach((slot, i) => ids.add(v === state.voice && i === state.selected[v] ? item.id : slot.id)));
+    return model.bytesOfIds(ids) - model.estimatedBytes(voiceTotal());
   }
 
   let lastView = null;
   function renderMeter() {
-    const summary = model.summary(); const view = lastView ?? memoryView(summary, { compact: isCompact() });
+    const summary = model.summary(voiceTotal()); const view = lastView ?? memoryView(summary, { compact: isCompact() });
     const box = $('.eg-meter'); const status = $('.eg-status');
     const track = $('.eg-track'); const fill = track.querySelector('i'); const ghostBar = track.querySelector('u');
     const ghost = ghostBytes(); const pct = view.percent; const ghostPct = Math.min(100, Math.abs(ghost) / summary.budgetBytes * 100);
@@ -646,7 +650,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   }
 
   function renderSummary() {
-    const summary = model.summary(); lastView = memoryView(summary, { compact: isCompact() });
+    const summary = model.summary(voiceTotal()); lastView = memoryView(summary, { compact: isCompact() });
     renderMeter(); updateActions(lastView);
     renderSuggestions(lastView.red);
   }
@@ -676,7 +680,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
 
   const build = button('1 · Build', 'primary build-toggle'); const flash = button('2 · Flash'); const dfu = button('Reboot to DFU', 'quiet'); dfu.title = 'Put the module into its bootloader'; const copyLog = button('Copy log', 'pill-button'); const suggestButton = button('Suggest replacements', 'pill-button'); suggestButton.hidden = true;
   flash.disabled = true;
-  suggestButton.addEventListener('click', () => { state.suggest = !state.suggest; renderSuggestions(model.summary().overBudget); });
+  suggestButton.addEventListener('click', () => { state.suggest = !state.suggest; renderSuggestions(model.summary(voiceTotal()).overBudget); });
   const progress = el('div', 'build-progress'); progress.hidden = true;
   const progressText = el('span', 'build-stage'); const progressBar = el('span', 'build-bar'); progressBar.append(el('i'));
   progress.append(progressText, progressBar);
@@ -685,13 +689,18 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   let cloudResult = null;   // the image of the last cloud build (hosted page without a local build server): flashed over WebUSB
   copyLog.addEventListener('click', async () => { try { await navigator.clipboard.writeText(fullLog); copyLog.textContent = 'Saved'; setTimeout(() => { copyLog.textContent = 'Copy log'; }, 2000); } catch (error) { onError(error); } });
   // Which firmware the Build makes: the compact module's third voice is a sampler or a looper (the looper image is a separate build).
-  const variant = document.createElement('select'); variant.setAttribute('aria-label', 'Firmware variant'); variant.title = 'Sampler voice or looper in the built firmware';
-  for (const [value, label] of [['sampler', 'Sampler'], ['looper', 'Looper']]) { const option = document.createElement('option'); option.value = value; option.textContent = label; variant.append(option); }
-  try { if (localStorage.getItem('pentavox.palette.variant') === 'looper') variant.value = 'looper'; } catch { /* optional */ }
-  const wantLooper = () => variant.value === 'looper' && isCompact();
-  const syncVariant = () => { const compactModule = isCompact(); variant.disabled = !compactModule || state.phase === 'building'; if (!compactModule) variant.value = 'sampler'; };
-  variant.addEventListener('change', () => { try { localStorage.setItem('pentavox.palette.variant', variant.value); } catch { /* optional */ } });
-  actions.append(variant, build, el('span', 'eg-arrow', '→'), flash, dfu, copyLog, suggestButton);
+  const variant = document.createElement('select'); variant.setAttribute('aria-label', 'Firmware variant'); variant.title = 'Choose the firmware to build';
+  for (const {id:value,label} of FIRMWARE_PROFILES) { const option = document.createElement('option'); option.value = value; option.textContent = label; variant.append(option); }
+  try { if (FIRMWARE_PROFILES.some(p=>p.id===localStorage.getItem('pentavox.palette.variant'))) variant.value = localStorage.getItem('pentavox.palette.variant'); } catch { /* optional */ }
+  variant.value=state.profile;
+  const wantLooper = () => firmwareProfile(variant.value).looper;
+  const diagnostic = document.createElement('input'); diagnostic.type='checkbox';
+  const diagnosticLabel=el('label','firmware-diagnostic');diagnosticLabel.append(diagnostic,document.createTextNode(' CPU diagnostic'));
+  diagnostic.setAttribute('aria-label','Build CPU diagnostic firmware');
+  const syncVariant = () => { const busy=['building','cancelling','flashing'].includes(state.phase);variant.disabled=diagnostic.disabled=busy; };
+  variant.addEventListener('change', () => { state.profile=variant.value;globalThis.dispatchEvent?.(new CustomEvent('pentavox-profile',{detail:firmwareProfile(variant.value)}));state.view='both';state.voice=0;cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;try { localStorage.setItem('pentavox.palette.variant', variant.value); } catch {} changed(); });
+  diagnostic.addEventListener('change',()=>{cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;});
+  actions.append(variant, diagnosticLabel, build, el('span', 'eg-arrow', '→'), flash, dfu, copyLog, suggestButton);
   $('.eg-meter').append(progress);
   // Demo mode (a simulated module): nothing may be built or flashed, so the three buttons stay off with an explanation.
   const DEMO_HINT = 'Not available in demo mode: there is no real module';
@@ -699,7 +708,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   function applyDemoLock() { if (!inDemo()) return; for (const control of [build, flash, dfu]) { control.disabled = true; control.title = DEMO_HINT; } }
   let operation = null;
   let operationVersion = 0;
-  function updateActions(view = memoryView(model.summary(), { compact: isCompact() })) {
+  function updateActions(view = memoryView(model.summary(voiceTotal()), { compact: isCompact() })) {
     syncVariant();
     const action = buildButtonView({ phase: state.phase, cancelling: operation?.cancelRequested || state.cancelPending, ...view });
     build.textContent = `1 · ${action.label}`; build.disabled = action.disabled; build.title = action.title;
@@ -719,7 +728,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     if (operation?.route === 'local' && operation.id && status.build_id && operation.id !== status.build_id)
       operation = null; // another browser has started a different local build
     if (!busy) operation = null;
-    flash.disabled = busy || !status.image; flash.classList.toggle('primary', !flash.disabled); build.classList.toggle('primary', flash.disabled); updateActions();
+    flash.disabled = busy || !status.image || status.profile!==variant.value || Boolean(status.diagnostic)!==diagnostic.checked; flash.classList.toggle('primary', !flash.disabled); build.classList.toggle('primary', flash.disabled); updateActions();
     if (!busy && state.polling) { clearInterval(state.polling); state.polling = null; }
   }
   async function poll() {
@@ -766,19 +775,21 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     const op = { controller: new AbortController(), route: 'starting', started: false, cancelRequested: false };
     operationVersion += 1;
     operation = op; cloudResult = null; state.touched = true;
-    const recipe = model.recipe(); const compact = isCompact(); const looper = wantLooper();
+    const profile=variant.value; const recipe = recipeForProfile(model.recipe(),profile); const compact = true; const looper = wantLooper();
     renderBuild({ state: 'building', stage: 'starting the build' });
     try {
       const cloud = !servedLocally() && !(await localServerUp(apiFetch));
       if (op.cancelRequested) { renderBuild({ state: 'cancelled', stage: 'build cancelled' }); return; }
       if (cloud) {
         op.route = 'cloud';
-        const result = await runCloudBuild({ recipe, compact, looper, onStatus: renderBuild, signal: op.controller.signal });
+        const result = await runCloudBuild({ recipe, compact, looper, profile, diagnostic:diagnostic.checked, onStatus: renderBuild, signal: op.controller.signal });
         if (result) cloudResult = result;
         return;
       }
       op.route = 'local';
-      const response = await apiFetch(looper ? '/api/build?variant=looper' : '/api/build', { method: 'POST', body: JSON.stringify(recipe) });
+      const support=await (await apiFetch('/api/status',{cache:'no-store'})).json();
+      if(!support.build_profiles?.includes(profile)) throw new Error('Restart the local Studio server to enable firmware profiles. No build was started.');
+      const response = await apiFetch(`/api/build?profile=${encodeURIComponent(profile)}&diagnostic=${diagnostic.checked}`, { method: 'POST', body: JSON.stringify(recipe) });
       const result = await response.json();
       if (!response.ok || result.error) throw new Error(result.error || `Build failed (${response.status})`);
       op.id = result.build_id;
@@ -791,20 +802,21 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     }
   });
   flash.addEventListener('click', async () => {
+    if(cloudResult && (cloudResult.meta.profile!==variant.value || Boolean(cloudResult.meta.diagnostic)!==diagnostic.checked)) { onError(new Error('Build the selected firmware variant first. The available image is a different or unknown variant.')); return; }
     if (cloudResult) {
       let about = '';
       if (cloudResult.meta) {
         // What is new in this firmware: the commits since the one in the module (connected now, or the last one seen), else the changelog.
         const moduleHash = parseFwGit(getController?.()?.session?.info?.fwGit).hash || lastModuleFirmware()?.hash || '';
         const [changes, entries] = await Promise.all([loadChangesForFlash({ moduleHash, meta: cloudResult.meta }), loadChangelog()]);
-        about = `${describeBuild(cloudResult.meta, model.recipe(), { changes, recent: changes ? [] : recentFirmwareChanges(entries) })}\n\n`;
+        about = `${describeBuild(cloudResult.meta, recipeForProfile(model.recipe(),variant.value), { changes, recent: changes ? [] : recentFirmwareChanges(entries) })}\n\n`;
       }
       if (!(await confirmDialog(about + flashWarning(), 'Flash'))) return;
       try { await runWebFlash({ image: cloudResult.image, onStatus: renderBuild, onFlashState: (flashState) => globalThis.dispatchEvent?.(new CustomEvent('pentavox-flash', { detail: flashState })) }); } catch (error) { onError(error); }
       return;
     }
     if (!confirm(flashWarning())) return;
-    try { const response = await apiFetch('/api/flash', { method: 'POST', body: '{}' }); const result = await response.json(); if (result.error) throw new Error(result.error); startPolling(); } catch (error) { onError(error); }
+    try { const response = await apiFetch('/api/flash', { method: 'POST', body: JSON.stringify({profile:variant.value,diagnostic:diagnostic.checked,build_id:state.buildId}) }); const result = await response.json(); if (result.error) throw new Error(result.error); startPolling(); } catch (error) { onError(error); }
   });
   dfu.addEventListener('click', async () => { try { const client = getClient(); if (!client) throw new Error('Connect the module first'); if (activeLinkJob()) throw new Error(linkBusyMessage()); await client.reboot(1); startPolling(); } catch (error) { onError(error); } });
   poll();
@@ -815,7 +827,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
       const latest = await loadLatestCloudBuild();
       if (!latest || cloudResult || state.busy || state.touched) return;
       cloudResult = latest; state.touched = true;
-      renderBuild({ state: 'built', image: 'cloud', stage: `last cloud build: ${(latest.meta.commit ?? '').slice(0, 7)} · ${(latest.image.byteLength / 1024).toFixed(0)} KB, ready to flash`, margins: latest.meta.margins ?? '', log: [] });
+      renderBuild({ state: 'built', image: 'cloud', profile:latest.meta.profile,diagnostic:latest.meta.diagnostic,stage: `last cloud build: ${(latest.meta.commit ?? '').slice(0, 7)} · ${(latest.image.byteLength / 1024).toFixed(0)} KB, ready to flash`, margins: latest.meta.margins ?? '', log: [] });
     });
   }
 

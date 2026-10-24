@@ -120,7 +120,7 @@ export class RoutingController {
     this.#schedule();
   }
 
-  settingsView() { return this.session.settings ? settingsView(this.session.settings, { looper: Boolean(this.session.loopIo) }) : []; }
+  settingsView() { return this.session.settings ? settingsView(this.session.settings, { looper: Boolean(this.session.loopIo), sliceVersion: Number(this.session.descriptor?.slice?.version) || 0 }) : []; }
 
   destinationGroups() { return this.session.destinationGroups(); }
 

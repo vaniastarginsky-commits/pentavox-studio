@@ -12,7 +12,11 @@ const LOOPER_DESTINATIONS = Object.freeze({
   Sampler1Decay: 'Overdub feedback',
   Sampler1Attack: 'Loop length',
 });
-const looperEntry = (item) => (LOOPER_DESTINATIONS[item.symbol] ? Object.freeze({ ...item, group: 'Looper', name: LOOPER_DESTINATIONS[item.symbol] }) : null);
+const MODERN_LOOPER_DESTINATIONS=Object.freeze({Sampler1Level:'Level',Sampler1Balance:'Delay send',Sampler1Decay:'Record length',Sampler1Cutoff:'Filter',Sampler1Resonance:'Filter resonance'});
+const looperEntry=(item,modern=false)=>{
+  const names=modern?MODERN_LOOPER_DESTINATIONS:LOOPER_DESTINATIONS;
+  return names[item.symbol]?Object.freeze({...item,group:'Looper',name:names[item.symbol]}):null;
+};
 
 class DestinationCatalog {
   constructor(json) {
@@ -40,17 +44,22 @@ class DestinationCatalog {
 
   byId(id) {
     const item = this.entries[id];
-    return this.looper && item ? (looperEntry(item) ?? item) : item;
+    return this.looper && item ? (looperEntry(item,Boolean(this.firmware?.multitap)) ?? item) : item;
   }
 
   // Voice[123]Balance stay in the catalog (ids are stable, saved routes may still name them) but are
   // deprecated no-ops in the firmware, so they are not offered for selection.
-  groups({ plaitsVoices = 3, samplerVoices = 2, granularEnabled = true, tapeEnabled = true, masterPage = true, stutter = true, destCount = this.count } = {}) {
+  groups({ plaitsVoices = 3, samplerVoices = 2, granularEnabled = true, tapeEnabled = true, masterPage = true, stutter = true, crossFm = true, sidechain = true, phaser = true, destCount = this.count } = {}) {
     const groups = [];
     const byName = new Map();
     for (const item of this.entries) {
       if (item.id >= destCount) continue;
       if (DEPRECATED_SYMBOLS.test(item.symbol ?? '')) continue;
+      if(!crossFm && /XMod/.test(item.symbol??''))continue;
+      if(!sidechain && /Sidechain/.test(item.symbol??''))continue;
+      if(!phaser && /^FxPhaser/.test(item.symbol??''))continue;
+      const numbered=/^Voice([123])/.exec(item.symbol??'');
+      if(numbered && Number(numbered[1])>plaitsVoices)continue;
       if (destCount > 90 && item.symbol === 'FxDelaySpace') continue;
       if (!masterPage && MASTER_PAGE_SYMBOLS.test(item.symbol ?? '')) continue;
       if (!stutter && STUTTER_SYMBOLS.test(item.symbol ?? '')) continue;
@@ -62,7 +71,7 @@ class DestinationCatalog {
       if (sampler && Number(sampler[1]) > samplerVoices) continue;
       let shown = item;
       if (this.looper && sampler) {
-        shown = looperEntry(item);
+        shown = looperEntry(item,Boolean(this.firmware?.multitap));
         if (!shown) continue;    // Start, End, Cutoff, Resonance, Transpose, Slot: nothing to do for a loop
       }
       let group = byName.get(shown.group);

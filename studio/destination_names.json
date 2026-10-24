@@ -366,5 +366,13 @@
   "FxDelayPingPong": {
     "group": "FX",
     "name": "Delay ping-pong"
+  },
+  "Voice1Twist": {
+    "group": "Plaits 1",
+    "name": "Twist (fourth control)"
+  },
+  "Voice2Twist": {
+    "group": "Plaits 2",
+    "name": "Twist (fourth control)"
   }
 }
