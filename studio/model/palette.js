@@ -328,10 +328,10 @@ export class PaletteModel {
   // ---- replacement suggestions (never applied automatically) --------------------------------
 
   // The heaviest engine classes of the union, each with lighter same-category alternatives.
-  suggestReplacements({ limit = 4, alternatives = 3 } = {}) {
-    const union = this.unionIds();
+  suggestReplacements({ limit = 4, alternatives = 3, voiceCount = this.voices.length, budgetBytes = this.budgetBytes() } = {}) {
+    const union = this.unionIds(voiceCount);
     const total = this.bytesOfIds(union);
-    const budget = this.budgetBytes();
+    const budget = budgetBytes;
     const rows = [];
     for (const id of union) {
       const without = new Set(union); without.delete(id);
@@ -344,7 +344,7 @@ export class PaletteModel {
       const users = [];
       let needStereo = false;
       let needSync = false;
-      this.voices.forEach((slots, voice) => {
+      this.voices.slice(0,voiceCount).forEach((slots, voice) => {
         const mine = slots.filter((slot) => slot.id === id);
         if (mine.length) users.push(voice + 1);
         if (mine.some((slot) => slot.stereo)) needStereo = true;

@@ -1,0 +1,610 @@
+{
+  "commit": "59b92154876c58493b171152ec1cd07c4850f161",
+  "profile": "single-plaits",
+  "diagnostic": false,
+  "margins": "AXI: used 473,624 B, free 17,896 B, margin above floor 1,512 B\nDTCM: used 94,140 B, free 36,932 B, margin above floor 28,740 B\nRAM_D2: used 221,560 B, free 40,584 B, margin above floor 24,200 B",
+  "recipe": {
+    "voices": [
+      {
+        "slots": [
+          {
+            "slot_index": 0,
+            "engine_id": "virtual_analog",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 1,
+            "engine_id": "waveshaping",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 2,
+            "engine_id": "f_m",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 3,
+            "engine_id": "grain",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 4,
+            "engine_id": "additive",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 5,
+            "engine_id": "wavetable",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 6,
+            "engine_id": "chord",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 7,
+            "engine_id": "acid",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 8,
+            "engine_id": "virtual_analog_v_c_f",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 9,
+            "engine_id": "phase_distortion",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 10,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 0
+          },
+          {
+            "slot_index": 11,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 1
+          },
+          {
+            "slot_index": 12,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 2
+          },
+          {
+            "slot_index": 13,
+            "engine_id": "helix",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 14,
+            "engine_id": "string_machine",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 15,
+            "engine_id": "brass",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 16,
+            "engine_id": "swarm",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 17,
+            "engine_id": "bubble_time",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 18,
+            "engine_id": "particle",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 19,
+            "engine_id": "string",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 20,
+            "engine_id": "modal",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 21,
+            "engine_id": "bass_drum",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 22,
+            "engine_id": "snare_drum",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 23,
+            "engine_id": "hi_hat",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 24,
+            "engine_id": "wave_paraphonic",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 25,
+            "engine_id": "wave_scan",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 26,
+            "engine_id": "undertow",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 27,
+            "engine_id": "struck_drum",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 28,
+            "engine_id": "struck_bell",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 29,
+            "engine_id": "spectral_spiral",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 30,
+            "engine_id": "skins",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 31,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 5
+          }
+        ]
+      },
+      {
+        "slots": [
+          {
+            "slot_index": 0,
+            "engine_id": "virtual_analog",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 1,
+            "engine_id": "waveshaping",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 2,
+            "engine_id": "f_m",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 3,
+            "engine_id": "grain",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 4,
+            "engine_id": "additive",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 5,
+            "engine_id": "wavetable",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 6,
+            "engine_id": "chord",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 7,
+            "engine_id": "acid",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 8,
+            "engine_id": "virtual_analog_v_c_f",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 9,
+            "engine_id": "phase_distortion",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 10,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 0
+          },
+          {
+            "slot_index": 11,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 1
+          },
+          {
+            "slot_index": 12,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 2
+          },
+          {
+            "slot_index": 13,
+            "engine_id": "helix",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 14,
+            "engine_id": "string_machine",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 15,
+            "engine_id": "brass",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 16,
+            "engine_id": "swarm",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 17,
+            "engine_id": "bubble_time",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 18,
+            "engine_id": "particle",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 19,
+            "engine_id": "string",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 20,
+            "engine_id": "modal",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 21,
+            "engine_id": "bass_drum",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 22,
+            "engine_id": "snare_drum",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 23,
+            "engine_id": "hi_hat",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 24,
+            "engine_id": "wave_paraphonic",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 25,
+            "engine_id": "wave_scan",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 26,
+            "engine_id": "undertow",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 27,
+            "engine_id": "struck_drum",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 28,
+            "engine_id": "struck_bell",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 29,
+            "engine_id": "spectral_spiral",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 30,
+            "engine_id": "skins",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 31,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 5
+          }
+        ]
+      },
+      {
+        "slots": [
+          {
+            "slot_index": 0,
+            "engine_id": "virtual_analog",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 1,
+            "engine_id": "waveshaping",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 2,
+            "engine_id": "f_m",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 3,
+            "engine_id": "grain",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 4,
+            "engine_id": "additive",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 5,
+            "engine_id": "wavetable",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 6,
+            "engine_id": "chord",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 7,
+            "engine_id": "acid",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 8,
+            "engine_id": "virtual_analog_v_c_f",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 9,
+            "engine_id": "phase_distortion",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 10,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 0
+          },
+          {
+            "slot_index": 11,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 1
+          },
+          {
+            "slot_index": 12,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 2
+          },
+          {
+            "slot_index": 13,
+            "engine_id": "helix",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 14,
+            "engine_id": "string_machine",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 15,
+            "engine_id": "brass",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 16,
+            "engine_id": "swarm",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 17,
+            "engine_id": "bubble_time",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 18,
+            "engine_id": "particle",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 19,
+            "engine_id": "string",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 20,
+            "engine_id": "modal",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 21,
+            "engine_id": "bass_drum",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 22,
+            "engine_id": "snare_drum",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 23,
+            "engine_id": "hi_hat",
+            "stereo_enabled": true,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 24,
+            "engine_id": "wave_paraphonic",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 25,
+            "engine_id": "wave_scan",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 26,
+            "engine_id": "undertow",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 27,
+            "engine_id": "struck_drum",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 28,
+            "engine_id": "struck_bell",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 29,
+            "engine_id": "spectral_spiral",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 30,
+            "engine_id": "skins",
+            "stereo_enabled": false,
+            "sync_enabled": false
+          },
+          {
+            "slot_index": 31,
+            "engine_id": "six_op",
+            "stereo_enabled": false,
+            "sync_enabled": false,
+            "user_data_bank": 5
+          }
+        ]
+      }
+    ]
+  }
+}
