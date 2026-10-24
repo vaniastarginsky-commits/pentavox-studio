@@ -2,6 +2,21 @@
   {
     "date": "2026-10-24",
     "area": "studio",
+    "text": "Routing catalog brought up to the firmware: Reverb special, motion and tone destinations (97 entries). Studio no longer calls the firmware newer."
+  },
+  {
+    "date": "2026-10-24",
+    "area": "firmware",
+    "text": "1 Plaits + Looper: separate Reverb and Delay sends per loop (B1 + B2 held: Reverb top, Delay middle). Saving the loop is now B1 + B2 held for 3 s."
+  },
+  {
+    "date": "2026-10-24",
+    "area": "firmware",
+    "text": "1 Plaits: pan of each loop (B1, bottom pots), of Plaits and of the looper (Master B1); the input gets a DJ filter and pan. Stored in presets: older ones are lost once."
+  },
+  {
+    "date": "2026-10-24",
+    "area": "studio",
     "text": "Build variants: 2 Plaits + Sampler, 2 Plaits + Looper, or experimental 1 Plaits + Looper; CPU diagnostic is a separate option. Local and cloud builds share trusted profiles."
   },
   {

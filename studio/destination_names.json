@@ -374,5 +374,17 @@
   "Voice2Twist": {
     "group": "Plaits 2",
     "name": "Twist (fourth control)"
+  },
+  "FxReverbSpecial": {
+    "group": "FX",
+    "name": "Reverb special"
+  },
+  "FxReverbMotion": {
+    "group": "FX",
+    "name": "Reverb motion"
+  },
+  "FxReverbTone": {
+    "group": "FX",
+    "name": "Reverb tone"
   }
 }

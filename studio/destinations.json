@@ -1,11 +1,12 @@
 {
   "schemaHash": 639964394,
-  "count": 94,
+  "count": 97,
   "supportedCounts": [
     87,
     90,
     92,
-    94
+    94,
+    97
   ],
   "entries": [
     {
@@ -571,6 +572,24 @@
       "symbol": "Voice2Twist",
       "group": "Plaits 2",
       "name": "Twist (fourth control)"
+    },
+    {
+      "id": 94,
+      "symbol": "FxReverbSpecial",
+      "group": "FX",
+      "name": "Reverb special"
+    },
+    {
+      "id": 95,
+      "symbol": "FxReverbMotion",
+      "group": "FX",
+      "name": "Reverb motion"
+    },
+    {
+      "id": 96,
+      "symbol": "FxReverbTone",
+      "group": "FX",
+      "name": "Reverb tone"
     }
   ]
 }
