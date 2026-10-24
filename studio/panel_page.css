@@ -1,0 +1,62 @@
+/* The Panel page: the front panel live on the left (the same dock the other tabs can open), on the right the colours of the selected ring and the
+   module settings. One page for controlling the whole module. */
+#panel-tab .panel-page { display: grid; grid-template-columns: minmax(340px, 440px) minmax(0, 1fr); gap: 22px; align-items: start; }
+#panel-tab .panel-dock.as-page { position: sticky; top: calc(var(--header-h, 64px) + 12px); z-index: 1; width: auto; height: calc(100vh - var(--header-h, 64px) - 28px); min-height: 560px; border: 1px solid var(--line); border-radius: 14px; box-shadow: none; }
+#panel-tab .panel-side { display: grid; gap: 18px; min-width: 0; }
+#panel-tab .skin-root { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+#panel-tab .skin-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+#panel-tab .skin-title { margin: 0; font-size: 1.05rem; }
+#panel-tab .skin-status { padding: .3rem .7rem; border: 1px solid var(--line); border-radius: 999px; font-size: .82rem; white-space: nowrap; }
+#panel-tab .skin-status[data-state="ok"] { border-color: #3b9a4a; }
+#panel-tab .skin-status[data-state="err"] { border-color: #c2401f; }
+#panel-tab .skin-status[data-state="dirty"] { border-color: #b9902a; }
+#panel-tab .skin-help { margin: 0; color: var(--muted); font-size: .88rem; }
+#panel-tab .skin-bar, #panel-tab .skin-effects, #panel-tab .skin-copy, #panel-tab .skin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#panel-tab .skin-bar button[aria-pressed="true"], #panel-tab .skin-effects button[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--surface); }
+#panel-tab .skin-chip { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .5); }
+#panel-tab .skin-effects-label { color: var(--muted); margin-right: 4px; }
+#panel-tab .skin-editor { display: grid; gap: 12px; }
+#panel-tab .skin-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 7px; max-width: 520px; }
+#panel-tab .skin-swatches-small { grid-template-columns: repeat(auto-fill, minmax(26px, 1fr)); max-width: 420px; }
+#panel-tab .skin-swatch { height: 32px; padding: 0; border-radius: 8px; border: 2px solid var(--line); }
+#panel-tab .skin-swatches-small .skin-swatch { height: 26px; }
+#panel-tab .skin-swatch[aria-pressed="true"] { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+@media (pointer: coarse) { #panel-tab .skin-swatch, #panel-tab .skin-swatches-small .skin-swatch { height: 44px; } #panel-tab .skin-swatches, #panel-tab .skin-swatches-small { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); } }
+#panel-tab .skin-swatch:hover { border-color: var(--text); }
+#panel-tab .skin-sliders { display: grid; gap: 7px; max-width: 520px; }
+#panel-tab .skin-slider { display: grid; grid-template-columns: 56px 1fr 40px; align-items: center; gap: 10px; }
+#panel-tab .skin-slider input[type="text"] { width: 9ch; padding: .4rem .5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); font-family: ui-monospace, monospace; }
+#panel-tab .skin-warnings { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+#panel-tab .skin-warnings h3 { margin: 0; font-size: .98rem; }
+#panel-tab .skin-warning { display: grid; gap: 8px; }
+#panel-tab .skin-warning h4 { margin: 0; font-size: .9rem; font-weight: 600; }
+#panel-tab .panel-settings { padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+#panel-tab .panel-settings > h2 { margin: 0 0 10px; font-size: 1.05rem; }
+
+/* The rings in the dock move as the skin says they will on the module. */
+@keyframes skin-breathe { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+@keyframes skin-pulse { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+@keyframes skin-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+.mp-pot[data-skin-effect="2"] .mp-dot.lit { animation: skin-breathe 1.25s ease-in-out infinite; }
+.mp-pot[data-skin-effect="3"] .mp-dot.lit { animation: skin-pulse .5s ease-in-out infinite; }
+.mp-pot[data-skin-effect="4"] .mp-dot.lit { animation: skin-blink .5s steps(1, end) infinite; }
+/* Follow effects react to the module itself; here they are shown as a typical motion. */
+@keyframes skin-beat { 0% { opacity: 1; } 100% { opacity: .1; } }
+@keyframes skin-bar { 0% { opacity: .1; } 100% { opacity: 1; } }
+@keyframes skin-wander { 0%, 100% { opacity: .15; } 30% { opacity: .9; } 55% { opacity: .4; } 80% { opacity: 1; } }
+.mp-pot[data-skin-effect="5"] .mp-dot.lit { animation: skin-beat .5s ease-out infinite; }
+.mp-pot[data-skin-effect="6"] .mp-dot.lit { animation: skin-bar 2s linear infinite; }
+.mp-pot:is([data-skin-effect="7"], [data-skin-effect="8"], [data-skin-effect="9"], [data-skin-effect="10"], [data-skin-effect="11"], [data-skin-effect="12"]) .mp-dot.lit { animation: skin-wander 2.6s ease-in-out infinite; }
+#panel-tab .skin-effects-group { display: grid; gap: 6px; }
+@media (prefers-reduced-motion: reduce) { .mp-pot[data-skin-effect] .mp-dot.lit { animation: none; } }
+@media (max-width: 1100px) {
+  #panel-tab .panel-page { grid-template-columns: 1fr; }
+  #panel-tab .panel-dock.as-page { position: static; height: 640px; }
+}
+/* A firmware without the skin (or no module): the editor is shown but not live. */
+#panel-tab .skin-root[data-available="false"] .skin-editor, #panel-tab .skin-root[data-available="false"] .skin-warnings { opacity: .5; pointer-events: none; }
+
+#panel-tab .panel-subtabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface-2); justify-self: start; }
+#panel-tab .panel-subtabs button { min-height: 36px; padding: 0 16px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+#panel-tab .panel-subtabs button[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, .15); }
+#panel-tab [hidden] { display: none !important; }

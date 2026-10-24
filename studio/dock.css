@@ -98,11 +98,8 @@
 .dock-link { min-height: 36px; padding: .32rem .75rem; border-radius: 999px; font-size: .78rem; font-weight: 600; }
 .dock-link:hover { border-color: var(--text); }
 
-.dock-toggle[aria-expanded="true"]::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--led-on, #3f9a5a); vertical-align: 1px; }
-body[data-tab="manual"] .panel-dock, body[data-tab="manual"] .dock-toggle { display: none; }
 
 @media (min-width: 1560px) {
-  body.dock-open:not([data-tab="manual"]) main { padding-right: 440px; }
   .panel-dock { box-shadow: none; }
 }
 @media (pointer: coarse) {

@@ -40,7 +40,7 @@ function button(text, className, handler) {
  * @param getSession the connected StudioSession; optional so the static dock still works without the app hook
  * @param onNavigate called with a tab name ('routing' or 'manual') when the readout points to where a control is set
  */
-export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings = () => null, getSession = () => null, onNavigate = () => {}, onLiveError = () => {} }) {
+export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings = () => null, getSession = () => null, onNavigate = () => {}, onLiveError = () => {}, decorate = () => {}, onSelect = () => {}, isActive = () => true }) {
   const state = { page: 0, shift: false, selected: null, built: false, generation: 0 };
   let descriptor = null;
   let refs = null;
@@ -48,7 +48,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
   let liveFields = new Map();
   let liveValues = new Map();
 
-  const dockVisible = () => !root.hidden && !document.hidden && globalThis.getComputedStyle?.(root).display !== 'none';
+  const dockVisible = () => !root.hidden && !document.hidden && isActive() && globalThis.getComputedStyle?.(root).display !== 'none';
   const syncLive = () => live?.setActive(dockVisible());
   const visibilityObserver = globalThis.MutationObserver ? new MutationObserver(syncLive) : null;
   visibilityObserver?.observe(root, { attributes: true, attributeFilter: ['hidden'] });
@@ -105,8 +105,16 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
   const hideBubbleSoon = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { if (refs) describe(null); }, 220); };
   const keepBubble = () => clearTimeout(hideTimer);
 
+  /** Tells the page that hosts the dock which page, layer and knob are shown (the colour inspector follows it). */
+  function emitSelect(control) {
+    const page = currentPage();
+    if (!page) return;
+    onSelect({ page: page.index, pageName: page.name, shift: state.shift, pot: control?.startsWith('pot') ? Number(control.slice(3)) : undefined });
+  }
+
   function describe(control) {
     state.selected = control;
+    emitSelect(control);
     const out = refs.readout;
     out.replaceChildren();
     const page = currentPage();
@@ -155,12 +163,14 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     if (!page) return;
     if (!state.shift && liveValues.size) paintLivePots(refs.potNodes, page, liveValues);
     else paintPots(refs.potNodes, page, state.shift);
+    decorate(refs.potNodes, page, state.shift);
   }
 
   function paint() {
     const page = currentPage();
     if (!page) return;
     paintDrawing();
+    emitSelect(state.selected);
     for (const tab of refs.tabs.querySelectorAll('[data-page]')) {
       const active = Number(tab.dataset.page) === state.page;
       tab.setAttribute('aria-selected', String(active));
@@ -281,6 +291,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
   return {
     show,
     refreshConnection,
+    repaint() { if (refs) paintDrawing(); },
     dispose() { live?.dispose(); visibilityObserver?.disconnect(); document.removeEventListener('visibilitychange', syncLive); },
   };
 }

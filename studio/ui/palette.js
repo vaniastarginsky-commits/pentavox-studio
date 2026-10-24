@@ -252,7 +252,9 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   function persist() { try { localStorage.setItem('pentavox.palette.recipe', JSON.stringify(model.recipe())); } catch { /* optional */ } }
   function preview(id, stereo) { audition.preview(id, stereo).catch(onError); }
   function voiceTotal() { return firmwareProfile(state.profile).plaitsVoices; }
-  function shownVoices() { const total = voiceTotal(); return state.view === 'both' ? Array.from({ length: total }, (_, v) => v) : [Math.min(state.view, total - 1)]; }
+  // With one voice the board is the detailed one-voice view (large rows), never the dense stack of 'both'.
+  function normalizeView() { const total = voiceTotal(); if (total === 1) state.view = 0; else if (state.view !== 'both' && state.view >= total) state.view = 'both'; }
+  function shownVoices() { normalizeView(); const total = voiceTotal(); return state.view === 'both' ? Array.from({ length: total }, (_, v) => v) : [Math.min(state.view, total - 1)]; }
   function kb(bytes) { return (bytes / 1024).toFixed(1); }
 
   function liveName(slot) {
@@ -292,9 +294,9 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     const seg = $('.eg-seg'); seg.replaceChildren();
     const total = voiceTotal();
     diffButton.hidden=total<2;
-    if (state.view !== 'both' && state.view >= total) state.view = 'both';
+    normalizeView();
     if (state.voice >= total) state.voice = 0;
-    const choices = total===1 ? [['both','Voice 1']] : [...Array.from({ length: total }, (_, v) => [v, `Voice ${v + 1}`]), ['both', 'Both']];
+    const choices = total===1 ? [[0,'Voice 1']] : [...Array.from({ length: total }, (_, v) => [v, `Voice ${v + 1}`]), ['both', 'Both']];
     for (const [value, label] of choices) {
       const item = button(label); item.dataset.voices = String(value); item.setAttribute('aria-pressed', String(state.view === value));
       item.addEventListener('click', () => { state.view = value; if (value !== 'both') state.voice = value; renderSeg(); renderBoard(); renderDock(); });
@@ -384,6 +386,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
 
   function renderBoard() {
     const target = $('.eg-board'); target.replaceChildren();
+    normalizeView();
     const dense = state.view === 'both';
     const total = voiceTotal();
     const legend = el('div', 'eg-legend');

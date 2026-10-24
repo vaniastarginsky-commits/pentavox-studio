@@ -273,6 +273,7 @@ export class StudioSession {
     if (this.readOnly || !this.table || !this.voices) throw readOnlyError();
     await this.client.loadFromSlot(slot);
     await this.discard();
+    globalThis.dispatchEvent?.(new CustomEvent('pentavox-skin-changed'));   // the colours are part of the preset
   }
 
   async discard() {

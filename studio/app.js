@@ -15,6 +15,7 @@ import { mountSessionFooter } from './ui/session_footer.js';
 import { mountVoice } from './ui/voices.js';
 import { mountSampler } from './ui/sampler.js';
 import { mountSdCard } from './ui/sdcard.js';
+import { mountPanelSkin } from './ui/panel_skin.js';
 import { mountKnobLocks } from './ui/knob_locks.js';
 import { mountManual } from './ui/manual.js';
 import { mountPanelDock } from './ui/panel_dock.js';
@@ -149,6 +150,7 @@ function markDisconnected() {
   showConnectionEmptyStates();
   samplerMount.refreshConnection();
   sdcardMount.refreshConnection();
+  panelSkin.refreshConnection();
   locksMount.refreshConnection();
 }
 
@@ -209,6 +211,7 @@ const sdcardMount = mountSdCard(document.querySelector('#sdcard-root'), {
   getLoopIo: () => Boolean(session?.loopIo),
 });
 
+
 const manualMount = mountManual(document.querySelector('#manual-root'), {
   getDescriptor: () => (demoMode ? null : session?.descriptor ?? null),   // the demo module is a different build; the manual describes the real one
   getSettings: () => session?.settings ?? null,
@@ -221,7 +224,7 @@ const manualMount = mountManual(document.querySelector('#manual-root'), {
   },
 });
 
-// The dock hangs under the sticky header, whose height changes with the window width and the session controls.
+// The panel hangs under the sticky header, whose height changes with the window width and the session controls.
 {
   const header = document.querySelector('.app-header');
   const fit = () => document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
@@ -229,28 +232,37 @@ const manualMount = mountManual(document.querySelector('#manual-root'), {
 }
 
 // The front-panel dock reads the same descriptor as the manual and points from a control to the tab that sets it.
-const dock = document.getElementById('panel-dock');
-const dockToggle = document.getElementById('dock-toggle');
-const dockMount = mountPanelDock(dock, {
+// The colour inspector follows the front panel on the Panel page and tints the rings both docks draw.
+const panelSkin = mountPanelSkin(document.querySelector('#panel-skin-root'), {
+  getClient: () => client,
+  getDescriptor: () => (demoMode ? null : session?.descriptor ?? null),
+  onError: showError,
+  onSuccess: showSuccess,
+  onChange: () => pageDockMount.repaint(),
+});
+const dockOptions = {
   getDescriptor: () => (demoMode ? null : session?.descriptor ?? null),
   getSettings: () => session?.settings ?? null,
   loadSnapshot: () => fetchJson('./manual_module.json'),
   onNavigate: (tab) => document.querySelector(`[data-tab="${tab}"]`)?.click(),
   getSession: () => (connectionStatus.dataset.state === 'on' ? session : null),
   onLiveError: showError,
-});
-function setDock(open, remember = true) {
-  dock.hidden = !open;
-  dockToggle.setAttribute('aria-expanded', String(open));
-  document.body.classList.toggle('dock-open', open);
-  if (open) dockMount.show();
-  if (remember) try { localStorage.setItem('pentavox.studio.dock', open ? '1' : '0'); } catch { /* optional */ }
+  decorate: (nodes, page, shift) => panelSkin.decorate(nodes, page, shift),
+};
+const pageDock = document.getElementById('panel-page-dock');
+const pageDockMount = mountPanelDock(pageDock, { ...dockOptions, onSelect: (selection) => panelSkin.select(selection), isActive: () => activeTab === 'panel' });
+// The Panel page's side column: the module settings, or the colours of the selected ring.
+function showPanelSection(name) {
+  const colours = name === 'colours';
+  document.getElementById('panel-skin-root').hidden = !colours;
+  document.getElementById('panel-settings-section').hidden = colours;
+  for (const button of document.querySelectorAll('.panel-subtabs [data-sub]')) button.setAttribute('aria-selected', String(button.dataset.sub === name));
+  try { localStorage.setItem('pentavox.studio.panel-section', name); } catch { /* optional */ }
 }
-dockToggle.addEventListener('click', () => setDock(dock.hidden));
-dock.querySelector('.dock-close').addEventListener('click', () => { setDock(false); dockToggle.focus(); });
-dock.addEventListener('keydown', (event) => { if (event.key === 'Escape') { setDock(false); dockToggle.focus(); } });
-// The panel never opens by itself on load; the Panel button opens it.
-setDock(false, false);
+for (const button of document.querySelectorAll('.panel-subtabs [data-sub]')) button.addEventListener('click', () => showPanelSection(button.dataset.sub));
+let storedSection = 'settings';
+try { storedSection = localStorage.getItem('pentavox.studio.panel-section') === 'colours' ? 'colours' : 'settings'; } catch { /* optional */ }
+showPanelSection(storedSection);
 
 async function fetchBytes(url) {
   const response = await fetch(url);
@@ -299,7 +311,7 @@ assetsPromise.then((assets) => {
 }).catch(showError);
 
 function syncFooter() {
-  const usesSession = activeTab === 'routing' || activeTab === 'palette' || activeTab === 'settings' || activeTab === 'midi';
+  const usesSession = activeTab === 'routing' || activeTab === 'palette' || activeTab === 'panel' || activeTab === 'midi';
   sessionFooter.hidden = !controller || !usesSession;
 }
 
@@ -345,9 +357,10 @@ async function connect({ demo = false } = {}) {
     persistDraft();
     samplerMount.refreshConnection();
     sdcardMount.refreshConnection();
+    panelSkin.refreshConnection();
     locksMount.refreshConnection();
     manualMount.refreshConnection(); if (activeTab === 'manual') manualMount.show();
-    dockMount.refreshConnection(); if (!dock.hidden) dockMount.show();
+    pageDockMount.refreshConnection(); if (activeTab === 'panel') pageDockMount.show();
   } catch (error) {
     demoBanner.hidden = true;
     document.body.classList.remove('demo-mode');
@@ -384,6 +397,7 @@ for (const tab of document.querySelectorAll('[data-tab]')) {
     syncFooter();
     document.body.dataset.tab = activeTab;
     if (activeTab === 'sampler') samplerMount.show();
+    if (activeTab === 'panel') { pageDockMount.show(); panelSkin.show(); }
     if (activeTab === 'locks') locksMount.show(); else locksMount.hide();
     if (activeTab === 'manual') manualMount.show();
     if (activeTab !== 'dx7' && dx7Editor.dialog.open) dx7Editor.dialog.close();
@@ -428,7 +442,7 @@ assetsPromise.then(() => { if (paletteMount) asPage(paletteMount.waves.dialog, (
     palette: ['Engines', `${buildVoiceCount===1?'One voice':'Two voices'}, three banks of eight`], dx7: ['DX7 banks', 'Six-op patches on the SD card'], wavetable: ['Wave tables', 'Harmonics banks for the Wavetable engine'],
     terrain: ['Wave terrain', 'Terrains for the Wave Terrain engine'], sampler: ['Sampler', 'SD card, two slots'], presets: ['Presets', 'Stored sounds'],
     routing: ['CV routing', 'Notes, jacks J3 to J8, pot map'], midi: ['MIDI routing', 'One table for the module'], locks: ['Knob record', 'Loops recorded with B3'],
-    settings: ['Settings', 'Tempo, levels, voices'], manual: ['Manual', 'Using Studio'],
+    panel: ['Panel', 'The module live: knobs, settings, colours'], manual: ['Manual', 'Using Studio'],
   };
   const title = document.getElementById('page-title'); const crumb = document.getElementById('page-crumb');
   // The slot, Save to slot and Discard controls belong to the module's stored settings; an engine set is a build, so the Engines page has none of them.
