@@ -7,6 +7,11 @@
   {
     "date": "2026-10-24",
     "area": "studio",
+    "text": "Studio connects to an allowed module by itself on load and whenever it returns (replug, restart, flash); a paired DFU device is flashed without the chooser."
+  },
+  {
+    "date": "2026-10-24",
+    "area": "studio",
     "text": "Single-Plaits builds now offer four banks of eight engines. GitHub Actions status survives reloads, with current steps, cancellation and a run link."
   },
   {

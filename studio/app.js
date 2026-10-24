@@ -108,7 +108,7 @@ function showDisconnectedLabel(status = {}) {
   connectionStatus.textContent = flashing ? 'Flashing…' : inDfu ? 'In DFU' : 'Disconnected';
   connectionStatus.dataset.state = inDfu ? 'dfu' : 'err';
   disconnectText.textContent = flashing ? 'The firmware is being flashed. Reconnect when it finishes.'
-    : inDfu ? 'The module is in DFU mode and ready to flash. After flashing, press Reconnect.' : DISCONNECTED_TEXT;
+    : inDfu ? 'The module is in DFU mode and ready to flash. After flashing, Studio reconnects by itself.' : DISCONNECTED_TEXT;
 }
 
 function stopDfuWatch() {
@@ -142,6 +142,7 @@ function startDfuWatch() {
 }
 
 function markDisconnected() {
+  scheduleAutoConnect(1500, 20);   // a restarted or replugged module is opened again by itself
   disconnectBanner.hidden = false;
   showDisconnectedLabel();
   startDfuWatch();
@@ -315,7 +316,33 @@ function syncFooter() {
   sessionFooter.hidden = !controller || !usesSession;
 }
 
-async function connect({ demo = false } = {}) {
+// Automatic connect, as the Hermetic Modular site does it: a module this site was allowed once is opened without a click when the page loads and
+// again whenever it comes back (replugged, restarted, flashed). A module in DFU has no serial port, so there is nothing to open until it leaves DFU.
+// Off with localStorage 'pentavox.studio.autoconnect' = '0'. Never while a flash is going on, in the Demo, or while another connect is running.
+const AUTO_CONNECT_KEY = 'pentavox.studio.autoconnect';
+const ALCHEMY_VENDOR_ID = 0x0483;
+let autoTimer = null;
+let autoTries = 0;
+function autoConnectEnabled() {
+  try { return localStorage.getItem(AUTO_CONNECT_KEY) !== '0'; } catch { return true; }
+}
+async function hasAllowedPort() {
+  try { return ((await globalThis.navigator?.serial?.getPorts?.()) ?? []).some((port) => port.getInfo?.().usbVendorId === ALCHEMY_VENDOR_ID); } catch { return false; }
+}
+function scheduleAutoConnect(delay = 700, tries = 8) {
+  if (!globalThis.navigator?.serial || !autoConnectEnabled()) return;
+  autoTries = tries;
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(runAutoConnect, delay);
+}
+async function runAutoConnect() {
+  autoTimer = null;
+  if (!autoConnectEnabled() || demoMode || webFlash || connectButton.disabled || connectionStatus.dataset.state === 'on') return;
+  if (await hasAllowedPort() && await connect({ auto: true })) return;
+  if (--autoTries > 0) autoTimer = setTimeout(runAutoConnect, 1500);   // the module may still be starting: HostLink answers a moment after the port appears
+}
+
+async function connect({ demo = false, auto = false } = {}) {
   demoMode = demo;
   demoBanner.hidden = !demo;
   document.body.classList.toggle('demo-mode', demo);
@@ -330,7 +357,7 @@ async function connect({ demo = false } = {}) {
     const transport = demoMode
       ? Promise.all([fetchBytes('./tests/fixtures/compact/descriptor.json'), fetchBytes('./tests/fixtures/compact/live.bin'), fetchJson('./tests/fixtures/compact/meta.json')])
         .then(([descriptor, live, meta]) => new SimTransport(descriptor, live, { schemaHash: meta.schemaHash }))
-      : openWebSerial();
+      : openWebSerial({ interactive: !auto });
     client = new HostLinkClient(await transport);
     session = new StudioSession(client, load(assets.destinations), { paletteCatalog: assets.paletteCatalog, composerCatalog: assets.composerCatalog });
     const result = await session.connect();
@@ -361,14 +388,17 @@ async function connect({ demo = false } = {}) {
     locksMount.refreshConnection();
     manualMount.refreshConnection(); if (activeTab === 'manual') manualMount.show();
     pageDockMount.refreshConnection(); if (activeTab === 'panel') pageDockMount.show();
+    return true;
   } catch (error) {
     demoBanner.hidden = true;
     document.body.classList.remove('demo-mode');
     globalThis.dispatchEvent(new Event('pentavox-demo'));
     connectionStatus.textContent = error?.code === 'BUSY_PORT' ? 'Port busy' : 'Not connected'; connectionStatus.dataset.state = 'err';
-    connectButton.disabled = false; showError(error);
+    connectButton.disabled = false;
+    if (!auto) showError(error);   // an automatic try fails quietly: the next one follows
     connectButton.textContent = 'Reconnect';
     samplerMount.refreshConnection();
+    return false;
   }
 }
 
@@ -385,6 +415,9 @@ async function connect({ demo = false } = {}) {
   }
 }
 connectButton.addEventListener('click', () => connect());
+globalThis.navigator?.serial?.addEventListener?.('connect', () => scheduleAutoConnect(700, 12));   // a module this site may use was plugged in
+globalThis.addEventListener?.('pentavox-flash', (event) => { if (event.detail === 'done') scheduleAutoConnect(2500, 14); });   // the module restarts after a flash
+assetsPromise.then(() => scheduleAutoConnect(300, 3)).catch(() => {});
 demoButton.addEventListener('click', () => connect({ demo: true }));
 for (const tab of document.querySelectorAll('[data-tab]')) {
   tab.addEventListener('click', () => {

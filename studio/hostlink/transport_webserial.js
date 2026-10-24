@@ -12,7 +12,8 @@ export class WebSerialTransport {
     this.disconnectCallback = () => {};
   }
 
-  static async connect() {
+  /** `interactive: false` never opens the port chooser: it takes a port this site was allowed before, or throws NO_PORT (for the automatic connect). */
+  static async connect({ interactive = true } = {}) {
     if (!globalThis.navigator?.serial) {
       throw new HostLinkError('Web Serial is not available. Open Studio in Chrome or Edge.', {
         code: 'UNSUPPORTED',
@@ -22,7 +23,8 @@ export class WebSerialTransport {
     const authorised = (await navigator.serial.getPorts()).filter(
       (candidate) => candidate.getInfo?.().usbVendorId === ALCHEMY_VENDOR_ID,
     );
-    let port = authorised.length === 1 ? authorised[0] : null;
+    let port = authorised.length === 1 || (!interactive && authorised.length > 0) ? authorised[0] : null;
+    if (!port && !interactive) throw new HostLinkError('No module has been allowed yet', { code: 'NO_PORT' });
     if (!port) {
       try {
         port = await navigator.serial.requestPort({ filters: [{ usbVendorId: ALCHEMY_VENDOR_ID }] });
@@ -107,6 +109,6 @@ export class WebSerialTransport {
   }
 }
 
-export async function openWebSerial() {
-  return WebSerialTransport.connect();
+export async function openWebSerial(options) {
+  return WebSerialTransport.connect(options);
 }

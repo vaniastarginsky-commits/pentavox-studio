@@ -140,7 +140,7 @@ export async function runWebFlash({ image, onStatus, requestDevice = requestDfuD
       last = now;
       onStatus({ state: 'flashing', stage: `flashing: ${phase} ${done}/${total}`, image: 'cloud' });
     });
-    onStatus({ state: 'built', stage: 'flashed; the module restarts by itself. Press Reconnect', image: 'cloud' });
+    onStatus({ state: 'built', stage: 'flashed; the module restarts by itself and Studio reconnects (press Reconnect if it does not)', image: 'cloud' });
     onFlashState('done');
   } catch (error) {
     onFlashState('error');

@@ -225,15 +225,20 @@ function isDfuDevice(device) {
   return configurations.some((config) => config.interfaces?.some((iface) => iface.alternates?.some((alt) => alt.interfaceClass === 0xfe && alt.interfaceSubclass === 1)));
 }
 
-/** Ask the user to pick the DFU device (must run from a click). `all` lists every USB device, for a bootloader that announces no DFU interface. */
+/** The DFU device: one this site may already use, else the user picks one (must run from a click). `all` lists every USB device, for a bootloader that announces no DFU interface. */
 export async function requestDfuDevice(usb = globalThis.navigator?.usb, { all = false } = {}) {
   if (!usb) throw new Error('This browser has no WebUSB. Use Chrome or Edge.');
+  // A device this site was allowed before needs no chooser (and no click): flashing starts straight away.
+  if (!all) {
+    const paired = await pairedDfuDevices(usb);
+    if (paired.length > 0) return new DfuDevice(paired[0]);
+  }
   const device = await usb.requestDevice(all ? { filters: [] } : { filters: DFU_FILTERS.map((filter) => ({ ...filter })) });
   return new DfuDevice(device);
 }
 
 /** Devices already allowed for this site (to show "In DFU" without a prompt). */
 export async function pairedDfuDevices(usb = globalThis.navigator?.usb) {
-  if (!usb) return [];
+  if (!usb?.getDevices) return [];
   return (await usb.getDevices()).filter(isDfuDevice);
 }

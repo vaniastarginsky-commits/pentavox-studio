@@ -9,6 +9,7 @@ function element(tag, className, text) {
 }
 
 export function mountSettings(root, controller) {
+  const RECENT_CHANGES = 3;   // the card shows this many entries of the changelog; the rest is behind "Show all"
   const ui = { open: new Set(['input', 'clock']), logAll: false };
   const firmware = { latest: null, builtAtMs: null, log: [] };
   root.classList.add('cc-page');
@@ -76,7 +77,7 @@ export function mountSettings(root, controller) {
       line.append(element('b', '', entry.label), element('span', '', entry.text));
       card.append(line);
     }
-    const entries = changelogEntries(firmware.log, ui.logAll ? 50 : 6);
+    const entries = changelogEntries(firmware.log, ui.logAll ? 50 : RECENT_CHANGES);
     if (entries.length) {
       const list = element('ul', 'cc-fwlog');
       for (const entry of entries) {
@@ -85,7 +86,7 @@ export function mountSettings(root, controller) {
         list.append(item);
       }
       card.append(list);
-      if (firmware.log.length > 6) {
+      if (firmware.log.length > RECENT_CHANGES) {
         const more = element('button', 'cc-fwmore', ui.logAll ? 'Show fewer' : 'Show all'); more.type = 'button';
         more.addEventListener('click', () => { ui.logAll = !ui.logAll; render(); });
         card.append(more);
