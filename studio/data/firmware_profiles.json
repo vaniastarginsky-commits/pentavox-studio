@@ -93,7 +93,8 @@
         "REVERB_EARLY_D2": "1",
         "LOOPER_PLAIN_BLOCK": "1",
         "SINGLE_PLAITS_EXPERIMENT": "1"
-      }
+      },
+      "engineBanks": 4
     }
   ]
 }

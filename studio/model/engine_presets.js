@@ -25,7 +25,7 @@ export class EnginePresetStore {
     this.storage = storage;
     const raw = readJson(storage, USER_KEY, []);
     this.sets = Array.isArray(raw)
-      ? raw.filter((set) => set && typeof set.id === 'string' && typeof set.name === 'string' && Array.isArray(set.slots) && set.slots.length === 24)
+      ? raw.filter((set) => set && typeof set.id === 'string' && typeof set.name === 'string' && Array.isArray(set.slots) && [24,32].includes(set.slots.length))
       : [];
     const defaults = readJson(storage, DEFAULTS_KEY, {});
     this.defaultKeys = defaults && typeof defaults === 'object' && !Array.isArray(defaults) ? defaults : {};
@@ -51,7 +51,7 @@ export class EnginePresetStore {
 
   /** `slots` are one voice's recipe slots (24). Returns the key of the new set. */
   add(name, slots) {
-    if (!Array.isArray(slots) || slots.length !== 24) throw new TypeError('A set holds exactly 24 engines');
+    if (!Array.isArray(slots) || ![24,32].includes(slots.length)) throw new TypeError('A set holds 24 or 32 engines');
     const clean = this.#uniqueName(name);
     const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     this.sets.push({ id, name: clean, slots: JSON.parse(JSON.stringify(slots)) });
@@ -69,7 +69,7 @@ export class EnginePresetStore {
   update(key, slots) {
     const set = this.get(key);
     if (!set) throw new RangeError('Only your own sets can be changed');
-    if (!Array.isArray(slots) || slots.length !== 24) throw new TypeError('A set holds exactly 24 engines');
+    if (!Array.isArray(slots) || ![24,32].includes(slots.length)) throw new TypeError('A set holds 24 or 32 engines');
     set.slots = JSON.parse(JSON.stringify(slots));
     this.#save();
   }

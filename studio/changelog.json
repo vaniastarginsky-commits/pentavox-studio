@@ -2,6 +2,16 @@
   {
     "date": "2026-10-24",
     "area": "studio",
+    "text": "Single-Plaits builds now offer four banks of eight engines. GitHub Actions status survives reloads, with current steps, cancellation and a run link."
+  },
+  {
+    "date": "2026-10-24",
+    "area": "studio",
+    "text": "DFU: the USB chooser finds any bootloader with a DFU interface, not only the ST ids; if nothing was chosen, the next try lists every USB device."
+  },
+  {
+    "date": "2026-10-24",
+    "area": "studio",
     "text": "Routing catalog brought up to the firmware: Reverb special, motion and tone destinations (97 entries). Studio no longer calls the firmware newer."
   },
   {
