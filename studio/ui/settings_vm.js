@@ -19,7 +19,7 @@ const titlesFor = (table) => {
     Math.max(0, Number(table.samplerVoices) || 0));
   return [
     ...Array.from({ length: plaits }, (_, i) => `Plaits ${i + 1}`),
-    ...Array.from({ length: samplers }, (_, i) => `Sampler ${i + 1}`),
+    ...Array.from({ length: samplers }, (_, i) => table.capabilities?.looper ? 'Looper' : `Sampler ${i + 1}`),
   ];
 };
 const SOURCE_LABELS = Object.freeze(['MIDI', 'CV 1', 'CV 2', 'CV 3', 'CV 4', 'CV 5', 'CV 6', 'Button 1', 'Button 2', 'Jack J3', 'Jack J4', 'Jack J5', 'Jack J6', 'Jack J7', 'Jack J8']);
@@ -93,7 +93,8 @@ function select(table, id, label, opts) {
 export function noteSourceRows(table, labels = {}) {
   const rows = [];
   const titles = titlesFor(table);
-  for (let voice = 0; voice < titles.length; ++voice) {
+  for (let position = 0; position < titles.length; ++position) {
+    const voice = table.capabilities?.noteVoiceIndices?.[position] ?? position;
     const pitch = `voice.${voice}.pitch_source`;
     const gate = `voice.${voice}.gate_source`;
     const midi = `voice.${voice}.midi_channel`;
@@ -107,7 +108,7 @@ export function noteSourceRows(table, labels = {}) {
       controls.push(select(table, midi, 'MIDI ch', options(MIDI_CHANNEL_LABELS, Number(table.field(midi).zones))));
     rows.push({
       voice,
-      label: titles[voice],
+      label: titles[position],
       controls,
     });
   }
@@ -116,16 +117,20 @@ export function noteSourceRows(table, labels = {}) {
 
 // `looper`: the looper image has no sampler recording, so the Sampler group is left out except the stutter character (Clean / Glitch), which
 // the loop stutter uses too, and the texts that speak of the sampler speak of the looper.
-export function settingsView(table, { looper = false } = {}) {
+export function settingsView(table, { looper = false, sliceVersion = 0 } = {}) {
   const groups = new Map(GROUP_DEFS.map((def) => [def.key, { ...def, items: [], summary: '' }]));
   if (looper) groups.get('sampler').title = 'Looper';
   for (const spec of SIMPLE_ITEMS) {
     if (!table.has(spec.id)) continue;
     const field = table.field(spec.id);
-    if (looper && spec.group === 'sampler' && spec.id !== 's0.4') continue;   // only the stutter character is a looper setting
+    if(spec.id==='s0.2' && table.capabilities?.plaitsVoices===1)continue;
+    if(spec.id==='s2.5' && (field.name==='Unused'||Number(field.zones)===1))continue;
+    const protectBeat = looper && sliceVersion >= 18 && spec.id === 's2.4';   // the slot that held the sampler's Record length holds the Slice stage's first-beat protection in a looper image
+    if (looper && spec.group === 'sampler' && spec.id !== 's0.4' && !protectBeat) continue;   // only the stutter character (and the first-beat protection) is a looper setting
     if (spec.name && field.name !== spec.name) continue;   // one slot id, different meaning in the full and the compact build (s0.4: Sampler Choke / Sampler Stutter)
     const raw = table.get(spec.id);
     const item = { id: spec.id, control: spec.control, label: spec.label, hint: looper ? looperHint(spec) : spec.hint, short: spec.short ?? '', twoRows: spec.twoRows === true };
+    if (protectBeat) Object.assign(item, { label: 'Protect first beat', short: 'protect', hint: 'On: the Slice stage leaves the first beat of each bar as it was recorded: no jumps, rolls, reverse, tape stops, colour or throws there. Off: it works on the first beat too.' });
     if (spec.control === 'slider') {
       if (spec.bpm) {
         Object.assign(item, { min: 20, max: 300, step: 1, unit: ' BPM', value: raw });
@@ -152,7 +157,7 @@ export function settingsView(table, { looper = false } = {}) {
     } else {
       // `show` trims the choices to the ones worth offering; a value the module already holds (an old preset, a hand-set mode) stays visible.
       const show = looper && spec.id === 's0.4' ? [0, 1, 2, 3] : spec.show;   // a loop has no cue markers: no slice repeat / roll
-      item.options = options(spec.labels, Number(field.zones)).filter((option) => !show || show.includes(option.value) || option.value === raw);
+      item.options = options(protectBeat ? ['On', 'Off'] : spec.labels, Number(field.zones)).filter((option) => protectBeat ? option.value < 2 || option.value === raw : (!show || show.includes(option.value) || option.value === raw));
       item.value = raw;
     }
     groups.get(spec.group).items.push(item);

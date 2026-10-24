@@ -1,10 +1,11 @@
 {
   "schemaHash": 639964394,
-  "count": 92,
+  "count": 94,
   "supportedCounts": [
     87,
     90,
-    92
+    92,
+    94
   ],
   "entries": [
     {
@@ -558,6 +559,18 @@
       "symbol": "FxDelayPingPong",
       "group": "FX",
       "name": "Delay ping-pong"
+    },
+    {
+      "id": 92,
+      "symbol": "Voice1Twist",
+      "group": "Plaits 1",
+      "name": "Twist (fourth control)"
+    },
+    {
+      "id": 93,
+      "symbol": "Voice2Twist",
+      "group": "Plaits 2",
+      "name": "Twist (fourth control)"
     }
   ]
 }

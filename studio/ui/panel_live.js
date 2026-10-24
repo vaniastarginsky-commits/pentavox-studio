@@ -1,4 +1,5 @@
 import { indexDescriptor, readField, writeField } from '../model/blob.js';
+import { panelPages } from './manual_vm.js';
 
 const clamp01 = (value) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 export const perfKey = (page, pot) => `${page}:${pot}`;
@@ -11,10 +12,13 @@ export function perfFieldMap(descriptor) {
   const index = indexDescriptor(descriptor);
   const indexed = new Map([...index.values()].filter((field) => field.comp === component.id).map((field) => [field.id, field]));
   const fields = new Map();
+  const pages = panelPages(descriptor);
   for (const source of component.fields ?? []) {
     const field = indexed.get(source.id);
     if (!field || field.type !== 'f32' || !Number.isInteger(field.page) || !Number.isInteger(field.pot)) continue;
-    fields.set(perfKey(field.page, field.pot), field);
+    const page = pages.find((page) => (page.perfIndex === undefined ? page.index : page.perfIndex) === field.page);
+    if (page?.pots[field.pot]?.live === false) continue;
+    fields.set(perfKey(page?.index ?? field.page, field.pot), field);
   }
   return fields;
 }

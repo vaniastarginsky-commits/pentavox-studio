@@ -1,5 +1,6 @@
 import { readField, writeField } from './blob.js';
 import { moduleCapabilities } from './capabilities.js';
+import { isLooperDescriptor } from './panel_pots.js';
 
 export const POTMAP_LAYERS = 2;
 export const POTMAP_PAGES = 8;
@@ -15,7 +16,7 @@ function coordinate(name, value, limit) {
 }
 
 export class PotMapTable {
-  static fromBlob(bytes, index) {
+  static fromBlob(bytes, index, descriptor = null) {
     const fields = new Map();
     const values = new Map();
     for (let layer = 0; layer < POTMAP_LAYERS; ++layer) {
@@ -30,7 +31,9 @@ export class PotMapTable {
       }
     }
     if (!fields.size) throw new Error('descriptor has no pot map fields');
-    return new PotMapTable(fields, values, moduleCapabilities(index));
+    const table = new PotMapTable(fields, values, moduleCapabilities(index));
+    table.looper = isLooperDescriptor(descriptor);
+    return table;
   }
 
   constructor(fields, values, capabilities = {

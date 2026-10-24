@@ -85,11 +85,11 @@ export function categoriesView(engines) {
 // three Plaits voices. Without a module (not connected, demo, unreadable table) it must NOT fall back to the full
 // three-voice build: that once started a cloud build of the wrong product.
 export function voiceTabCount(table) {
-  return Number(table?.voiceCount) === 3 ? 3 : 2;
+  return Number(table?.voiceCount) === 1 ? 1 : Number(table?.voiceCount) === 3 ? 3 : 2;
 }
 
 export function isCompactModule(table) {
-  return voiceTabCount(table) === 2;
+  return voiceTabCount(table) <= 2;
 }
 
 // The AXI-code meter: estimated union size against the budget; red (and no Build) when over.

@@ -19,13 +19,13 @@ export async function localServerUp(apiFetch, timeoutMs = 1500) {
  * Build in the cloud. onStatus gets the same shape the server's /api/status has ({ state, stage, image, margins, log }).
  * Resolves { image: Uint8Array, meta }; rejects after reporting a failed status.
  */
-export async function runCloudBuild({ recipe, compact, looper = false, onStatus, signal, token = githubToken(), settings = cloudSettings(), makeBuilder = (options) => new CloudBuild(options) }) {
+export async function runCloudBuild({ recipe, compact, looper = false, profile, diagnostic = false, onStatus, signal, token = githubToken(), settings = cloudSettings(), makeBuilder = (options) => new CloudBuild(options) }) {
   if (!token) throw new Error('A GitHub token is needed to build in the cloud (see the Studio README)');
   const builder = makeBuilder({ token, ...settings, onUnauthorized: forgetGithubToken });
   try {
-    const result = await builder.build(recipe, { onStatus, compact, looper, signal });
+    const result = await builder.build(recipe, { onStatus, compact, looper, ...(profile?{profile,diagnostic}:{}), signal });
     const kb = (result.image.byteLength / 1024).toFixed(0);
-    onStatus({ state: 'built', image: 'cloud', stage: `done: ${(result.meta.commit ?? '').slice(0, 7)} · ${kb} KB`, margins: result.meta.margins ?? '', log: [] });
+    onStatus({ state: 'built', image: 'cloud', profile:result.meta.profile,diagnostic:result.meta.diagnostic,stage: `done: ${(result.meta.commit ?? '').slice(0, 7)} · ${kb} KB`, margins: result.meta.margins ?? '', log: [] });
     return result;
   } catch (error) {
     if (error instanceof BuildCancelledError) {
@@ -71,6 +71,7 @@ export function describeBuild(meta, currentRecipe, { now = Date.now(), locale, c
   const lines = ['Firmware to flash (the last cloud build):'];
   lines.push(`Built: ${at === null ? 'unknown time' : `${new Date(at).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })} (${ago(now - at)})`}`);
   lines.push(`Size: ${((meta.size ?? 0) / 1024).toFixed(0)} KB · commit ${(meta.commit ?? '').slice(0, 7) || 'unknown'}`);
+  if (meta.profile) lines.push(`Variant: ${meta.profile} · ${meta.diagnostic ? 'diagnostic' : 'normal'}`);
   if (meta.margins) lines.push(String(meta.margins));
   if (meta.recipe === undefined) lines.push('Settings: not recorded for this build');
   else if (JSON.stringify(meta.recipe) === JSON.stringify(currentRecipe)) lines.push('Settings: the same as the engines chosen now in Studio');
