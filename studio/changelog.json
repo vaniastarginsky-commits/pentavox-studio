@@ -2,6 +2,11 @@
   {
     "date": "2026-10-24",
     "area": "firmware",
+    "text": "Fix: the LED skin's descriptor text was not valid JSON, so the SDK replaced the whole descriptor and Studio found no routing fields. Fixed, with a test that parses every HostLink fragment."
+  },
+  {
+    "date": "2026-10-24",
+    "area": "firmware",
     "text": "Fix: the LED skin and sample upload were left out of HostLink (the SDK takes four extensions); the firmware's own blocks now share one, so Studio finds the colour skin."
   },
   {
