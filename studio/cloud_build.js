@@ -144,7 +144,7 @@ export class CloudBuild {
     const data=await this.json(`/repos/${this.repo}/actions/workflows/${DEFAULTS.workflow}/runs?event=workflow_dispatch&per_page=30`);
     const run=(data.workflow_runs??[]).find(r=>r.head_branch===this.workflowRef && ['queued','in_progress','waiting','pending','requested'].includes(r.status));
     if(!run) return null;
-    const request=String(run.display_title??'').match(/studio-build\s+([a-z0-9]+-[a-z0-9]+)/i)?.[1];
+    const request=String(run.display_title??'').match(/studio-build\s+([A-Za-z0-9-]{1,64})(?:\s|$)/i)?.[1];
     if(!request) return null;
     const recovered={request,runId:run.id,startedAt:Date.parse(run.created_at)||this.now(),buildRef:this.buildRef};
     write(`pentavox.cloud.pending.${this.repo}`,JSON.stringify(recovered));
@@ -255,6 +255,7 @@ export class CloudBuild {
     let cancelSent = false;
     while (this.now() < deadline) {
       await this.waitForPoll(pollMs, signal);
+      try {
       run = run ?? await this.findRun(request);
       if (!run) { onStatus({ state: 'building', stage: signal?.aborted ? 'cancelling: waiting for GitHub to register the run' : 'waiting for GitHub to start the run' }); continue; }
       const pending=this.pending();
@@ -262,9 +263,17 @@ export class CloudBuild {
       const current = await this.json(`/repos/${this.repo}/actions/runs/${run.id}`);
       if (current.status === 'completed') {
         if (current.conclusion === 'cancelled') {this.clearPending(request);throw new BuildCancelledError();}
-        const result = await this.result(request);
+        let result;
+        try { result = await this.result(request); }
+        catch(error) {
+          if(error.status!==409) throw error;
+          this.clearPending(request);
+          const replaced=new CloudBuildError(current.conclusion==='success'?'Build completed; a newer build replaced its download':'The cloud build failed; a newer build replaced its log',{status:410});
+          replaced.buildFailed=current.conclusion!=='success';
+          throw replaced;
+        }
         this.clearPending(request);
-        if (current.conclusion !== 'success' || !result.image) throw new CloudBuildError('The cloud build failed', { log: result.log });
+        if (current.conclusion !== 'success' || !result.image) { const error=new CloudBuildError('The cloud build failed',{log:result.log});error.buildFailed=true;throw error; }
         return result;
       }
       if (signal?.aborted) {
@@ -274,6 +283,12 @@ export class CloudBuild {
       }
       const step = await this.stage(run);
       onStatus({ state: 'building', stage: `GitHub Actions: ${current.status === 'queued' ? 'queued' : step || 'running'}`, runUrl:current.html_url, ...this.stepProgress });
+      } catch(error) {
+        if(signal?.aborted || error instanceof BuildCancelledError || error.buildFailed || [401,410].includes(error.status)) throw error;
+        onStatus({state:'building',stage:'GitHub Actions: connection lost; retrying status',connectionLost:true,
+          runUrl:run?.id?`https://github.com/${this.repo}/actions/runs/${run.id}`:undefined});
+        await this.waitForPoll(error.status===403?60000:15000,signal);
+      }
     }
     throw new CloudBuildError(signal?.aborted
       ? 'GitHub has not confirmed cancellation. The build may still be running there.'

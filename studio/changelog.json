@@ -2,6 +2,11 @@
   {
     "date": "2026-10-24",
     "area": "studio",
+    "text": "Single-Plaits memory meter uses a measured budget and reserves uncertainty for edits. Actions status retries connection failures and recovers newer published results."
+  },
+  {
+    "date": "2026-10-24",
+    "area": "studio",
     "text": "Single-Plaits builds now offer four banks of eight engines. GitHub Actions status survives reloads, with current steps, cancellation and a run link."
   },
   {
