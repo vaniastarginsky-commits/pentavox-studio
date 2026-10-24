@@ -7,7 +7,8 @@ import { bankCardsView, buildButtonView, categoriesView, isCompactModule, librar
 import { lcdLabel, lcdSvg } from './lcd.js';
 import { lastBackupInfo } from '../model/preset_backup.js';
 import { apiFetch, servedLocally } from '../site.js';
-import { describeBuild, loadChangesForFlash, loadLatestCloudBuild, localServerUp, recentFirmwareChanges, runCloudBuild, runWebFlash } from '../build_flow.js';
+import { requestDfuDevice } from '../webdfu.js';
+import { describeBuild, loadChangesForFlash, resumeCloudBuild, loadLatestCloudBuild, localServerUp, recentFirmwareChanges, runCloudBuild, runWebFlash } from '../build_flow.js';
 import { lastModuleFirmware, loadChangelog, parseFwGit } from '../firmware_info.js';
 import { mountWaveResourcesEditor } from './wave_resources_editor.js';
 import { activeLinkJob, linkBusyMessage } from '../model/link_jobs.js';
@@ -54,6 +55,7 @@ function button(text, className = '') {
 }
 
 let HELP = {};
+let dfuListAll = false;   // after a flash where no DFU device was chosen, the next chooser lists every USB device
 
 // Engine artwork: the PNG from Rubato's open catalog when it has one, else a
 // four-letter LCD tile like their palette tool (tone = hardware bank colour).
@@ -107,7 +109,7 @@ const PRESETS = [['stock', 'Plaits 1.2'], ['braids1', 'Braids 1'], ['braids2', '
 const PRESET_LABEL = Object.fromEntries(PRESETS);
 const SVG_STEREO = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5.5" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10.5" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
 const SVG_SYNC = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 0 1 8.6-3.4M13 8a5 5 0 0 1-8.6 3.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12.2 1.8v3.2H9M3.8 14.2V11H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const BANK_NAMES = ['Green', 'Yellow', 'Red'];
+const BANK_NAMES = ['Green', 'Yellow', 'Red', 'Blue'];
 const slotKey = (slot) => (slot.bank === undefined ? slot.id : `${slot.id}#${slot.bank}`);
 
 function svg(markup, className = '') {
@@ -123,6 +125,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   const presetStore = new EnginePresetStore();
   let hadSavedRecipe = false;
   try { const saved = JSON.parse(localStorage.getItem('pentavox.palette.recipe')); if (saved) { model.importRecipe(migrateStockBankOrder(saved)); hadSavedRecipe = true; } } catch { /* invalid local state falls back to stock */ }
+  try { model.extraBanks=JSON.parse(localStorage.getItem('pentavox.palette.extraBanks'))||{}; } catch {}
   const audition = new EngineAudition(catalog.engines);
   const entries = libraryEntries(catalog);
   // view: 0..2 shows one voice (large rows), 'both' stacks every voice in the dense table. voice = the voice that receives clicks and library picks.
@@ -249,7 +252,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   moreList.append(exportButton, importLabel, dx7Button, wavesButton, terrainButton);
   bar.append(diffButton, setGroup, more);
 
-  function persist() { try { localStorage.setItem('pentavox.palette.recipe', JSON.stringify(model.recipe())); } catch { /* optional */ } }
+  function persist() { try { localStorage.setItem('pentavox.palette.recipe', JSON.stringify(model.recipe()));localStorage.setItem('pentavox.palette.extraBanks',JSON.stringify(model.extraBanks)); } catch { /* optional */ } }
   function preview(id, stereo) { audition.preview(id, stereo).catch(onError); }
   function voiceTotal() { return firmwareProfile(state.profile).plaitsVoices; }
   // With one voice the board is the detailed one-voice view (large rows), never the dense stack of 'both'.
@@ -347,6 +350,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   async function assignActiveVoice(slotIndex) {
     const controller = getController();
     if (!controller || controller.view().readOnly || state.voice >= (getVoiceTable()?.voiceCount??0)) return;
+    if(slotIndex >= (getVoiceTable()?.voiceLabels?.[state.voice]?.length??24)) {onError(new Error('Build and flash the four-bank firmware before selecting this slot on the module'));return;}
     try { await controller.assignVoiceEngine(state.voice, slotIndex); } catch (error) { onError(error); }
   }
 
@@ -406,7 +410,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
         bulk.title = `Turn ${label.split(':')[0]} on for every slot of this voice that supports it (or off when all are on)`;
         head.append(bulk);
       }
-      const banks = el('div', 'eg-banks');
+      const banks = el('div', 'eg-banks'); banks.style.setProperty('--banks',model.slotsOf(voice).length/8);
       for (const bank of bankCardsView(model, voice, liveIndex)) {
         const column = el('div', `eg-bank bank-${bank.colour}`); column.append(el('h5', '', `Bank ${bank.name}`));
         for (const slot of bank.slots) column.append(slotRow(slot, voice, dense, others));
@@ -686,7 +690,8 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   suggestButton.addEventListener('click', () => { state.suggest = !state.suggest; renderSuggestions(model.summary(voiceTotal()).overBudget); });
   const progress = el('div', 'build-progress'); progress.hidden = true;
   const progressText = el('span', 'build-stage'); const progressBar = el('span', 'build-bar'); progressBar.append(el('i'));
-  progress.append(progressText, progressBar);
+  const actionsLink=el('a','cloud-actions-link','Open GitHub Actions');actionsLink.target='_blank';actionsLink.rel='noopener noreferrer';actionsLink.hidden=true;
+  progress.append(progressText, progressBar,actionsLink);
   copyLog.hidden = true;
   let fullLog = '';
   let cloudResult = null;   // the image of the last cloud build (hosted page without a local build server): flashed over WebUSB
@@ -725,7 +730,13 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     const busy = ['building', 'cancelling', 'flashing'].includes(status.state);
     progress.hidden = !(busy || failed || (state.touched && status.stage));
     progress.classList.toggle('failed', failed); progress.classList.toggle('busy', busy);
-    progressText.textContent = status.stage ?? status.state ?? '';
+    progressText.textContent = (status.stage ?? status.state ?? '')+(status.totalSteps?` · ${status.completedSteps}/${status.totalSteps} steps`:'');
+    $('.eg-meter').classList.toggle('build-active',busy);
+    progress.classList.toggle('counted',Boolean(status.totalSteps));
+    if(status.totalSteps)progressBar.firstElementChild.style.width=`${status.completedSteps/status.totalSteps*100}%`;
+    else progressBar.firstElementChild.style.removeProperty('width');
+    if(/starting (the|a) (cloud )?build/.test(status.stage??''))actionsLink.hidden=true;
+    if(/^https:\/\/github\.com\//.test(status.runUrl??'')){actionsLink.href=status.runUrl;actionsLink.hidden=false;}
     state.phase = status.state; state.busy = busy; state.hasImage = !!status.image;
     state.buildId = status.build_id ?? null;
     if (operation?.route === 'local' && operation.id && status.build_id && operation.id !== status.build_id)
@@ -815,7 +826,8 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
         about = `${describeBuild(cloudResult.meta, recipeForProfile(model.recipe(),variant.value), { changes, recent: changes ? [] : recentFirmwareChanges(entries) })}\n\n`;
       }
       if (!(await confirmDialog(about + flashWarning(), 'Flash'))) return;
-      try { await runWebFlash({ image: cloudResult.image, onStatus: renderBuild, onFlashState: (flashState) => globalThis.dispatchEvent?.(new CustomEvent('pentavox-flash', { detail: flashState })) }); } catch (error) { onError(error); }
+      // The chooser lists DFU devices (by their interface, not only by the ST ids). When nothing was chosen the next try lists every USB device.
+      try { await runWebFlash({ image: cloudResult.image, requestDevice: () => requestDfuDevice(undefined, { all: dfuListAll }), onStatus: renderBuild, onFlashState: (flashState) => globalThis.dispatchEvent?.(new CustomEvent('pentavox-flash', { detail: flashState })) }); } catch (error) { if (error?.noDfuDevice) dfuListAll = true; onError(error); }
       return;
     }
     if (!confirm(flashWarning())) return;
@@ -827,6 +839,14 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   if (!servedLocally()) {
     localServerUp(apiFetch).then(async (up) => {
       if (up || cloudResult || state.busy || state.touched) return;
+      try {
+        const controller=new AbortController();
+        const resumed=await resumeCloudBuild({signal:controller.signal,onStatus:renderBuild,onRecovered:()=>{operationVersion+=1;operation={route:'cloud',controller,started:true};state.touched=true;cloudResult=null;}});
+        if(resumed) {cloudResult=resumed;return;}
+      } catch(error) {
+        renderBuild({state:error.name==='BuildCancelledError'?'cancelled':'failed',stage:error.name==='BuildCancelledError'?'GitHub Actions: cancelled':'GitHub Actions: status unavailable; build may still be running',log:[String(error.message??error)]});
+        return;
+      }
       const latest = await loadLatestCloudBuild();
       if (!latest || cloudResult || state.busy || state.touched) return;
       cloudResult = latest; state.touched = true;
@@ -834,7 +854,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     });
   }
 
-  function changed() { persist(); renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); renderSetControls(); }
+  function changed() { for(let v=0;v<3;++v) model.setSlotCount(v,v===0&&state.profile==='single-plaits'?32:24); persist(); renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); renderSetControls(); }
   if (!hadSavedRecipe) applyDefaults();   // a first visit, or a cleared browser: every voice starts from the set chosen as its default
   changed();
   return { waves: waveEditor, refreshLive() { renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); }, dispose() { waveEditor.destroy(); if (state.polling) clearInterval(state.polling); root.replaceChildren(); } };

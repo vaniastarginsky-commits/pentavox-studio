@@ -37,6 +37,19 @@ export async function runCloudBuild({ recipe, compact, looper = false, profile, 
   }
 }
 
+/** Resume observation only: never dispatch another job after reloading Studio. */
+export async function resumeCloudBuild({onStatus,onRecovered=()=>{},signal,token=githubToken(()=>''),settings=cloudSettings(),makeBuilder=options=>new CloudBuild(options)}={}) {
+  if(!token) return null;
+  const builder=makeBuilder({token,...settings,onUnauthorized:forgetGithubToken});
+  const pending=await builder.recover();
+  if(!pending) return null;
+  onRecovered(pending);
+  onStatus({state:'building',stage:'GitHub Actions: restoring build status'});
+  const result=await builder.monitor(pending.request,{onStatus,signal});
+  onStatus({state:'built',image:'cloud',profile:result.meta.profile,diagnostic:result.meta.diagnostic,stage:`GitHub Actions: complete · ${(result.meta.commit??'').slice(0,7)}`,margins:result.meta.margins??'',log:[]});
+  return result;
+}
+
 /** The build the workflow published last, when a token is already saved in this browser (never asks for one); null when there is none. */
 export async function loadLatestCloudBuild({ token = githubToken(() => ''), settings = cloudSettings(), makeBuilder = (options) => new CloudBuild(options) } = {}) {
   if (!token) return null;
@@ -132,7 +145,7 @@ export async function runWebFlash({ image, onStatus, requestDevice = requestDfuD
   } catch (error) {
     onFlashState('error');
     onStatus({ state: 'built', stage: 'flash failed', image: 'cloud', log: [String(error.message ?? error)] });
-    if (error?.name === 'NotFoundError') throw new Error('No DFU device was chosen. Put the module in DFU (Reboot to DFU) and try again');
+    if (error?.name === 'NotFoundError') throw Object.assign(new Error('No DFU device was chosen. Put the module in DFU (Reboot to DFU) and try again: the next time the list shows every USB device'), { noDfuDevice: true });
     throw error;
   } finally {
     if (device) await device.close();

@@ -53,7 +53,7 @@ let unsubscribeDraft;
 let toastTimer;
 let activeTab = 'palette';
 let buildVoiceCount=2;try { if(localStorage.getItem('pentavox.palette.variant')==='single-plaits')buildVoiceCount=1; } catch {}
-globalThis.addEventListener?.('pentavox-profile',event=>{buildVoiceCount=event.detail.plaitsVoices;if(activeTab==='palette')document.querySelector('#page-crumb').textContent=`${buildVoiceCount===1?'One voice':'Two voices'}, three banks of eight`;});
+globalThis.addEventListener?.('pentavox-profile',event=>{buildVoiceCount=event.detail.plaitsVoices;if(activeTab==='palette')document.querySelector('#page-crumb').textContent=`${buildVoiceCount===1?'One voice':'Two voices'}, ${buildVoiceCount===1?'four':'three'} banks of eight`;});
 
 let samplerMount;
 let locksMount;
@@ -439,7 +439,7 @@ assetsPromise.then(() => { if (paletteMount) asPage(paletteMount.waves.dialog, (
 // Page title and crumb in the top bar, like the Console design.
 {
   const TITLES = {
-    palette: ['Engines', `${buildVoiceCount===1?'One voice':'Two voices'}, three banks of eight`], dx7: ['DX7 banks', 'Six-op patches on the SD card'], wavetable: ['Wave tables', 'Harmonics banks for the Wavetable engine'],
+    palette: ['Engines', `${buildVoiceCount===1?'One voice':'Two voices'}, ${buildVoiceCount===1?'four':'three'} banks of eight`], dx7: ['DX7 banks', 'Six-op patches on the SD card'], wavetable: ['Wave tables', 'Harmonics banks for the Wavetable engine'],
     terrain: ['Wave terrain', 'Terrains for the Wave Terrain engine'], sampler: ['Sampler', 'SD card, two slots'], presets: ['Presets', 'Stored sounds'],
     routing: ['CV routing', 'Notes, jacks J3 to J8, pot map'], midi: ['MIDI routing', 'One table for the module'], locks: ['Knob record', 'Loops recorded with B3'],
     panel: ['Panel', 'The module live: knobs, settings, colours'], manual: ['Manual', 'Using Studio'],

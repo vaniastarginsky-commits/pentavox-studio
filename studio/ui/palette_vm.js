@@ -3,7 +3,8 @@ import { BANK_LETTERS, libraryEntries } from '../model/palette.js';
 const BANKS = Object.freeze([
   { name: 'Green', colour: 'green', tagline: 'First eight · lively spectrum' },
   { name: 'Yellow', colour: 'yellow', tagline: 'Middle eight · soft light' },
-  { name: 'Red', colour: 'red', tagline: 'Final eight · hits and noise' },
+  { name: 'Red', colour: 'red', tagline: 'Third bank · hits and noise' },
+  { name: 'Blue', colour: 'blue', tagline: 'Fourth bank · single Plaits' },
 ]);
 
 const CATEGORY_ICONS = Object.freeze({
@@ -45,7 +46,7 @@ function engineRow(engine, index, slot) {
 // currently plays on this voice (null when not connected).
 export function bankCardsView(model, voice, liveIndex = null) {
   const slots = model.slotsOf(voice);
-  return BANKS.map((definition, bank) => {
+  return BANKS.slice(0,slots.length/8).map((definition, bank) => {
     const start = bank * 8;
     return {
       ...definition,

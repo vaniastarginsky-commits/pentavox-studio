@@ -210,16 +210,30 @@ export class DfuDevice {
   }
 }
 
-/** Ask the user to pick the DFU device (must run from a click). */
-export async function requestDfuDevice(usb = globalThis.navigator?.usb) {
+/**
+ * What counts as a DFU device: the ST ROM bootloader (0483:df11), or anything else that offers a DFU interface (class 0xFE, subclass 1), so a
+ * bootloader with its own IDs is found without Studio knowing them.
+ */
+export const DFU_FILTERS = Object.freeze([
+  Object.freeze({ vendorId: DFU_VENDOR, productId: DFU_PRODUCT }),
+  Object.freeze({ classCode: 0xfe, subclassCode: 0x01 }),
+]);
+
+function isDfuDevice(device) {
+  if (device.vendorId === DFU_VENDOR && device.productId === DFU_PRODUCT) return true;
+  const configurations = device.configurations ?? (device.configuration ? [device.configuration] : []);
+  return configurations.some((config) => config.interfaces?.some((iface) => iface.alternates?.some((alt) => alt.interfaceClass === 0xfe && alt.interfaceSubclass === 1)));
+}
+
+/** Ask the user to pick the DFU device (must run from a click). `all` lists every USB device, for a bootloader that announces no DFU interface. */
+export async function requestDfuDevice(usb = globalThis.navigator?.usb, { all = false } = {}) {
   if (!usb) throw new Error('This browser has no WebUSB. Use Chrome or Edge.');
-  const device = await usb.requestDevice({ filters: [{ vendorId: DFU_VENDOR, productId: DFU_PRODUCT }] });
+  const device = await usb.requestDevice(all ? { filters: [] } : { filters: DFU_FILTERS.map((filter) => ({ ...filter })) });
   return new DfuDevice(device);
 }
 
 /** Devices already allowed for this site (to show "In DFU" without a prompt). */
 export async function pairedDfuDevices(usb = globalThis.navigator?.usb) {
   if (!usb) return [];
-  const devices = await usb.getDevices();
-  return devices.filter((d) => d.vendorId === DFU_VENDOR && d.productId === DFU_PRODUCT);
+  return (await usb.getDevices()).filter(isDfuDevice);
 }

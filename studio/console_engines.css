@@ -92,7 +92,7 @@
 .eg-voice > header h4 { margin: 0; font-size: 14px; font-family: inherit; letter-spacing: 0; }
 .eg-src { color: var(--muted); font-size: 12px; }
 .eg-liveline { color: var(--ok); }
-.eg-banks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.eg-banks { display: grid; grid-template-columns: repeat(var(--banks, 3), minmax(0, 1fr)); }
 .eg-bank { border-right: 1px solid var(--line); min-width: 0; }
 .eg-bank:last-child { border-right: 0; }
 .eg-bank.bank-green { --c: var(--g); } .eg-bank.bank-yellow { --c: var(--y); } .eg-bank.bank-red { --c: var(--r); }
@@ -248,3 +248,11 @@
 .eg .lcd-tile { color: hsl(var(--h, 150) 70% var(--ico-l)); }
 
 .firmware-diagnostic { display: inline-flex; align-items: center; gap: 5px; font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
+
+.eg-bank.bank-blue { --c: #6c9cff; }
+
+.eg-meter.build-active .eg-track, .eg-meter.build-active .memory-text { display:none; }
+.eg-meter.build-active .build-progress { display:grid; grid-template-columns:1fr auto; width:100%; }
+.eg-meter.build-active .build-bar { grid-column:1 / -1; grid-row:2; width:100%; height:8px; }
+.build-progress.counted.busy .build-bar i { animation:none; left:0; transition:width .3s ease; }
+.cloud-actions-link { font-size:11px; white-space:nowrap; }

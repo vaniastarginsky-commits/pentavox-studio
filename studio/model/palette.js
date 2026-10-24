@@ -31,8 +31,8 @@ function assertVoice(voice) {
   if (!Number.isInteger(voice) || voice < 0 || voice >= VOICE_COUNT) throw new RangeError('voice must be 0..2');
 }
 
-function assertSlot(index) {
-  if (!Number.isInteger(index) || index < 0 || index >= SLOT_COUNT) throw new RangeError('slot must be 0..23');
+function assertSlot(index, count=24) {
+  if (!Number.isInteger(index) || index < 0 || index >= count) throw new RangeError(`slot must be 0..${count-1}`);
 }
 
 function bankName(bank) {
@@ -49,8 +49,22 @@ export class PaletteModel {
     this.measured = measured; // kept for API compatibility; the estimate is union based
     this.byId = new Map(catalog.engines.map((engine) => [engine.id, engine]));
     this.voices = [[], [], []];
+    this.extraBanks = {};
     this.resources = {};
     this.loadPreset(preset);
+  }
+
+  setSlotCount(voice,count) {
+    assertVoice(voice);
+    if(![24,32].includes(count)) throw new RangeError('palette must have 24 or 32 slots');
+    const slots=this.voices[voice];
+    if(slots.length===count)return;
+    if(count===24) {this.extraBanks[voice]=structuredClone(slots.slice(24));this.voices[voice]=slots.slice(0,24);return;}
+    const fallback=slots.filter(s=>!this.isBanked(s.id));
+    const extra=this.extraBanks[voice];
+    const added=extra?.length===8 && extra.every(s=>this.byId.has(s.id)) ? structuredClone(extra) : Array.from({length:8},(_,i)=>({...fallback[i%fallback.length]}));
+    this.#checkBankedCount([...slots,...added]);
+    this.voices[voice]=[...slots,...added];
   }
 
   slotsOf(voice) {
@@ -97,7 +111,7 @@ export class PaletteModel {
       return { id, stereo: stereo && Boolean(engine.stereo), sync: false };
     }));
     const targets = voice === null ? [0, 1, 2] : [voice];
-    for (const target of targets) { assertVoice(target); this.voices[target] = build(); }
+    for (const target of targets) { assertVoice(target); const count=this.voices[target].length||24; if(count===32)this.extraBanks[target]=structuredClone(this.voices[target].slice(24)); this.voices[target] = build(); this.setSlotCount(target,count); }
   }
 
   /** One voice's 24 slots in recipe form, for saving them as a set of the player's own. */
@@ -109,23 +123,26 @@ export class PaletteModel {
   /** Loads recipe-form slots (24) into one voice. All-or-nothing: a bad set leaves the voice as it was. */
   loadVoice(voice, recipeSlots) {
     assertVoice(voice);
+    const count=this.voices[voice].length;
+    if(count===32)this.extraBanks[voice]=structuredClone(this.voices[voice].slice(24));
     this.voices[voice] = this.#parseSet(recipeSlots, `voice ${voice + 1}`);
+    if(count===32 && recipeSlots.length===24) this.setSlotCount(voice,32);
   }
 
   move(voice, index, delta) {
     assertVoice(voice);
-    assertSlot(index);
+    assertSlot(index,this.voices[voice].length);
     if (delta !== -1 && delta !== 1) throw new RangeError('move delta must be -1 or 1');
     const target = index + delta;
-    if (target < 0 || target >= SLOT_COUNT) return false;
+    if (target < 0 || target >= this.voices[voice].length) return false;
     this.swap(voice, index, target);
     return true;
   }
 
   swap(voice, first, second) {
     assertVoice(voice);
-    assertSlot(first);
-    assertSlot(second);
+    assertSlot(first,this.voices[voice].length);
+    assertSlot(second,this.voices[voice].length);
     const slots = this.voices[voice];
     [slots[first], slots[second]] = [slots[second], slots[first]];
   }
@@ -133,7 +150,7 @@ export class PaletteModel {
   // opts.bank picks the DX7 bank for a six-op slot (default: the first bank not used in this voice).
   place(voice, index, engineId, opts = {}) {
     assertVoice(voice);
-    assertSlot(index);
+    assertSlot(index,this.voices[voice].length);
     this.#engine(engineId);
     const slots = this.voices[voice];
     const slot = { id: engineId, stereo: false, sync: false };
@@ -150,21 +167,21 @@ export class PaletteModel {
 
   setStereo(voice, index, enabled) {
     assertVoice(voice);
-    assertSlot(index);
+    assertSlot(index,this.voices[voice].length);
     const slot = this.voices[voice][index];
     slot.stereo = Boolean(enabled) && Boolean(this.#engine(slot.id).stereo);
   }
 
   setSync(voice, index, enabled) {
     assertVoice(voice);
-    assertSlot(index);
+    assertSlot(index,this.voices[voice].length);
     const slot = this.voices[voice][index];
     slot.sync = Boolean(enabled) && Boolean(this.#engine(slot.id).sync);
   }
 
   setBank(voice, index, bank) {
     assertVoice(voice);
-    assertSlot(index);
+    assertSlot(index,this.voices[voice].length);
     const slot = this.voices[voice][index];
     if (!this.isBanked(slot.id)) throw new TypeError('this engine does not read a DX7 bank');
     if (!Number.isInteger(bank) || bank < 0 || bank >= BANK_LETTERS.length) throw new RangeError(`bank must be 0..${BANK_LETTERS.length - 1}`);
@@ -192,12 +209,12 @@ export class PaletteModel {
   }
 
   #parseSet(recipeSlots, label) {
-    if (!Array.isArray(recipeSlots) || recipeSlots.length !== SLOT_COUNT) {
+    if (!Array.isArray(recipeSlots) || ![24,32].includes(recipeSlots.length)) {
       throw new TypeError(`${label}: recipe must contain exactly 24 slots`);
     }
-    const next = Array(SLOT_COUNT);
+    const next = Array(recipeSlots.length);
     for (const source of recipeSlots) {
-      assertSlot(source?.slot_index);
+      assertSlot(source?.slot_index,recipeSlots.length);
       if (next[source.slot_index]) throw new TypeError(`${label}: duplicate slot: ${source.slot_index}`);
       const engine = this.#engine(source.engine_id);
       const slot = {
@@ -282,7 +299,7 @@ export class PaletteModel {
     assertVoice(voice);
     const slots = this.voices[voice];
     for (const [name, ids] of Object.entries(this.sets)) {
-      if (ids.length === SLOT_COUNT && ids.every((id, index) => slots[index].id === id)) return name;
+      if (ids.length === slots.length && ids.every((id, index) => slots[index].id === id)) return name;
     }
     return null;
   }

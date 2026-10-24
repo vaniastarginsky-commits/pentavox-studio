@@ -128,7 +128,27 @@ export class CloudBuild {
     }
     if (response.status === 404) throw new CloudBuildError(`The workflow ${DEFAULTS.workflow} was not found in ${this.repo} (is it on ${this.workflowRef}, and does the token have Actions: write?)`, { status: 404 });
     if (response.status !== 204) throw new CloudBuildError(`GitHub did not start the build (${response.status}): ${(await response.text()).slice(0, 200)}`, { status: response.status });
+    write(`pentavox.cloud.pending.${this.repo}`, JSON.stringify({request, profile, diagnostic, startedAt:this.now(), buildRef:this.buildRef}));
     return request;
+  }
+
+  pending() {
+    try { const p=JSON.parse(read(`pentavox.cloud.pending.${this.repo}`)); return p?.request && p.buildRef===this.buildRef ? p : null; } catch { return null; }
+  }
+  clearPending(request) {
+    if(this.pending()?.request===request) try { storage()?.removeItem(`pentavox.cloud.pending.${this.repo}`); } catch {}
+  }
+  async recover() {
+    const saved=this.pending();
+    if(saved) return saved;
+    const data=await this.json(`/repos/${this.repo}/actions/workflows/${DEFAULTS.workflow}/runs?event=workflow_dispatch&per_page=30`);
+    const run=(data.workflow_runs??[]).find(r=>r.head_branch===this.workflowRef && ['queued','in_progress','waiting','pending','requested'].includes(r.status));
+    if(!run) return null;
+    const request=String(run.display_title??'').match(/studio-build\s+([a-z0-9]+-[a-z0-9]+)/i)?.[1];
+    if(!request) return null;
+    const recovered={request,runId:run.id,startedAt:Date.parse(run.created_at)||this.now(),buildRef:this.buildRef};
+    write(`pentavox.cloud.pending.${this.repo}`,JSON.stringify(recovered));
+    return recovered;
   }
 
   /** The run that carries this request id in its title, or null while GitHub has not created it yet. */
@@ -157,6 +177,7 @@ export class CloudBuild {
     try {
       const data = await this.json(`/repos/${this.repo}/actions/runs/${run.id}/jobs`);
       const steps = data.jobs?.[0]?.steps ?? [];
+      this.stepProgress={completedSteps:steps.filter(s=>s.status==='completed').length,totalSteps:steps.length};
       const current = steps.find((s) => s.status === 'in_progress') ?? steps.find((s) => s.status === 'queued');
       return current ? current.name : '';
     } catch (error) {
@@ -224,17 +245,25 @@ export class CloudBuild {
     if (signal?.aborted) throw new BuildCancelledError();
     onStatus({ state: 'building', stage: 'starting the cloud build' });
     const request = await this.start(recipe, { compact, looper, profile, diagnostic });
+    return this.monitor(request, {onStatus,pollMs,timeoutMs,signal});
+  }
+
+  async monitor(request, {onStatus=()=>{},pollMs=5000,timeoutMs=50*60*1000,signal}={}) {
     const deadline = this.now() + timeoutMs;
-    let run = null;
+    const saved=this.pending();
+    let run=saved?.request===request&&saved.runId?{id:saved.runId}:null;
     let cancelSent = false;
     while (this.now() < deadline) {
       await this.waitForPoll(pollMs, signal);
       run = run ?? await this.findRun(request);
       if (!run) { onStatus({ state: 'building', stage: signal?.aborted ? 'cancelling: waiting for GitHub to register the run' : 'waiting for GitHub to start the run' }); continue; }
+      const pending=this.pending();
+      if(pending?.request===request && pending.runId!==run.id) write(`pentavox.cloud.pending.${this.repo}`,JSON.stringify({...pending,runId:run.id}));
       const current = await this.json(`/repos/${this.repo}/actions/runs/${run.id}`);
       if (current.status === 'completed') {
-        if (current.conclusion === 'cancelled') throw new BuildCancelledError();
+        if (current.conclusion === 'cancelled') {this.clearPending(request);throw new BuildCancelledError();}
         const result = await this.result(request);
+        this.clearPending(request);
         if (current.conclusion !== 'success' || !result.image) throw new CloudBuildError('The cloud build failed', { log: result.log });
         return result;
       }
@@ -244,7 +273,7 @@ export class CloudBuild {
         continue;
       }
       const step = await this.stage(run);
-      onStatus({ state: 'building', stage: `cloud build: ${current.status === 'queued' ? 'queued' : step || 'running'}` });
+      onStatus({ state: 'building', stage: `GitHub Actions: ${current.status === 'queued' ? 'queued' : step || 'running'}`, runUrl:current.html_url, ...this.stepProgress });
     }
     throw new CloudBuildError(signal?.aborted
       ? 'GitHub has not confirmed cancellation. The build may still be running there.'
