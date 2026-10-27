@@ -130,12 +130,6 @@ export function mountSettings(root, controller) {
       const items = group.key === 'clock' ? [...group.items].sort((a,b) => (a.id === 'transport.bpm' ? -2 : a.id === 'transport.source' ? -1 : 0) - (b.id === 'transport.bpm' ? -2 : b.id === 'transport.source' ? -1 : 0)) : group.items;
       for (const item of items) body.append(row(item, view.readOnly));
       card.append(body);
-      if (group.key === 'lighting') {
-        const preview = element('div', 'brightness-preview'); preview.setAttribute('aria-hidden', 'true');
-        const value = group.items[0].value; preview.style.opacity = String(.12 + .88 * value / 100);
-        for (let i = 0; i < 6; i++) preview.append(element('i'));
-        card.append(preview, element('small', 'brightness-caption', 'Brightness preview'));
-      }
       list.append(card);
     }
     const extra = element('section', 'instrument-settings-advanced');
@@ -150,7 +144,7 @@ export function mountSettings(root, controller) {
     const details = element('details', 'firmware-details'); details.open = ui.firmwareOpen;
     details.addEventListener('toggle', () => { ui.firmwareOpen = details.open; });
     const version = controller.session?.info?.fwVersion ?? 'Unknown version';
-    details.append(element('summary', '', `Firmware ${version} · version and change history`), firmwareCard());
+    details.append(element('summary', '', 'Firmware and change history'), firmwareCard());
     root.append(list, extra, details);
   }
 

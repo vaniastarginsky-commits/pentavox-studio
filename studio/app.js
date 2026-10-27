@@ -565,7 +565,7 @@ function refreshWorkspace() {
   const settingsLink = document.querySelector('.settings-shortcut');
   if (activeTab === 'settings') settingsLink.setAttribute('aria-current','page'); else settingsLink.removeAttribute('aria-current');
   const heading = document.getElementById('workspace-heading');
-  heading.hidden = ['palette', 'manual'].includes(activeTab);
+  heading.hidden = true;
   document.getElementById('workspace-title').textContent = title;
   document.getElementById('workspace-description').textContent = activeTab === 'locks' ? 'Record on the module. Shape it here.' : crumb;
   const status = document.getElementById('workspace-state');
@@ -577,7 +577,7 @@ function refreshWorkspace() {
   else if (activeTab === 'locks') text = connected ? 'Edits apply to the playing module. Curve files can also be kept on this computer.' : 'Connect to read recorded movements, or explore the Demo.';
   else if (['panel', 'settings', 'routing', 'midi'].includes(activeTab) && connected) text = controller?.view().readOnly ? `Read only. ${controller.view().reason ?? ''}` : session?.dirty ? 'Applied to module · Changes not saved to a sound slot' : 'Module connected · No pending sound changes';
   if (demoMode && connected && !['wavetable', 'terrain', 'sampler', 'dx7'].includes(activeTab)) text = '';
-  status.hidden = !text;
+  status.hidden = !text || (connected && !session?.dirty && !controller?.view().readOnly);
   if (status.textContent !== text) status.textContent = text;
 }
 navigation.render();

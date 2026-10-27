@@ -49,7 +49,7 @@ function setFill(slider) {
 }
 
 export function mountRouting(root, controller, { potMapHost = null } = {}) {
-  const ui = { open: new Set(), popover: null, query: '' };   // several inputs can be open at once
+  const ui = { open: new Set(), popover: null, query: '', section: 'cv' };   // several inputs can be open at once
   const destinations = controller.destinations;
   root.classList.add('cc-page');
 
@@ -240,16 +240,22 @@ export function mountRouting(root, controller, { potMapHost = null } = {}) {
     collapse.addEventListener('click', (event) => { event.stopPropagation(); ui.popover = null; ui.open.clear(); render(); });
     const tools = element('div', 'cc-tools'); tools.append(expand, collapse);
     head.append(tools);
-    root.append(head);
+    const tabs = element('nav', 'routing-tabs'); tabs.setAttribute('aria-label', 'CV routing tasks');
+    for (const [key, label] of [['notes', 'Notes'], ['cv', 'CV modulation'], ['knobs', 'Knob mapping']]) {
+      const tab = element('button', '', label); tab.type = 'button'; tab.setAttribute('aria-pressed', String(ui.section === key));
+      tab.addEventListener('click', () => { ui.section = key; ui.popover = null; render(); }); tabs.append(tab);
+    }
+    head.replaceChildren(tabs, tools); root.append(head);
 
     if (view.notes?.rows.length) {
       const notes = element('section', 'workflow-routing-section'); notes.setAttribute('aria-label', 'Notes');
+      notes.hidden = ui.section !== 'notes';
       notes.append(element('h2', 'workflow-section-title', 'Notes'), notesTable(view.notes, view.readOnly)); root.append(notes);
     }
     const sections = routingSections(view.groups);
     for (const [key, title, hint] of [['cv', 'CV routing', 'Each source can add to four parameters. Negative depth inverts the signal.'], ['knobs', 'Knob mapping', 'Pot map replaces the normal knob function. Additional routes below add to it.']]) {
       if (!sections[key].length && !(key === 'knobs' && potMapHost)) continue;
-      const section = element('section', 'workflow-routing-section'); section.setAttribute('aria-label', title);
+      const section = element('section', 'workflow-routing-section'); section.setAttribute('aria-label', title); section.hidden = ui.section !== key; section.dataset.task = key;
       section.append(element('h2', 'workflow-section-title', title), element('p', 'workflow-section-hint', hint));
       if (key === 'knobs' && potMapHost) section.append(potMapHost);
       for (const group of sections[key]) {

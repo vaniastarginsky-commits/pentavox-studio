@@ -20,7 +20,7 @@ export function mountPanelSkin(root, { getClient = () => null, getDescriptor = (
 
   const head = el('div', 'skin-head'); const title = el('h2', 'skin-title'); const status = el('span', 'skin-status');
   head.append(title, status);
-  const elementBar = el('div', 'skin-bar'); const editor = el('div', 'skin-editor'); const warnings = el('div', 'skin-warnings'); const actions = el('div', 'skin-actions');
+  const elementBar = el('div', 'skin-bar'); const editor = el('div', 'skin-editor'); const warnings = el('details', 'skin-warnings'); const actions = el('div', 'skin-actions');
   const reset = button('Reset all colours');
   const note = el('p', 'skin-help', 'Colours are part of the preset: they are stored with it by Save to slot, and a preset brings its own back.');
   actions.append(reset, note);
@@ -39,7 +39,8 @@ export function mountPanelSkin(root, { getClient = () => null, getDescriptor = (
       swatches.append(swatch);
     }
     editor.append(swatches);
-    editor.append(sliders(ring, change), motion(ring, change));
+    const custom = el('details', 'skin-custom'); custom.append(el('summary', '', 'Custom RGB colour'), sliders(ring, change));
+    editor.append(custom, motion(ring, change));
     const copyRow = el('div', 'skin-copy');
     const toPage = button('Copy to every ring of this page layer', 'quiet-button'); const toAll = button('Copy to every ring of every page', 'quiet-button');
     toPage.addEventListener('click', () => copyElement(false)); toAll.addEventListener('click', () => copyElement(true));
@@ -77,7 +78,7 @@ export function mountPanelSkin(root, { getClient = () => null, getDescriptor = (
   }
 
   function renderWarnings() {
-    warnings.replaceChildren(el('h3', '', 'New-loop warning'), el('p', 'skin-help', 'B2 held for five seconds wipes the loop of the slot: first the panel blinks, then it flashes. Colour them here; Off keeps the firmware’s own.'));
+    warnings.replaceChildren(el('summary', '', 'New-loop warning colours'), el('p', 'skin-help', 'B2 held for five seconds wipes the loop of the slot: first the panel blinks, then it flashes. Colour them here; Off keeps the firmware’s own.'));
     SKIN_WARNING_NAMES.forEach((name, index) => {
       const ring = state.skin.warnings[index];
       const block = el('div', 'skin-warning'); block.append(el('h4', '', name));

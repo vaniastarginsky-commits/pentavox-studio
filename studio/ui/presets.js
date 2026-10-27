@@ -46,8 +46,8 @@ export function mountPresets(root, controller, { onError = () => {}, onSuccess =
   const list = element('div', 'preset-list'); list.setAttribute('aria-label', 'Stored sound slots');
   const detail = element('section', 'preset-detail'); detail.setAttribute('aria-label', 'Selected slot');
   layout.append(list, detail);
-  const backup = element('section', 'preset-backup-section');
-  backup.append(element('h2', '', 'Backup and restore'));
+  const backup = element('details', 'preset-backup-section');
+  backup.append(element('summary', '', 'Backup and restore'));
   const warning = element('p', 'preset-backup-warning', 'Export briefly loads each stored sound into the playing module, then restores the current sound. Mute your audio before exporting. Import overwrites matching slots; the autosave slot is skipped.');
   const backupBar = element('div', 'page-tools preset-backup');
   const exportButton = element('button', '', 'Export backup'); exportButton.type = 'button';
@@ -96,7 +96,7 @@ export function mountPresets(root, controller, { onError = () => {}, onSuccess =
     const label = element('label', 'preset-name-field'); label.append(element('span', '', 'Name in this browser'));
     const name = document.createElement('input'); name.type = 'text'; name.maxLength = 40;
     name.value = slot.autosave ? 'Autosave' : names[selected] || ''; name.placeholder = 'Name this sound'; name.disabled = busy || slot.autosave;
-    name.addEventListener('change', () => { const value = name.value.trim(); if (value) names[selected] = value; else delete names[selected]; savePresetNames(uid, names, storage); list.replaceChildren(...slots.map(row)); });
+    name.addEventListener('input', () => { const value = name.value.trim(); if (value) names[selected] = value; else delete names[selected]; savePresetNames(uid, names, storage); list.replaceChildren(...slots.map(row)); });
     label.append(name);
     const note = element('p', 'preset-detail-note', slot.autosave ? 'The module writes this slot automatically and starts from it. Choose another slot to save a sound manually.' : 'Saving replaces this slot with the sound currently playing on the module.');
     const save = element('button', 'primary preset-save-current', 'Save current sound'); save.type = 'button'; save.disabled = busy || slot.autosave || readOnly();
@@ -107,7 +107,10 @@ export function mountPresets(root, controller, { onError = () => {}, onSuccess =
       run(`Saved to slot ${number}`, () => controller.save(number), `Saving slot ${number}…`);
     });
     const privacy = element('p', 'preset-name-note', 'Names are saved only in this browser and included in exported backups. The module stores sound data without names.');
-    detail.replaceChildren(title, label, note, save, privacy);
+    const load = element('button', 'preset-detail-load', 'Load sound'); load.type = 'button'; load.disabled = busy || readOnly();
+    load.addEventListener('click', () => loadSlot(selected));
+    const actions = element('div', 'preset-detail-actions'); actions.append(load, save);
+    detail.replaceChildren(title, label, actions, note, privacy);
   }
 
   const showProgress = (n, total) => { progress.textContent = `Slot ${n} of ${total}…`; };
@@ -138,7 +141,7 @@ export function mountPresets(root, controller, { onError = () => {}, onSuccess =
     list.setAttribute('aria-busy', String(busy));
     if (!busy) progress.textContent = '';
     const pending = controller.session.dirty ? ' Changes are not saved to a sound slot.' : '';
-    state.textContent = (readOnly() ? controller.session.reason || 'Read only: sounds cannot be loaded or saved.' : lastLoaded ? `Last loaded in Studio: slot ${lastLoaded}. Changes apply to the current sound; save to keep them.` : 'Studio has not observed a slot load. Select a slot to load a sound or save the current one.') + pending;
+    state.textContent = (readOnly() ? controller.session.reason || 'Read only: sounds cannot be loaded or saved.' : lastLoaded ? `Last loaded in Studio: slot ${lastLoaded}. Changes apply to the current sound; save to keep them.` : 'Select a slot to load or save a sound.') + pending;
     list.replaceChildren(...slots.map(row));
     renderDetail();
   }

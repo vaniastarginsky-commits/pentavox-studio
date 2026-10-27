@@ -290,6 +290,15 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     state.page = Math.min(state.page, pages.length - 1);
     const { drawing, potNodes } = drawPanel();
     const figure = el('figure', 'dock-figure'); figure.append(drawing);
+    const fullViewBox = drawing.getAttribute('viewBox');
+    let showJacks = false;
+    const framePanel = () => {
+      if (!inspectorRoot) return;
+      figure.classList.toggle('controls-only', !showJacks);
+      drawing.setAttribute('viewBox', showJacks ? fullViewBox : '56.36 40 60.6 88');
+      drawing.setAttribute('aria-label', showJacks ? 'Full front panel' : 'Six knobs and three buttons');
+    };
+    framePanel();
 
     const tabs = el('div', 'dock-pages'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Page');
     for (const page of pages) {
@@ -309,6 +318,13 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     const shiftToggle = button('Hold B1', 'dock-shift', () => { state.shift = !state.shift; paint(); });
     shiftToggle.title = 'Show what each knob does while B1 is held';
     const controls = el('div', 'dock-controls'); controls.append(tabs, shiftToggle);
+    if (inspectorRoot) {
+      const jacks = button('Show jacks', 'dock-jacks-toggle', () => {
+        showJacks = !showJacks; framePanel(); jacks.textContent = showJacks ? 'Knobs only' : 'Show jacks';
+        jacks.setAttribute('aria-pressed', String(showJacks));
+      });
+      jacks.setAttribute('aria-pressed', 'false'); controls.append(jacks);
+    }
     const readout = el('div', inspectorRoot ? 'dock-inspector' : 'dock-bubble'); readout.setAttribute('aria-live', 'polite'); readout.hidden = true;
     const status = getSession() ? null : el('p', 'dock-status', 'Module not connected. This is the factory layout; press Connect, or Demo, to see live knob values.');
     body.classList.toggle('has-status', Boolean(status));
