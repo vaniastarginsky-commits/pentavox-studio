@@ -1,6 +1,21 @@
 import { builtAt, loadLatestCloudMeta } from '../build_flow.js';
 import { changelogEntries, firmwareRows, loadChangelog } from '../firmware_info.js';
 
+export function settingsLayout(groups) {
+  const input = groups.find(group => group.key === 'input');
+  const lighting = input?.items.filter(item => item.id === 's0.0') ?? [];
+  const panels = [];
+  const clock = groups.find(group => group.key === 'clock');
+  if (clock) panels.push({ ...clock, title: 'Clock', items: clock.items.filter(item => !['s2.2', 's2.3'].includes(item.id)) });
+  if (lighting.length) panels.push({ key: 'lighting', title: 'Lighting', mod: 'gl', items: lighting });
+  if (input?.items.some(item => item.id !== 's0.0')) panels.push({ ...input, title: 'Input & output', items: input.items.filter(item => item.id !== 's0.0') });
+  const voices = groups.find(group => group.key === 'voices'); if (voices) panels.push({ ...voices, title: 'Voices' });
+  const advanced = groups.filter(group => !['clock', 'input', 'voices'].includes(group.key));
+  const transitions = clock?.items.filter(item => ['s2.2', 's2.3'].includes(item.id)) ?? [];
+  if (transitions.length) advanced.unshift({ key: 'clock-transition', title: 'Tempo transitions', mod: 'fx', items: transitions });
+  return { panels, advanced };
+}
+
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -10,9 +25,9 @@ function element(tag, className, text) {
 
 export function mountSettings(root, controller) {
   const RECENT_CHANGES = 3;   // the card shows this many entries of the changelog; the rest is behind "Show all"
-  const ui = { open: new Set(['input', 'clock']), logAll: false };
+  const ui = { open: new Set(['input', 'clock']), logAll: false, firmwareOpen: false };
   const firmware = { latest: null, builtAtMs: null, log: [] };
-  root.classList.add('cc-page');
+  root.classList.add('cc-page', 'instrument-settings');
 
   function segmented(item, readOnly) {
     const box = element('div', item.twoRows ? 'cc-seg two' : 'cc-seg'); box.setAttribute('role', 'radiogroup'); box.setAttribute('aria-label', item.label);
@@ -33,7 +48,7 @@ export function mountSettings(root, controller) {
     fill();
     const text = (value) => `${value}${item.unit === '%' ? ' %' : item.unit}`;
     const out = element('output', '', text(item.value));
-    input.addEventListener('input', () => { out.textContent = text(input.value); fill(); });
+    input.addEventListener('input', () => { out.textContent = text(input.value); fill(); if (item.id === 's0.0') { const preview = root.querySelector('.brightness-preview'); if (preview) preview.style.opacity = String(.12 + .88 * Number(input.value) / 100); } });
     input.addEventListener('change', () => controller.updateSetting(item.id, input.value));
     return [input, out];
   }
@@ -55,11 +70,16 @@ export function mountSettings(root, controller) {
   }
 
   function row(item, readOnly) {
-    const line = element('div', 'cc-row2');
+    const line = element('div', `instrument-setting${item.id === 'transport.bpm' ? ' setting-tempo' : item.id === 'transport.source' ? ' setting-source' : ''}`); line.dataset.setting = item.id;
     const text = element('span', 'cc-rtext'); text.append(element('b', '', item.label));
-    if (item.hint) text.append(element('small', '', item.hint));
+    if (item.hint) { const hint = element('small', '', item.hint.split('. ')[0]); hint.title = item.hint; text.append(hint); }
+    const help = element('a', 'setting-help', '?'); help.href = `#manual/search:${encodeURIComponent(item.label)}`; help.setAttribute('aria-label', `Help for ${item.label}`); text.append(help);
     const ctrl = element('span', 'cc-ctrl');
-    if (item.control === 'segmented') ctrl.append(...segmented(item, readOnly));
+    if (item.id === 'transport.bpm') {
+      const input = document.createElement('input'); input.type = 'number'; input.min = item.min; input.max = item.max; input.step = item.step; input.value = item.value; input.inputMode = 'numeric'; input.setAttribute('aria-label', item.label); input.disabled = readOnly;
+      input.addEventListener('change', () => { const value = Number(input.value); if (!Number.isFinite(value) || input.value === '') { input.value = item.value; return; } controller.updateSetting(item.id, value); });
+      ctrl.append(input, element('span', 'tempo-unit', 'BPM'));
+    } else if (item.control === 'segmented') ctrl.append(...segmented(item, readOnly));
     else if (item.control === 'slider') ctrl.append(...slider(item, readOnly));
     else if (item.control === 'switch') ctrl.append(...toggle(item, readOnly));
     else for (const control of item.controls) ctrl.append(dropdown(control, readOnly));
@@ -101,20 +121,31 @@ export function mountSettings(root, controller) {
     if (view.readOnly) root.append(element('div', 'banner warning', view.reason ?? 'Read only'));
     const groups = controller.settingsView();
     if (!groups.length) { root.append(element('p', 'cc-muted', 'This module firmware has no settings fields.')); return; }
-    root.append(element('p', 'cc-lead', 'The same list as the module’s own Settings page (hold B2 + B3). Changes are heard at once; Save to slot keeps them.'));
-    root.append(firmwareCard());
-    const list = element('div', 'cc-setlist');
-    for (const group of groups) {
-      const open = ui.open.has(group.key);
-      const card = element('section', `cc-card cc-setcard${open ? ' open' : ''}`); card.dataset.mod = group.mod; card.dataset.group = group.key;
-      const head = element('button', 'cc-sethead'); head.type = 'button'; head.setAttribute('aria-expanded', String(open));
-      head.append(element('span', 'cc-ddot'), element('h3', '', group.title), element('span', 'cc-chip', group.summary || 'defaults'), element('span', 'cc-sp'), element('span', 'cc-chev', open ? '⌃' : '⌄'));
-      head.addEventListener('click', () => { if (open) ui.open.delete(group.key); else ui.open.add(group.key); render(); });
-      card.append(head);
-      if (open) { const body = element('div', 'cc-setbody'); for (const item of group.items) body.append(row(item, view.readOnly)); card.append(body); }
+    const { panels, advanced } = settingsLayout(groups);
+    const list = element('div', 'instrument-settings-grid');
+    for (const group of panels) {
+      const card = element('section', 'instrument-settings-card'); card.dataset.group = group.key;
+      card.append(element('h2', '', group.title));
+      const body = element('div', 'instrument-settings-fields');
+      const items = group.key === 'clock' ? [...group.items].sort((a,b) => (a.id === 'transport.bpm' ? -2 : a.id === 'transport.source' ? -1 : 0) - (b.id === 'transport.bpm' ? -2 : b.id === 'transport.source' ? -1 : 0)) : group.items;
+      for (const item of items) body.append(row(item, view.readOnly));
+      card.append(body);
       list.append(card);
     }
-    root.append(list);
+    const extra = element('section', 'instrument-settings-advanced');
+    for (const group of advanced) {
+      const open = ui.open.has(group.key);
+      const card = element('details', 'instrument-settings-extra'); card.open = open;
+      card.append(element('summary', '', group.title));
+      card.addEventListener('toggle', () => { if (card.open) ui.open.add(group.key); else ui.open.delete(group.key); });
+      const body = element('div', 'instrument-settings-fields'); for (const item of group.items) body.append(row(item, view.readOnly));
+      card.append(body); extra.append(card);
+    }
+    const details = element('details', 'firmware-details'); details.open = ui.firmwareOpen;
+    details.addEventListener('toggle', () => { ui.firmwareOpen = details.open; });
+    const version = controller.session?.info?.fwVersion ?? 'Unknown version';
+    details.append(element('summary', '', 'Firmware and change history'), firmwareCard());
+    root.append(list, extra, details);
   }
 
   let disposed = false;

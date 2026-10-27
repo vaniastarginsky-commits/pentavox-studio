@@ -40,6 +40,11 @@ function download(name, bytes) {
 }
 const sameBytes = (a, b) => a.length === b.length && a.every((byte, i) => byte === b[i]);
 
+export function dx7EmptyMessage({ libraryCount, filteredCount }) {
+  if (!libraryCount) return 'No patches are available. Import a .syx file to start a library.';
+  return filteredCount ? '' : 'No patches match these filters. Clear the search or choose another category.';
+}
+
 export function mountDx7Editor({ getClient = () => null, getInfo = () => null, onError = () => {}, onSuccess = () => {} } = {}) {
   const dialog = el('dialog', 'dx7-dialog');
   dialog.setAttribute('aria-label', 'DX7 banks');
@@ -48,14 +53,20 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
   const audition = new DX7Audition();
   const store = new DX7Store();
   const imports = [];                  // { name, b64 } of every imported file, kept in the browser
-  const ui = { state: null, notice: '', pitch: 48, busy: false, timer: null, importCounter: 0 };
+  const ui = { state: null, notice: '', pitch: 48, busy: false, timer: null, importCounter: 0, loaded: false, loadError: '' };
+  let loading = null;
   let patchById = new Map();
 
   const files = () => { const client = getClient(); const info = getInfo(); return client && info ? new SdFilesClient(client, info) : null; };
 
   // ---- loading -------------------------------------------------------------------------------------
-  async function ensureLoaded() {
-    if (ui.state) return;
+  function ensureLoaded() {
+    if (ui.loaded) return Promise.resolve();
+    if (loading) return loading;
+    loading = loadCatalog().then(() => { ui.loaded = true; }).catch((error) => { ui.state = null; throw error; }).finally(() => { loading = null; });
+    return loading;
+  }
+  async function loadCatalog() {
     const [sample, rom, stock, factory, saved, community] = await Promise.all([
       fetchJson('dx7-catalog-sample.json'), fetchJson('dx7-rom-catalog.json'), fetchJson('dx7-stock-banks.json'), fetchFactory(), store.loadImports(),
       fetchJson('dx7-community-banks.json'),
@@ -100,7 +111,7 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
   // ---- frame ---------------------------------------------------------------------------------------
   const header = el('header', 'dx7-head');
   const titleBlock = el('div', 'dx7-title');
-  titleBlock.append(el('h2', '', 'DX7 banks'), el('p', 'dx7-sub', 'Six banks of six-op FM patches. A six-op slot reads the bank named on its chip from the SD card.'));
+  titleBlock.append(el('h2', '', 'DX7 banks'), el('p', 'dx7-sub', 'Choose patches from the library, arrange a bank, then write it to the module’s SD card.'));
   const sdStatus = el('span', 'dx7-sd-status');
   const readButton = button('Read from SD', 'dx7-ghost', 'Load the six banks currently on the card');
   const writeButton = button('Write to SD', 'primary', 'Write the banks to /DX7/BANK_A.SYX to BANK_F.SYX');
@@ -109,10 +120,15 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
   header.append(titleBlock, headActions);
 
   const notice = el('p', 'dx7-notice');
+  notice.setAttribute('role', 'status');
+  const loadingState = el('section', 'workflow-dx7-loading'); loadingState.setAttribute('role', 'status');
+  const loadingText = el('p', '', 'Loading the patch library…');
+  const retry = button('Retry loading', 'dx7-ghost'); retry.hidden = true; retry.addEventListener('click', () => open(ui.state?.activeBank ?? 'A'));
+  loadingState.append(loadingText, retry);
   const library = el('section', 'dx7-library');
   const banksColumn = el('aside', 'dx7-banks');
   const body = el('div', 'dx7-body'); body.append(library, banksColumn);
-  dialog.append(header, notice, body);
+  dialog.append(header, notice, loadingState, body); body.hidden = true;
 
   // library parts
   const search = el('input', 'dx7-search'); search.type = 'search'; search.placeholder = 'Search patch names…'; search.setAttribute('aria-label', 'Search patch names');
@@ -133,7 +149,7 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
   const hint = el('p', 'dx7-hint', 'Click the list, then ↑ ↓ to audition, Enter to add, Space to replay.');
   const table = el('div', 'dx7-table'); table.tabIndex = 0; table.setAttribute('role', 'listbox'); table.setAttribute('aria-label', 'Patches');
   const pager = el('div', 'dx7-pager');
-  library.append(toolbar, soundChips, categoryChips, meta, hint, table, pager);
+  library.append(el('h3', 'workflow-editor-heading', 'Library'), toolbar, soundChips, categoryChips, meta, hint, table, pager);
 
   // ---- rendering: library ---------------------------------------------------------------------------
   function renderChips() {
@@ -168,7 +184,11 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
       return row;
     });
     table.replaceChildren(...rows);
-    if (!rows.length) table.append(el('p', 'dx7-empty', 'No patches match these filters.'));
+    if (!rows.length) {
+      const empty = el('div', 'dx7-empty'); empty.append(el('p', '', dx7EmptyMessage({ libraryCount: state.catalog.patches.length, filteredCount: view.total })));
+      if (state.catalog.patches.length) { const reset = button('Clear filters', 'dx7-ghost'); reset.addEventListener('click', () => { state.setQuery(''); search.value = ''; state.tags.clear(); state.setCategory(null); renderLibrary(); }); empty.append(reset); }
+      table.append(empty);
+    }
     pager.replaceChildren();
     if (view.pages > 1) {
       const prev = button('‹ Prev', 'dx7-ghost'); prev.disabled = view.page === 0;
@@ -189,7 +209,9 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
   const clearButton = button('Clear bank', 'dx7-ghost');
   const downloadButton = button('Download .syx', 'dx7-ghost', 'Save this bank as a .syx file');
   bankActions.append(clearButton, downloadButton);
-  banksColumn.append(tabs, el('label', 'dx7-start-label', 'Start from'), startFrom, slots, bankActions);
+  const bankHeading = el('div', 'workflow-bank-heading'); const bankTitle = el('h3', 'workflow-editor-heading');
+  bankHeading.append(bankTitle, el('p', '', 'Edits stay in Studio until you write to SD. A six-op engine uses the bank named on its chip.'));
+  banksColumn.append(bankHeading, tabs, el('label', 'dx7-start-label', 'Start from'), startFrom, slots, bankActions);
 
   function renderStartFrom() {
     startFrom.replaceChildren();
@@ -238,7 +260,7 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
     }));
     clearButton.disabled = !list.length; downloadButton.disabled = !list.length;
   }
-  function renderBanks() { renderTabs(); renderSlots(); }
+  function renderBanks() { bankTitle.textContent = `Selected bank ${ui.state.activeBank}`; renderTabs(); renderSlots(); }
   function changed() { renderBanks(); renderTable(); saveDraft(); }
 
   function dropOn(letter, index, event) {
@@ -255,7 +277,9 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
     const connected = Boolean(files());
     sdStatus.textContent = connected ? 'Module connected' : 'Module not connected';
     sdStatus.dataset.state = connected ? 'on' : 'off';
-    readButton.disabled = !connected || ui.busy; writeButton.disabled = !connected || ui.busy;
+    readButton.disabled = !connected || ui.busy || !ui.loaded; writeButton.disabled = !connected || ui.busy || !ui.loaded;
+    readButton.textContent = ui.busy && ui.operation === 'read' ? 'Reading banks…' : 'Read from SD';
+    writeButton.textContent = ui.busy && ui.operation === 'write' ? 'Writing banks…' : 'Write to SD';
     writeButton.title = connected ? 'Write the banks to /DX7/BANK_A.SYX to BANK_F.SYX' : 'Connect the module to write to its SD card. Download .syx works without it.';
     notice.textContent = ui.notice; notice.hidden = !ui.notice;
   }
@@ -264,7 +288,7 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
     const client = files(); if (!client) return;
     const { state } = ui;
     if (BANK_LETTERS.some((letter) => state.banks.count(letter)) && !confirm('Replace the banks in the editor with the ones on the card?')) return;
-    ui.busy = true; renderHeader();
+    ui.busy = true; ui.operation = 'read'; renderHeader();
     try {
       const loaded = DX7Banks.fromFiles(await readBanksFromSd(client));
       const byKey = new Map(state.catalog.patches.map((p) => [voiceKey(p.voice), p]));
@@ -277,8 +301,8 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
     const client = files(); if (!client) return;
     const bytes = ui.state.banks.toFiles();
     const letters = BANK_LETTERS.filter((letter) => bytes[letter]);
-    if (!letters.length) { onError(new Error('All three banks are empty. Add patches first.')); return; }
-    ui.busy = true; renderHeader();
+    if (!letters.length) { onError(new Error('All six banks are empty. Add patches first.')); return; }
+    ui.busy = true; ui.operation = 'write'; renderHeader();
     try {
       let existing = null;
       try { existing = await readBanksFromSd(client); } catch { /* unreadable: ask anyway */ }
@@ -345,10 +369,19 @@ export function mountDx7Editor({ getClient = () => null, getInfo = () => null, o
     }
   });
 
+  let openRequest = 0;
   async function open(letter = 'A') {
+    const request = ++openRequest;
     if (!dialog.open) dialog.showModal();
+    loadingState.hidden = ui.loaded; body.hidden = !ui.loaded; retry.hidden = true;
+    loadingText.textContent = 'Loading the patch library…'; loadingState.setAttribute('role', 'status'); dialog.setAttribute('aria-busy', String(!ui.loaded));
     renderHeader();
-    try { await ensureLoaded(); } catch (error) { onError(error); return; }
+    try { await ensureLoaded(); } catch (error) {
+      ui.loadError = error?.message ?? String(error); loadingText.textContent = `The patch library could not be loaded. ${ui.loadError}`;
+      retry.hidden = false; loadingState.setAttribute('role', 'alert'); dialog.setAttribute('aria-busy', 'false'); onError(error); return;
+    }
+    if (!dialog.open || request !== openRequest) return;
+    loadingState.hidden = true; body.hidden = false; dialog.setAttribute('aria-busy', 'false');
     ui.state.setActiveBank(BANK_LETTERS.includes(letter) ? letter : 'A');
     renderStartFrom(); renderLibrary(); renderBanks(); renderHeader();
     table.focus({ preventScroll: true });
