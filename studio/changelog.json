@@ -1,5 +1,6 @@
 [
-  {"date": "2026-10-27", "area": "firmware", "text": "Engines: DnB basses Reece, Neuro and JumpUp, and Reeze, a Reece rebuilt against a measured Serum 2 reese bass (21 saws, phase filter, overload under 6 kHz, legato glide). Reeze is heavy: about 96 % of the callback with TIMBRE high. Library only, no audition yet."},
+  {"date": "2026-10-27", "area": "firmware", "text": "Engines: DnB basses Reece, Neuro, JumpUp, and Reeze, a Reece rebuilt against a Serum 2 patch. Reeze is heavy (about 96 % CPU). Library only, no audition yet."},
+  {"date": "2026-10-27", "area": "studio", "text": "Memory meter: an estimate over the budget no longer blocks Build; the real linker check decides."},
   {"date": "2026-10-27", "area": "studio", "text": "Panel: one-page Slicer and Plaits FM guides with live values, pickup targets, Fill and event feedback on compatible firmware; older firmware keeps its layout."},
   {"date": "2026-10-26", "area": "firmware", "text": "Slicer: one page (Loop, Style, Edit, Throw, Seed, Mix; B1 for the rest). A style sets its delay and reverb. Whole-bar phrases, ghost snares, kick doubles, finales. 64 typed markers."},
   {"date": "2026-10-25", "area": "firmware", "text": "Slicer styles: B1 + tap B2 applies the next preset (Jungle, Break, IDM, Glitch, Calm). B1 adds Ghost snares, Drift, Shuffle, Cycle 3/5/7, Gate, Finale, Keep pitch, throw destination."},

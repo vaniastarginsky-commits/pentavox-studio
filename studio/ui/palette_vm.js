@@ -102,12 +102,12 @@ export function memoryView(summary, { compact = false } = {}) {
   if(summary.memoryUnavailable)return {red:false,buildDisabled:true,percent:0,marginLabel:'Single-Plaits memory calibration unavailable; reload Studio',classesLabel:'',hint:'Wait for the memory calibration to load, or reload Studio.'};
   if (summary.calibrated) {
     const over=summary.overBudget;
-    return {red:over,buildDisabled:over,percent:Math.min(100,Math.round(summary.usedFraction*100)),
+    return {red:over,buildDisabled:over&&Boolean(summary.exact),percent:Math.min(100,Math.round(summary.usedFraction*100)),
       usedLabel:`engines ≈ ${kb(summary.unionBytes)} of ${kb(summary.budgetBytes)}`,
       marginLabel:summary.exact ? `measured AXI reserve: ${kb(summary.referenceMargin)} above the 16 KB minimum`
         : `${over?'over conservative budget by':'estimated available'} ${kb(summary.estimatedMargin)} · 17 KB uncertainty reserved`,
       classesLabel:`engine classes: ${summary.unionClasses}`,
-      hint:over?'Conservative single-Plaits limit reached. Replace heavy engines; the linker makes the final check.':''};
+      hint:over?(summary.exact?'Over the measured single-Plaits limit. Replace heavy engines.':'Over the conservative estimate (new engines are only estimated). Build still runs; the real linker check decides, and a finished build recalibrates this meter.'):''};
   }
   if (compact) {
     return {
