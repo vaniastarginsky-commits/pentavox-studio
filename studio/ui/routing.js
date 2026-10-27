@@ -27,6 +27,21 @@ const GROUP_HINTS = Object.freeze({
 });
 const groupTitle = (title) => title.replace(/\s*\(.*\)\s*$/, '');
 
+export function routingSections(groups) {
+  return {
+    cv: groups.map((group) => ({ ...group, sources: group.sources.filter((entry) => entry.source.key !== 'panelpot') })).filter((group) => group.sources.length),
+    knobs: groups.map((group) => ({ ...group, sources: group.sources.filter((entry) => entry.source.key === 'panelpot') })).filter((group) => group.sources.length),
+  };
+}
+
+export function routeSummary(source, rows, destinations) {
+  const title = sourceTitle(source);
+  return rows.map((row) => {
+    const entry = destinations.byId(row.destId);
+    return `${title.name} → ${entry ? `${entry.group} / ${entry.name}` : `#${row.destId}`} · ${pctText(row.depthPct)}`;
+  }).join('; ');
+}
+
 const pctText = (value) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value)}%`;
 
 function setFill(slider) {
@@ -42,6 +57,7 @@ export function mountRouting(root, controller, { potMapHost = null } = {}) {
     const pid = `${key}|${row.k}`;
     const entry = destinations.byId(row.destId);
     const button = element('button', 'cc-dbtn'); button.type = 'button'; button.disabled = view.readOnly;
+    button.dataset.picker = pid;
     button.dataset.mod = moduleKey(entry?.group);
     const text = element('span', 'cc-dtext'); text.append(element('small', '', entry?.group ?? ''), element('strong', '', entry?.name ?? `#${row.destId}`));
     button.append(element('span', 'cc-ddot'), text);
@@ -50,8 +66,14 @@ export function mountRouting(root, controller, { potMapHost = null } = {}) {
     route.append(button);
     if (ui.popover !== pid) return;
     const pop = element('div', 'cc-pop'); pop.addEventListener('click', (event) => event.stopPropagation());
+    pop.addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); ui.popover = null; render(); root.querySelector(`[data-picker="${pid}"]`)?.focus(); } });
     const search = document.createElement('input'); search.type = 'search'; search.placeholder = 'Search destinations'; search.value = ui.query; search.setAttribute('aria-label', 'Search destinations');
     const list = element('div', 'cc-poplist'); list.setAttribute('role', 'listbox');
+    const matches = () => {
+      const q = ui.query.trim().toLocaleLowerCase('en');
+      return controller.destinationGroups().flatMap((group) => group.items.filter((item) => item.id !== 0 && (!q || `${group.group} ${item.name}`.toLocaleLowerCase('en').includes(q))).map((item) => ({ group, item })));
+    };
+    const choose = (id) => { ui.popover = null; controller.updateRoute(row.k, { destId: id }, key); };
     const fill = () => {
       list.replaceChildren(); const q = ui.query.trim().toLocaleLowerCase('ru');
       for (const group of controller.destinationGroups()) {
@@ -61,14 +83,18 @@ export function mountRouting(root, controller, { potMapHost = null } = {}) {
         list.append(head);
         for (const item of items) {
           const choice = element('button', `cc-pi${item.id === row.destId ? ' cur' : ''}`, item.name); choice.type = 'button'; choice.dataset.mod = moduleKey(group.group);
-          choice.addEventListener('click', () => { ui.popover = null; controller.updateRoute(row.k, { destId: item.id }, key); });
+          choice.addEventListener('click', () => choose(item.id));
           list.append(choice);
         }
       }
       if (!list.children.length) list.append(element('p', 'cc-nf', 'Nothing found'));
     };
     search.addEventListener('input', () => { ui.query = search.value; fill(); });
-    search.addEventListener('keydown', (event) => { if (event.key === 'Escape') { ui.popover = null; render(); } });
+    search.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); ui.popover = null; render(); root.querySelector(`[data-picker="${pid}"]`)?.focus(); }
+      else if (event.key === 'Enter') { event.preventDefault(); const first = matches()[0]?.item; if (first) choose(first.id); }
+      else if (event.key === 'ArrowDown') { event.preventDefault(); list.querySelector('.cc-pi')?.focus(); }
+    });
     pop.append(search, list); route.append(pop); fill();
     queueMicrotask(() => { placePopover(button, pop); search.focus(); });
   }
@@ -120,7 +146,7 @@ export function mountRouting(root, controller, { potMapHost = null } = {}) {
     for (const row of source.rows) {
       const entry = destinations.byId(row.destId);
       const chip = element('span', 'cc-chip'); chip.dataset.mod = moduleKey(entry?.group);
-      chip.append(element('span', 'cc-ddot'), entry?.name ?? `#${row.destId}`, element('b', '', pctText(row.depthPct)));
+      chip.append(element('span', 'cc-ddot'), element('span', 'cc-route-arrow', '→'), entry ? `${entry.group} / ${entry.name}` : `#${row.destId}`, element('b', '', pctText(row.depthPct)));
       box.append(chip);
     }
     return box;
@@ -157,6 +183,7 @@ export function mountRouting(root, controller, { potMapHost = null } = {}) {
     const open = ui.open.has(entry.key);
     const item = element('div', `cc-scard${open ? ' open' : ''}${rows.length ? ' used' : ''}`);
     const title = sourceTitle(source);
+    item.title = routeSummary(source, rows, destinations);
     const head = element('button', 'cc-shead'); head.type = 'button'; head.setAttribute('aria-expanded', String(open));
     const name = element('span', 'cc-st'); name.append(element('b', '', title.name)); if (title.tag) name.append(element('small', 'cc-tag', title.tag));
     head.append(name, summaryChips({ rows, key: source.key }, builtIn(source), entry.noteChips), element('span', 'cc-cnt', `${rows.length}/4`), element('span', 'cc-chev', open ? '⌃' : '⌄'));
@@ -205,7 +232,7 @@ export function mountRouting(root, controller, { potMapHost = null } = {}) {
     if (view.bank !== 'A') controller.selectBank('A');
 
     const head = element('div', 'cc-head');
-    head.append(element('p', 'cc-lead', 'Where notes come from, what each jack does and what each knob adds. Up to four parameters per source, depth −100…+100 %. Edits are live.'));
+    head.append(element('p', 'cc-lead', 'Choose note inputs, route CV, or change what the knobs control. Edits are heard immediately.'));
     const allKeys = view.groups.flatMap((group) => group.sources.map((entry) => entry.key));
     const expand = element('button', 'cc-btn', 'Expand all'); expand.type = 'button';
     expand.addEventListener('click', (event) => { event.stopPropagation(); ui.popover = null; for (const key of allKeys) ui.open.add(key); render(); });
@@ -215,13 +242,22 @@ export function mountRouting(root, controller, { potMapHost = null } = {}) {
     head.append(tools);
     root.append(head);
 
-    if (view.notes?.rows.length) root.append(notesTable(view.notes, view.readOnly));
-
-    for (const group of view.groups) {
-      if (potMapHost && group.title.startsWith('Panel pots')) root.append(potMapHost);
-      const list = element('div', 'cc-slist');
-      for (const entry of group.sources) list.append(sourceCard(entry, view));
-      root.append(card(groupTitle(group.title), GROUP_HINTS[group.sources[0]?.source.key] ?? '', list));
+    if (view.notes?.rows.length) {
+      const notes = element('section', 'workflow-routing-section'); notes.setAttribute('aria-label', 'Notes');
+      notes.append(element('h2', 'workflow-section-title', 'Notes'), notesTable(view.notes, view.readOnly)); root.append(notes);
+    }
+    const sections = routingSections(view.groups);
+    for (const [key, title, hint] of [['cv', 'CV routing', 'Each source can add to four parameters. Negative depth inverts the signal.'], ['knobs', 'Knob mapping', 'Pot map replaces the normal knob function. Additional routes below add to it.']]) {
+      if (!sections[key].length && !(key === 'knobs' && potMapHost)) continue;
+      const section = element('section', 'workflow-routing-section'); section.setAttribute('aria-label', title);
+      section.append(element('h2', 'workflow-section-title', title), element('p', 'workflow-section-hint', hint));
+      if (key === 'knobs' && potMapHost) section.append(potMapHost);
+      for (const group of sections[key]) {
+        const list = element('div', 'cc-slist');
+        for (const entry of group.sources) list.append(sourceCard(entry, view));
+        section.append(card(key === 'knobs' ? 'Additional knob routes' : groupTitle(group.title), GROUP_HINTS[group.sources[0]?.source.key] ?? '', list));
+      }
+      root.append(section);
     }
   }
 

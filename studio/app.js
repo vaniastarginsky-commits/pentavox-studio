@@ -23,6 +23,7 @@ import { renderConnectionEmptyStates } from './ui/connection_empty.js';
 import { apiFetch, siteUrl } from './site.js';
 import { rememberModuleFirmware } from './firmware_info.js';
 import { pairedDfuDevices } from './webdfu.js';
+import { mountNavigation, parseRoute } from './ui/navigation.js';
 
 const connectButton = document.querySelector('#connect-button');
 const demoButton = document.querySelector('#demo-button');
@@ -51,7 +52,9 @@ let unmountVoices = [];
 let unsubscribePaletteLive;
 let unsubscribeDraft;
 let toastTimer;
-let activeTab = 'palette';
+let activeTab = parseRoute(location.hash).tab;
+let activePanelSection = 'live';
+let navigation;
 let buildVoiceCount=2;try { if(localStorage.getItem('pentavox.palette.variant')==='single-plaits')buildVoiceCount=1; } catch {}
 globalThis.addEventListener?.('pentavox-profile',event=>{buildVoiceCount=event.detail.plaitsVoices;if(activeTab==='palette')document.querySelector('#page-crumb').textContent=`${buildVoiceCount===1?'One voice':'Two voices'}, ${buildVoiceCount===1?'four':'three'} banks of eight`;});
 
@@ -142,13 +145,17 @@ function startDfuWatch() {
 }
 
 function markDisconnected() {
+  if (session) session.readOnly = true;
   scheduleAutoConnect(1500, 20);   // a restarted or replugged module is opened again by itself
   disconnectBanner.hidden = false;
   showDisconnectedLabel();
+  dx7Editor.refresh();
   startDfuWatch();
   connectButton.textContent = 'Reconnect';
   connectButton.disabled = false;
   showConnectionEmptyStates();
+  syncFooter();
+  pageDockMount.refreshConnection(); if (activeTab === 'panel') pageDockMount.show();
   samplerMount.refreshConnection();
   sdcardMount.refreshConnection();
   panelSkin.refreshConnection();
@@ -182,7 +189,7 @@ toast.addEventListener('click', () => { clearTimeout(toastTimer); toast.classLis
 samplerMount = mountSampler(document.querySelector('#sampler-root'), {
   onError: showError,
   onSuccess: showSuccess,
-  getClient: () => client,
+  getClient: () => connectionStatus.dataset.state === 'on' ? client : null,
   getInfo: () => session?.info,
   getSampleSlotCount: () => session?.sampleSlotCount ?? 4,
   getLoopIo: () => Boolean(session?.loopIo),
@@ -190,23 +197,24 @@ samplerMount = mountSampler(document.querySelector('#sampler-root'), {
 });
 
 locksMount = mountKnobLocks(document.querySelector('#locks-root'), {
-  getSession: () => session,
+  getSession: () => connectionStatus.dataset.state === 'on' ? session : null,
   onError: showError,
   onSuccess: showSuccess,
   onUndo: showUndo,
 });
 
 const sdDialog = document.querySelector('#sdcard-dialog');
+document.getElementById('sdcard-nav').addEventListener('click', () => { closeNavigation(); openSdDialog(); });
 function openSdDialog() { if (!sdDialog.open) sdDialog.showModal(); sdcardMount.show(); }
 sdDialog.querySelector('.sd-dialog-close').addEventListener('click', () => sdDialog.close());
 sdDialog.addEventListener('click', (event) => { if (event.target === sdDialog) sdDialog.close(); });
 // What was changed in the full file manager shows up in the Sampler's slots right away.
-sdDialog.addEventListener('close', () => samplerMount.show());
+sdDialog.addEventListener('close', () => { if (activeTab === 'sampler') samplerMount.show(); });
 
 const sdcardMount = mountSdCard(document.querySelector('#sdcard-root'), {
   onError: showError,
   onSuccess: showSuccess,
-  getClient: () => client,
+  getClient: () => connectionStatus.dataset.state === 'on' ? client : null,
   getInfo: () => session?.info,
   getSampleSlotCount: () => session?.sampleSlotCount ?? 4,
   getLoopIo: () => Boolean(session?.loopIo),
@@ -235,7 +243,7 @@ const manualMount = mountManual(document.querySelector('#manual-root'), {
 // The front-panel dock reads the same descriptor as the manual and points from a control to the tab that sets it.
 // The colour inspector follows the front panel on the Panel page and tints the rings both docks draw.
 const panelSkin = mountPanelSkin(document.querySelector('#panel-skin-root'), {
-  getClient: () => client,
+  getClient: () => connectionStatus.dataset.state === 'on' ? client : null,
   getDescriptor: () => (demoMode ? null : session?.descriptor ?? null),
   onError: showError,
   onSuccess: showSuccess,
@@ -245,25 +253,46 @@ const dockOptions = {
   getDescriptor: () => (demoMode ? null : session?.descriptor ?? null),
   getSettings: () => session?.settings ?? null,
   loadSnapshot: () => fetchJson('./manual_module.json'),
-  onNavigate: (tab) => document.querySelector(`[data-tab="${tab}"]`)?.click(),
+  onNavigate: (tab, context) => {
+    const section = tab === 'manual' && context ? `control:${context.page}:${context.control}:${context.shift ? 'shift' : 'normal'}` : '';
+    navigation?.navigate(tab, section);
+  },
   getSession: () => (connectionStatus.dataset.state === 'on' ? session : null),
   onLiveError: showError,
   decorate: (nodes, page, shift) => panelSkin.decorate(nodes, page, shift),
 };
 const pageDock = document.getElementById('panel-page-dock');
-const pageDockMount = mountPanelDock(pageDock, { ...dockOptions, onSelect: (selection) => panelSkin.select(selection), isActive: () => activeTab === 'panel' });
-// The Panel page's side column: the module settings, or the colours of the selected ring.
+const pageDockMount = mountPanelDock(pageDock, { ...dockOptions, inspectorRoot: document.getElementById('panel-control-inspector'), onSelect: (selection) => panelSkin.select(selection), isActive: () => activeTab === 'panel' && activePanelSection !== 'settings' });
+// Three task modes keep settings reachable without scrolling past the whole panel.
 function showPanelSection(name) {
-  const colours = name === 'colours';
-  document.getElementById('panel-skin-root').hidden = !colours;
-  document.getElementById('panel-settings-section').hidden = colours;
-  for (const button of document.querySelectorAll('.panel-subtabs [data-sub]')) button.setAttribute('aria-selected', String(button.dataset.sub === name));
-  try { localStorage.setItem('pentavox.studio.panel-section', name); } catch { /* optional */ }
+  activePanelSection = ['live', 'settings', 'colours'].includes(name) ? name : 'live';
+  const liveVisible = activePanelSection !== 'settings';
+  document.querySelector('#panel-tab .panel-page').dataset.section = activePanelSection;
+  document.getElementById('panel-live-section').hidden = !liveVisible;
+  document.getElementById('panel-control-inspector').hidden = activePanelSection !== 'live';
+  document.getElementById('panel-skin-root').hidden = activePanelSection !== 'colours';
+  document.getElementById('panel-settings-section').hidden = activePanelSection !== 'settings';
+  document.querySelector('#panel-tab .panel-side').hidden = activePanelSection === 'live';
+  for (const button of document.querySelectorAll('.panel-subtabs [data-sub]')) {
+    const active = button.dataset.sub === activePanelSection;
+    button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1;
+  }
+  if (activeTab === 'panel') pageDockMount.show();
 }
-for (const button of document.querySelectorAll('.panel-subtabs [data-sub]')) button.addEventListener('click', () => showPanelSection(button.dataset.sub));
-let storedSection = 'settings';
-try { storedSection = localStorage.getItem('pentavox.studio.panel-section') === 'colours' ? 'colours' : 'settings'; } catch { /* optional */ }
-showPanelSection(storedSection);
+for (const button of document.querySelectorAll('.panel-subtabs [data-sub]')) {
+  button.addEventListener('click', () => navigation.navigate('panel', button.dataset.sub));
+  button.addEventListener('keydown', event => {
+    const modes = ['live', 'settings', 'colours'];
+    let index = modes.indexOf(activePanelSection);
+    if (event.key === 'ArrowRight') index = (index + 1) % modes.length;
+    else if (event.key === 'ArrowLeft') index = (index + modes.length - 1) % modes.length;
+    else if (event.key === 'Home') index = 0;
+    else if (event.key === 'End') index = modes.length - 1;
+    else return;
+    event.preventDefault(); navigation.navigate('panel', modes[index]);
+    document.getElementById(`panel-sub-${modes[index]}`).focus();
+  });
+}
 
 async function fetchBytes(url) {
   const response = await fetch(url);
@@ -294,7 +323,7 @@ function withCatalogNames(catalog, help, mono = new Set()) {
 }
 
 let pendingBank = 'A';
-const dx7Editor = mountDx7Editor({ getClient: () => client, getInfo: () => session?.info, onError: showError, onSuccess: showSuccess });
+const dx7Editor = mountDx7Editor({ getClient: () => connectionStatus.dataset.state === 'on' ? client : null, getInfo: () => session?.info, onError: showError, onSuccess: showSuccess });
 
 assetsPromise.then((assets) => {
   paletteMount = mountPalette(document.querySelector('#palette-root'), {
@@ -305,15 +334,18 @@ assetsPromise.then((assets) => {
     getVoiceTable: () => session?.voices,
     isDemo: () => demoMode,   // the simulated module's set is not a real mismatch
     getController: () => controller,
-    getClient: () => client,
+    getClient: () => connectionStatus.dataset.state === 'on' ? client : null,
     onEditBanks: (letter) => { pendingBank = letter; document.querySelector('[data-tab="dx7"]')?.click(); },
     onError: showError,
   });
+  asPage(paletteMount.waves.dialog, () => document.getElementById(`${activeTab}-tab`));
+  if (activeTab === 'wavetable' || activeTab === 'terrain') navigation?.render();
 }).catch(showError);
 
 function syncFooter() {
-  const usesSession = activeTab === 'routing' || activeTab === 'palette' || activeTab === 'panel' || activeTab === 'midi';
-  sessionFooter.hidden = !controller || !usesSession;
+  const usesSession = ['routing', 'panel', 'midi'].includes(activeTab);
+  sessionFooter.hidden = !controller || connectionStatus.dataset.state !== 'on' || !usesSession;
+  refreshWorkspace();
 }
 
 // Automatic connect, as the Hermetic Modular site does it: a module this site was allowed once is opened without a click when the page loads and
@@ -349,7 +381,9 @@ async function connect({ demo = false, auto = false } = {}) {
   globalThis.dispatchEvent(new Event('pentavox-demo'));
   stopDfuWatch();
   connectButton.disabled = true;
-  connectionStatus.textContent = 'Connecting…';
+  connectionStatus.textContent = 'Connecting…'; connectionStatus.dataset.state = 'connecting';
+  if (session) { session.readOnly = true; controller?.notify(); }
+  dx7Editor.refresh(); syncFooter();
   try {
     persistDraft();
     if (client) { try { await client.close(); } catch { /* already disconnected */ } }
@@ -377,17 +411,18 @@ async function connect({ demo = false, auto = false } = {}) {
     unmountVoices = [];
     unmountFooter = mountSessionFooter(sessionFooter, controller);
     unsubscribePaletteLive = controller.subscribe(() => paletteMount?.refreshLive());
-    unsubscribeDraft = controller.subscribe(persistDraft);
+    unsubscribeDraft = controller.subscribe(() => { persistDraft(); refreshWorkspace(); });
     paletteMount?.refreshLive();
     connectionStatus.textContent = demoMode ? 'Demo module' : `${result.info.moduleName} · ${result.info.fwVersion}`;
-    connectButton.textContent = 'Reconnect'; connectButton.disabled = false; connectionStatus.dataset.state = 'on'; disconnectBanner.hidden = true; syncFooter();
+    connectButton.textContent = 'Reconnect'; connectButton.disabled = false; connectionStatus.dataset.state = 'on'; disconnectBanner.hidden = true; syncFooter(); dx7Editor.refresh();
     persistDraft();
     samplerMount.refreshConnection();
     sdcardMount.refreshConnection();
     panelSkin.refreshConnection();
     locksMount.refreshConnection();
-    manualMount.refreshConnection(); if (activeTab === 'manual') manualMount.show();
+    manualMount.refreshConnection(); if (activeTab === 'manual') manualMount.openSection(parseRoute(location.hash).section);
     pageDockMount.refreshConnection(); if (activeTab === 'panel') pageDockMount.show();
+    refreshWorkspace();
     return true;
   } catch (error) {
     demoBanner.hidden = true;
@@ -397,7 +432,7 @@ async function connect({ demo = false, auto = false } = {}) {
     connectButton.disabled = false;
     if (!auto) showError(error);   // an automatic try fails quietly: the next one follows
     connectButton.textContent = 'Reconnect';
-    samplerMount.refreshConnection();
+    samplerMount.refreshConnection(); dx7Editor.refresh(); syncFooter();
     return false;
   }
 }
@@ -419,30 +454,62 @@ globalThis.navigator?.serial?.addEventListener?.('connect', () => scheduleAutoCo
 globalThis.addEventListener?.('pentavox-flash', (event) => { if (event.detail === 'done') scheduleAutoConnect(2500, 14); });   // the module restarts after a flash
 assetsPromise.then(() => scheduleAutoConnect(300, 3)).catch(() => {});
 demoButton.addEventListener('click', () => connect({ demo: true }));
-for (const tab of document.querySelectorAll('[data-tab]')) {
-  tab.addEventListener('click', () => {
-    activeTab = tab.dataset.tab;
-    for (const button of document.querySelectorAll('[data-tab]')) {
-      button.classList.toggle('active', button === tab);
-      if (button === tab) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
-    }
-    for (const panel of document.querySelectorAll('.tab-panel')) panel.hidden = panel.id !== `${activeTab}-tab`;
-    syncFooter();
-    document.body.dataset.tab = activeTab;
+document.querySelector('.skip-link').addEventListener('click', event => { event.preventDefault(); document.getElementById('main-workspace').focus(); });
+const menuButton = document.getElementById('menu-toggle');
+const navScrim = document.getElementById('nav-scrim');
+function closeNavigation() {
+  document.querySelector('.content').inert = false;
+  document.querySelector('.side').removeAttribute('aria-modal');
+  document.querySelector('.side').removeAttribute('role');
+  document.body.classList.remove('navigation-open'); menuButton?.setAttribute('aria-expanded', 'false');
+  if (navScrim) navScrim.hidden = true;
+}
+menuButton.addEventListener('click', () => {
+  const open = !document.body.classList.contains('navigation-open');
+  if (!open) { closeNavigation(); return; }
+  document.querySelector('.content').inert = true;
+  document.querySelector('.side').setAttribute('role', 'dialog'); document.querySelector('.side').setAttribute('aria-modal', 'true');
+  document.body.classList.toggle('navigation-open', open); menuButton.setAttribute('aria-expanded', String(open)); navScrim.hidden = !open;
+  if (open) document.querySelector('.side .tabs [aria-current="page"]')?.focus();
+});
+navScrim.addEventListener('click', () => { closeNavigation(); menuButton.focus(); });
+document.getElementById('close-navigation').addEventListener('click', () => { closeNavigation(); menuButton.focus(); });
+matchMedia('(max-width: 960px)').addEventListener('change', event => { if (!event.matches) closeNavigation(); });
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.body.classList.contains('navigation-open')) { closeNavigation(); menuButton.focus(); }
+});
+// The menu is a disclosure; keep keyboard focus inside its visible links while open.
+document.querySelector('.side').addEventListener('keydown', event => {
+  if (event.key !== 'Tab' || !document.body.classList.contains('navigation-open')) return;
+  const items = [...document.querySelectorAll('.side a, .side button')];
+  if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1).focus(); }
+  else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0].focus(); }
+});
+
+navigation = mountNavigation({
+  links: document.querySelectorAll('.tabs [data-tab]'), panels: document.querySelectorAll('.tab-panel'),
+  onChange: route => {
+    const changed = activeTab !== route.tab;
+    const fromMenu = document.body.classList.contains('navigation-open');
+    activeTab = route.tab; document.body.dataset.tab = activeTab;
+    closeNavigation(); syncFooter();
+    if (changed || activeTab === 'panel') document.getElementById('main-workspace').scrollTop = 0;
+    if (fromMenu) document.getElementById('main-workspace').focus({ preventScroll: true });
     if (activeTab === 'sampler') samplerMount.show();
-    if (activeTab === 'panel') { pageDockMount.show(); panelSkin.show(); }
+    if (activeTab === 'panel') { showPanelSection(route.section); panelSkin.show(); }
     if (activeTab === 'locks') locksMount.show(); else locksMount.hide();
-    if (activeTab === 'manual') manualMount.show();
+    if (activeTab === 'manual') manualMount.openSection(route.section);
     if (activeTab !== 'dx7' && dx7Editor.dialog.open) dx7Editor.dialog.close();
     if (activeTab !== 'wavetable' && activeTab !== 'terrain' && paletteMount?.waves.dialog.open) paletteMount.waves.close();
     if (activeTab === 'dx7') { const letter = pendingBank; pendingBank = 'A'; dx7Editor.open(letter); }
-    if ((activeTab === 'wavetable' || activeTab === 'terrain') && paletteMount) { document.getElementById(`${activeTab}-tab`).append(paletteMount.waves.dialog); paletteMount.waves.open(activeTab); }
-  });
-}
-
-document.body.dataset.tab = activeTab;
-if (demoMode) connect({ demo: true });
-
+    if ((activeTab === 'wavetable' || activeTab === 'terrain') && paletteMount) {
+      document.getElementById(`${activeTab}-tab`).append(paletteMount.waves.dialog); paletteMount.waves.open(activeTab);
+    }
+  },
+});
+globalThis.addEventListener('pentavox-navigate', event => {
+  if (event.detail?.tab) navigation.navigate(event.detail.tab, event.detail.section ?? '');
+});
 
 // Light/dark override on top of the system setting (persisted; falls back to the system theme).
 {
@@ -467,19 +534,36 @@ function asPage(dialog, hostFor) {
   dialog.addEventListener('click', (event) => { if (event.target === dialog) event.stopImmediatePropagation(); }, true);
 }
 asPage(dx7Editor.dialog, () => document.getElementById('dx7-tab'));
-assetsPromise.then(() => { if (paletteMount) asPage(paletteMount.waves.dialog, () => document.getElementById(`${activeTab}-tab`)); });
 
-// Page title and crumb in the top bar, like the Console design.
-{
-  const TITLES = {
-    palette: ['Engines', `${buildVoiceCount===1?'One voice':'Two voices'}, ${buildVoiceCount===1?'four':'three'} banks of eight`], dx7: ['DX7 banks', 'Six-op patches on the SD card'], wavetable: ['Wave tables', 'Harmonics banks for the Wavetable engine'],
-    terrain: ['Wave terrain', 'Terrains for the Wave Terrain engine'], sampler: ['Sampler', 'SD card, two slots'], presets: ['Presets', 'Stored sounds'],
-    routing: ['CV routing', 'Notes, jacks J3 to J8, pot map'], midi: ['MIDI routing', 'One table for the module'], locks: ['Knob record', 'Loops recorded with B3'],
-    panel: ['Panel', 'The module live: knobs, settings, colours'], manual: ['Manual', 'Using Studio'],
+
+// Context says where this editor's changes go, using only observed state.
+function refreshWorkspace() {
+  const connected = connectionStatus.dataset.state === 'on';
+  const loops = Boolean(session?.loopIo);
+  const slots = session?.sampleSlotCount ?? 4;
+  const titles = {
+    palette: ['Engines', `${buildVoiceCount === 1 ? 'One voice' : 'Two voices'}, ${buildVoiceCount === 1 ? 'four' : 'three'} banks of eight`],
+    dx7: ['DX7 banks', 'Six-op patches on the SD card'], wavetable: ['Wave tables', 'Resources for the next firmware build'],
+    terrain: ['Wave terrain', 'Resources for the next firmware build'], sampler: [loops ? 'Loops' : 'Sampler', loops ? 'Prepare audio and manage the loop library' : `Prepare audio and manage ${slots} sample slots`],
+    presets: ['Presets', 'Stored sound sets'], routing: ['CV routing', 'Notes, modulation and knob mapping'], midi: ['MIDI routing', 'Controllers to sound parameters'],
+    locks: ['Knob record', 'Recorded and drawn movements'], panel: ['Panel', 'Live controls, settings and colours'], manual: ['Manual', 'Controls, gestures and Studio help'],
   };
-  const title = document.getElementById('page-title'); const crumb = document.getElementById('page-crumb');
-  // The slot, Save to slot and Discard controls belong to the module's stored settings; an engine set is a build, so the Engines page has none of them.
-  const show = (tab) => { const [t, c] = TITLES[tab] || [tab, '']; title.textContent = t; crumb.textContent = c; document.documentElement.dataset.studioTab = tab; };
-  for (const tab of document.querySelectorAll('[data-tab]')) tab.addEventListener('click', () => show(tab.dataset.tab));
-  show(activeTab);
+  const [title, crumb] = titles[activeTab] ?? [activeTab, ''];
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('page-crumb').textContent = crumb;
+  document.documentElement.dataset.studioTab = activeTab;
+  document.querySelector('.tabs [data-tab="sampler"]').textContent = loops ? 'Loops' : 'Sampler';
+  const status = document.getElementById('workspace-state');
+  if (!status) return;
+  let text = '';
+  if (['wavetable', 'terrain'].includes(activeTab)) text = 'Saved in this browser. Matching engines include these resources in the next build.';
+  else if (activeTab === 'dx7') text = 'Prepare banks in Studio. Write banks to SD to use them on the module.';
+  else if (activeTab === 'sampler') text = 'Audio preparation stays on this computer until you send files to the module’s SD card.';
+  else if (activeTab === 'locks') text = connected ? 'Edits apply to the playing module. Curve files can also be kept on this computer.' : 'Connect to read recorded movements, or explore the Demo.';
+  else if (['panel', 'routing', 'midi'].includes(activeTab) && connected) text = controller?.view().readOnly ? `Read only. ${controller.view().reason ?? ''}` : session?.dirty ? 'Applied to module · Changes not saved to a sound slot' : 'Module connected · No pending sound changes';
+  if (demoMode && connected && !['wavetable', 'terrain', 'sampler', 'dx7'].includes(activeTab)) text = '';
+  status.hidden = !text;
+  if (status.textContent !== text) status.textContent = text;
 }
+navigation.render();
+if (demoMode) connect({ demo: true });

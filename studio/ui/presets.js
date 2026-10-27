@@ -8,6 +8,7 @@ function element(tag, className, text) {
 }
 
 const NAMES_KEY = 'pentavox.studio.presetNames';
+const observedLoads = new WeakMap();
 
 /** Slot names live in this browser only (the module stores no names), keyed by the module's UID. */
 export function loadPresetNames(uid, storage = globalThis.localStorage) {
@@ -19,7 +20,7 @@ export function savePresetNames(uid, names, storage = globalThis.localStorage) {
 }
 
 export function presetSlotList(info) {
-  const count = Math.max(1, Math.min(16, Number(info?.slotCount) || 0));
+  const count = Math.max(1, Math.min(16, Math.floor(Number(info?.slotCount)) || 0));
   return Array.from({ length: count }, (_, index) => ({ number: index + 1, autosave: index === (Number(info?.bootSlot) || 0) }));
 }
 
@@ -35,49 +36,78 @@ export function mountPresets(root, controller, { onError = () => {}, onSuccess =
   const uid = info?.mcuUid ?? 'unknown';
   const names = loadPresetNames(uid, storage);
   const slots = presetSlotList(info);
+  let selected = slots.find((slot) => !slot.autosave)?.number ?? slots[0].number;
+  let lastLoaded = observedLoads.get(controller.session) ?? null;   // Only loads observed here, never a claim about the module's active slot.
+  let busy = false;
   const heading = element('div', 'page-bar');
-  heading.append(element('p', 'page-hint', 'Load a stored sound set into the module or save the current one. Slot 1 is the autosave: the module writes it by itself and starts from it. Names are kept in this browser.'));
+  heading.append(element('p', 'page-hint', 'Choose a stored sound to load, or select a slot for the current sound.'));
+  const state = element('p', 'preset-session-state'); state.setAttribute('role', 'status');
+  const layout = element('div', 'preset-workspace');
+  const list = element('div', 'preset-list'); list.setAttribute('aria-label', 'Stored sound slots');
+  const detail = element('section', 'preset-detail'); detail.setAttribute('aria-label', 'Selected slot');
+  layout.append(list, detail);
+  const backup = element('section', 'preset-backup-section');
+  backup.append(element('h2', '', 'Backup and restore'));
+  const warning = element('p', 'preset-backup-warning', 'Export briefly loads each stored sound into the playing module, then restores the current sound. Mute your audio before exporting. Import overwrites matching slots; the autosave slot is skipped.');
   const backupBar = element('div', 'page-tools preset-backup');
   const exportButton = element('button', '', 'Export backup'); exportButton.type = 'button';
-  exportButton.title = 'Download every stored slot as one file. The module plays each slot briefly while it is read; the current sound is put back afterwards.';
   const importButton = element('button', '', 'Import backup…'); importButton.type = 'button';
-  importButton.title = 'Write the slots of a backup file to the module (slot 1, the autosave, is skipped).';
   const fileInput = document.createElement('input'); fileInput.type = 'file'; fileInput.accept = 'application/json,.json'; fileInput.hidden = true;
-  const progress = element('span', 'midi-count', '');
+  const progress = element('span', 'midi-count', ''); progress.setAttribute('role', 'status');
   backupBar.append(exportButton, importButton, fileInput, progress);
-  const list = element('div', 'preset-list');
-  let busy = false;
+  backup.append(warning, backupBar);
+  const readOnly = () => Boolean(controller.session.readOnly || controller.view?.().readOnly);
 
   async function run(label, action, working = 'Working…') {
-    if (busy) return;
+    if (busy || readOnly()) return;
     busy = true; render(); progress.textContent = working;
     try { await action(); onSuccess(label); } catch (error) { onError(error); }
     busy = false; render();
   }
 
+  function loadSlot(number) {
+    if (busy || readOnly()) return;
+    if (controller.session.dirty && !confirmAction?.('Loading replaces the changes that are not saved on the module. Continue?')) return;
+    run(`Loaded slot ${number}`, async () => { await controller.load(number); lastLoaded = number; observedLoads.set(controller.session, number); selected = number; }, `Loading slot ${number}…`);
+  }
+
   function row(slot) {
-    const item = element('div', `preset-row${slot.autosave ? ' autosave' : ''}`);
+    const item = element('div', `preset-row${slot.autosave ? ' autosave' : ''}${slot.number === selected ? ' selected' : ''}`);
+    const pick = element('button', 'preset-pick'); pick.type = 'button'; pick.disabled = busy;
+    pick.setAttribute('aria-pressed', String(slot.number === selected));
+    pick.setAttribute('aria-label', `Select slot ${slot.number}${slot.autosave ? ', autosave' : ''}`);
     const number = element('span', 'preset-number', String(slot.number).padStart(2, '0'));
-    const name = document.createElement('input');
-    name.type = 'text'; name.maxLength = 40; name.value = names[slot.number] ?? ''; name.disabled = slot.autosave;
-    name.placeholder = slot.autosave ? 'Autosave' : 'Unnamed';
-    name.setAttribute('aria-label', `Name of slot ${slot.number}`);
-    const main = element('span', 'preset-main'); main.append(name);
-    if (slot.autosave) main.append(element('small', '', 'Written by the module'));
-    name.addEventListener('change', () => { const value = name.value.trim(); if (value) names[slot.number] = value; else delete names[slot.number]; savePresetNames(uid, names, storage); item.classList.toggle('named', Boolean(value)); save.classList.toggle('primary', !slot.autosave && !value); });
-    const load = element('button', 'preset-load', 'Load'); load.type = 'button'; load.disabled = busy;
-    load.addEventListener('click', () => {
-      if (controller.session.dirty && !confirmAction?.('Loading replaces the changes that are not saved on the module. Continue?')) return;
-      run(`Loaded slot ${slot.number}`, () => controller.load(slot.number), `Loading slot ${slot.number}…`);
-    });
-    const save = element('button', slot.autosave || names[slot.number] ? '' : 'primary', 'Save here'); save.type = 'button'; save.disabled = busy || slot.autosave;
-    save.title = slot.autosave ? 'The module overwrites this slot by itself' : '';
-    save.addEventListener('click', () => {
-      if (!confirmAction?.(`Overwrite slot ${slot.number}${names[slot.number] ? ` (${names[slot.number]})` : ''} with the current sound?`)) return;
-      run(`Saved to slot ${slot.number}`, () => controller.save(slot.number), `Saving slot ${slot.number}…`);
-    });
-    item.append(number, main, load, save); if (names[slot.number]) item.classList.add('named');
+    const main = element('span', 'preset-main');
+    main.append(element('strong', '', slot.autosave ? 'Autosave' : names[slot.number] || 'Unnamed sound'));
+    const description = slot.autosave ? 'Written by the module' : 'Stored sound';
+    main.append(element('small', '', lastLoaded === slot.number ? 'Last loaded in Studio' : description));
+    pick.append(number, main);
+    pick.addEventListener('click', () => { selected = slot.number; render(); });
+    const load = element('button', 'preset-load', 'Load'); load.type = 'button'; load.disabled = busy || readOnly();
+    load.setAttribute('aria-label', `Load slot ${slot.number}`);
+    load.addEventListener('click', () => loadSlot(slot.number));
+    item.append(pick, load);
     return item;
+  }
+
+  function renderDetail() {
+    const slot = slots.find((entry) => entry.number === selected);
+    const title = element('h2', '', `Slot ${selected}${slot.autosave ? ' · Autosave' : ''}`);
+    const label = element('label', 'preset-name-field'); label.append(element('span', '', 'Name in this browser'));
+    const name = document.createElement('input'); name.type = 'text'; name.maxLength = 40;
+    name.value = slot.autosave ? 'Autosave' : names[selected] || ''; name.placeholder = 'Name this sound'; name.disabled = busy || slot.autosave;
+    name.addEventListener('change', () => { const value = name.value.trim(); if (value) names[selected] = value; else delete names[selected]; savePresetNames(uid, names, storage); list.replaceChildren(...slots.map(row)); });
+    label.append(name);
+    const note = element('p', 'preset-detail-note', slot.autosave ? 'The module writes this slot automatically and starts from it. Choose another slot to save a sound manually.' : 'Saving replaces this slot with the sound currently playing on the module.');
+    const save = element('button', 'primary preset-save-current', 'Save current sound'); save.type = 'button'; save.disabled = busy || slot.autosave || readOnly();
+    save.addEventListener('click', () => {
+      if (busy || slot.autosave || readOnly()) return;
+      const number = slot.number;
+      if (!confirmAction?.(`Overwrite slot ${number}${names[number] ? ` (${names[number]})` : ''} with the current sound?`)) return;
+      run(`Saved to slot ${number}`, () => controller.save(number), `Saving slot ${number}…`);
+    });
+    const privacy = element('p', 'preset-name-note', 'Names are saved only in this browser and included in exported backups. The module stores sound data without names.');
+    detail.replaceChildren(title, label, note, save, privacy);
   }
 
   const showProgress = (n, total) => { progress.textContent = `Slot ${n} of ${total}…`; };
@@ -104,12 +134,16 @@ export function mountPresets(root, controller, { onError = () => {}, onSuccess =
   });
 
   function render() {
-    exportButton.disabled = busy; importButton.disabled = busy;
+    exportButton.disabled = busy || readOnly(); importButton.disabled = busy || readOnly();
     list.setAttribute('aria-busy', String(busy));
     if (!busy) progress.textContent = '';
+    const pending = controller.session.dirty ? ' Changes are not saved to a sound slot.' : '';
+    state.textContent = (readOnly() ? controller.session.reason || 'Read only: sounds cannot be loaded or saved.' : lastLoaded ? `Last loaded in Studio: slot ${lastLoaded}. Changes apply to the current sound; save to keep them.` : 'Studio has not observed a slot load. Select a slot to load a sound or save the current one.') + pending;
     list.replaceChildren(...slots.map(row));
+    renderDetail();
   }
+  const unsubscribe = controller.subscribe?.(render);
   render();
-  root.replaceChildren(heading, backupBar, list);
-  return () => { root.replaceChildren(); };
+  root.replaceChildren(heading, state, layout, backup);
+  return () => { unsubscribe?.(); root.replaceChildren(); };
 }

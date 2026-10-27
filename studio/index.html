@@ -6,21 +6,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pentavox Studio</title>
   <link rel="icon" type="image/png" href="./assets/favicon.png">
-  <link rel="stylesheet" href="./style.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./top.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./empty.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./curve.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./dx7.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./wave_resources.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./manual.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./dock.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./console.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./console_engines.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./console_sampler.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./console_control.css?v=2b1fe9c">
-  <link rel="stylesheet" href="./panel_page.css?v=2b1fe9c">
+  <link rel="stylesheet" href="./style.css?v=876cd6e">
+  <link rel="stylesheet" href="./top.css?v=876cd6e">
+  <link rel="stylesheet" href="./empty.css?v=876cd6e">
+  <link rel="stylesheet" href="./curve.css?v=876cd6e">
+  <link rel="stylesheet" href="./dx7.css?v=876cd6e">
+  <link rel="stylesheet" href="./wave_resources.css?v=876cd6e">
+  <link rel="stylesheet" href="./manual.css?v=876cd6e">
+  <link rel="stylesheet" href="./dock.css?v=876cd6e">
+  <link rel="stylesheet" href="./console.css?v=876cd6e">
+  <link rel="stylesheet" href="./console_engines.css?v=876cd6e">
+  <link rel="stylesheet" href="./console_sampler.css?v=876cd6e">
+  <link rel="stylesheet" href="./console_control.css?v=876cd6e">
+  <link rel="stylesheet" href="./panel_page.css?v=876cd6e">
+  <link rel="stylesheet" href="./workflow.css?v=876cd6e">
+  <link rel="stylesheet" href="./workflow_presets.css?v=876cd6e">
+  <link rel="stylesheet" href="./workflow_editors.css?v=876cd6e">
 </head>
 <body>
+  <a class="skip-link" href="#main-workspace">Skip to workspace</a>
   <script>
     // Opened by double-click (file://): the module scripts are blocked there and the page stays empty. Say so.
     if (location.protocol === 'file:') document.write('<div style="font:16px/1.5 system-ui;max-width:42rem;margin:12vh auto;padding:0 1rem;color:#ddd">'
@@ -30,27 +34,31 @@
       + '<p>It opens Studio in the browser and prints the address (http://127.0.0.1:8766/studio/index.html, or the next free port).</p></div>');
   </script>
   <div class="shell">
-  <aside class="side" aria-label="Sections">
+  <aside class="side" id="app-navigation" aria-label="Sections">
     <a class="brand" href="./index.html" aria-label="Pentavox Studio"><span class="brand-mark" aria-hidden="true"><img src="./assets/logo.png" alt="" width="34" height="26"></span><b>Studio</b></a>
+    <button type="button" id="close-navigation">Close menu</button>
     <nav class="tabs" aria-label="Sections">
       <h6>Sound</h6>
-      <button type="button" class="active" aria-current="page" data-tab="palette">Engines</button>
-      <button type="button" class="sub" data-tab="dx7">DX7 banks</button>
-      <button type="button" class="sub" data-tab="wavetable">Wave tables</button>
-      <button type="button" class="sub" data-tab="terrain">Wave terrain</button>
-      <button type="button" data-tab="sampler">Sampler</button>
-      <button type="button" data-tab="presets">Presets</button>
+      <a href="#engines" class="active" aria-current="page" data-tab="palette">Engines</a>
+      <a href="#dx7" class="sub" data-tab="dx7">DX7 banks</a>
+      <a href="#wavetable" class="sub" data-tab="wavetable">Wave tables</a>
+      <a href="#terrain" class="sub" data-tab="terrain">Wave terrain</a>
+      <a href="#sampler" data-tab="sampler">Sampler</a>
+      <a href="#presets" data-tab="presets">Presets</a>
       <h6>Control</h6>
-      <button type="button" data-tab="routing">CV routing</button>
-      <button type="button" data-tab="midi">MIDI routing</button>
-      <button type="button" data-tab="locks">Knob record</button>
+      <a href="#routing" data-tab="routing">CV routing</a>
+      <a href="#midi" data-tab="midi">MIDI routing</a>
+      <a href="#locks" data-tab="locks">Knob record</a>
       <h6>Module</h6>
-      <button type="button" data-tab="panel">Panel</button>
-      <button type="button" data-tab="manual" class="tab-help" title="Manual" aria-label="Manual">Manual</button>
+      <a href="#panel" data-tab="panel">Panel</a>
+      <button type="button" id="sdcard-nav">SD card files</button>
+      <a href="#manual" data-tab="manual" class="tab-help">Manual</a>
     </nav>
   </aside>
+  <button type="button" class="nav-scrim" id="nav-scrim" aria-label="Close navigation" hidden></button>
   <div class="content">
   <header class="app-header">
+    <button type="button" id="menu-toggle" aria-controls="app-navigation" aria-expanded="false">Menu</button>
     <div class="page-head"><h2 id="page-title">Engines</h2><span id="page-crumb" class="crumb">Two voices, three banks of eight</span></div>
     <div class="connection-bar">
       <div id="session-footer" class="session-footer" hidden></div>
@@ -60,10 +68,11 @@
       <button id="theme-toggle" type="button" class="theme-toggle" aria-label="Toggle theme">☾</button>
     </div>
   </header>
-  <main>
+  <main id="main-workspace" tabindex="-1">
     <div id="unsupported-banner" class="banner warning" role="status" hidden><span id="unsupported-text"></span> <button type="button" id="unsupported-demo">Open Demo</button></div>
     <div id="demo-banner" class="banner" role="status" hidden>Demo mode: a simulated module. Nothing is sent to hardware and edits are not saved.</div>
     <div id="disconnect-banner" class="banner warning" role="alert" hidden><span id="disconnect-text">The module is disconnected, so edits are not sent to it.</span> <button type="button" id="banner-reconnect">Reconnect</button></div>
+    <p id="workspace-state" class="workspace-state" role="status" hidden></p>
     <section id="dx7-tab" class="tab-panel" hidden></section>
     <section id="wavetable-tab" class="tab-panel" hidden></section>
     <section id="terrain-tab" class="tab-panel" hidden></section>
@@ -73,13 +82,17 @@
     <section id="midi-tab" class="tab-panel" hidden><h1 class="page-title">MIDI routing</h1><div id="midi-root" class="disconnected"><p>Connect Pentavox to route MIDI controllers.</p></div></section>
     <section id="locks-tab" class="tab-panel" hidden><div id="locks-root" class="lock-root"></div></section>
     <section id="panel-tab" class="tab-panel" hidden>
+      <div class="panel-subtabs" role="tablist" aria-label="Panel sections">
+        <button type="button" role="tab" id="panel-sub-live" aria-selected="true" aria-controls="panel-live-section" data-sub="live">Live</button>
+        <button type="button" role="tab" id="panel-sub-settings" aria-selected="false" aria-controls="panel-settings-section" data-sub="settings">Settings</button>
+        <button type="button" role="tab" id="panel-sub-colours" aria-selected="false" aria-controls="panel-skin-root" data-sub="colours">Colours</button>
+      </div>
       <div class="panel-page">
+        <section id="panel-live-section" role="tabpanel" aria-labelledby="panel-sub-live" class="panel-live-section">
         <aside id="panel-page-dock" class="panel-dock as-page" aria-label="Front panel"><div class="dock-body"><p class="dock-note">Loading the panel…</p></div></aside>
+        <aside id="panel-control-inspector" class="panel-control-inspector" aria-label="Selected control"></aside>
+        </section>
         <div class="panel-side">
-          <div class="panel-subtabs" role="tablist" aria-label="Panel sections">
-            <button type="button" role="tab" id="panel-sub-settings" aria-selected="true" aria-controls="panel-settings-section" data-sub="settings">Settings</button>
-            <button type="button" role="tab" id="panel-sub-colours" aria-selected="false" aria-controls="panel-skin-root" data-sub="colours">Colours</button>
-          </div>
           <section id="panel-skin-root" class="skin-root" aria-label="Colours of the selected ring" role="tabpanel" aria-labelledby="panel-sub-colours" hidden></section>
           <section id="panel-settings-section" class="panel-settings" role="tabpanel" aria-labelledby="panel-sub-settings"><h2>Module settings</h2><div id="settings-root" class="disconnected"><p>Connect Pentavox to see the module settings.</p></div></section>
         </div>
@@ -95,7 +108,7 @@
     <div id="sdcard-root"></div>
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="importmap">{"imports": {"./app.js": "./app.js?v=2b1fe9c", "./audition.js": "./audition.js?v=2b1fe9c", "./audition_dx7.js": "./audition_dx7.js?v=2b1fe9c", "./build_flow.js": "./build_flow.js?v=2b1fe9c", "./cloud_build.js": "./cloud_build.js?v=2b1fe9c", "./firmware_info.js": "./firmware_info.js?v=2b1fe9c", "./hostlink/client.js": "./hostlink/client.js?v=2b1fe9c", "./hostlink/frame.js": "./hostlink/frame.js?v=2b1fe9c", "./hostlink/transport_sim.js": "./hostlink/transport_sim.js?v=2b1fe9c", "./hostlink/transport_sim_fs.js": "./hostlink/transport_sim_fs.js?v=2b1fe9c", "./hostlink/transport_webserial.js": "./hostlink/transport_webserial.js?v=2b1fe9c", "./model/adtof.js": "./model/adtof.js?v=2b1fe9c", "./model/blob.js": "./model/blob.js?v=2b1fe9c", "./model/break_embed.js": "./model/break_embed.js?v=2b1fe9c", "./model/break_engine.js": "./model/break_engine.js?v=2b1fe9c", "./model/break_generators.js": "./model/break_generators.js?v=2b1fe9c", "./model/break_grooves.js": "./model/break_grooves.js?v=2b1fe9c", "./model/break_pattern.js": "./model/break_pattern.js?v=2b1fe9c", "./model/break_presets.js": "./model/break_presets.js?v=2b1fe9c", "./model/break_preview.js": "./model/break_preview.js?v=2b1fe9c", "./model/break_repeat.js": "./model/break_repeat.js?v=2b1fe9c", "./model/capabilities.js": "./model/capabilities.js?v=2b1fe9c", "./model/classify.js": "./model/classify.js?v=2b1fe9c", "./model/curve_draft.js": "./model/curve_draft.js?v=2b1fe9c", "./model/curve_library.js": "./model/curve_library.js?v=2b1fe9c", "./model/curve_points.js": "./model/curve_points.js?v=2b1fe9c", "./model/destinations.js": "./model/destinations.js?v=2b1fe9c", "./model/dx7_banks.js": "./model/dx7_banks.js?v=2b1fe9c", "./model/dx7_catalog.js": "./model/dx7_catalog.js?v=2b1fe9c", "./model/dx7_sd.js": "./model/dx7_sd.js?v=2b1fe9c", "./model/dx7_store.js": "./model/dx7_store.js?v=2b1fe9c", "./model/dx7_syx.js": "./model/dx7_syx.js?v=2b1fe9c", "./model/engine_presets.js": "./model/engine_presets.js?v=2b1fe9c", "./model/firmware_panel.js": "./model/firmware_panel.js?v=2b1fe9c", "./model/firmware_profiles.js": "./model/firmware_profiles.js?v=2b1fe9c", "./model/hybrid.js": "./model/hybrid.js?v=2b1fe9c", "./model/key_map.js": "./model/key_map.js?v=2b1fe9c", "./model/knob_locks.js": "./model/knob_locks.js?v=2b1fe9c", "./model/led_skin.js": "./model/led_skin.js?v=2b1fe9c", "./model/link_jobs.js": "./model/link_jobs.js?v=2b1fe9c", "./model/loop_io.js": "./model/loop_io.js?v=2b1fe9c", "./model/merge.js": "./model/merge.js?v=2b1fe9c", "./model/midi_learn.js": "./model/midi_learn.js?v=2b1fe9c", "./model/module_set.js": "./model/module_set.js?v=2b1fe9c", "./model/onsets.js": "./model/onsets.js?v=2b1fe9c", "./model/palette.js": "./model/palette.js?v=2b1fe9c", "./model/palette_memory.js": "./model/palette_memory.js?v=2b1fe9c", "./model/panel_pots.js": "./model/panel_pots.js?v=2b1fe9c", "./model/panel_pots_data.js": "./model/panel_pots_data.js?v=2b1fe9c", "./model/potmap.js": "./model/potmap.js?v=2b1fe9c", "./model/preset_backup.js": "./model/preset_backup.js?v=2b1fe9c", "./model/rotate.js": "./model/rotate.js?v=2b1fe9c", "./model/routes.js": "./model/routes.js?v=2b1fe9c", "./model/sample_upload.js": "./model/sample_upload.js?v=2b1fe9c", "./model/sd_files.js": "./model/sd_files.js?v=2b1fe9c", "./model/session.js": "./model/session.js?v=2b1fe9c", "./model/settings.js": "./model/settings.js?v=2b1fe9c", "./model/slices.js": "./model/slices.js?v=2b1fe9c", "./model/tempo_hint.js": "./model/tempo_hint.js?v=2b1fe9c", "./model/timestretch.js": "./model/timestretch.js?v=2b1fe9c", "./model/voices.js": "./model/voices.js?v=2b1fe9c", "./model/wav.js": "./model/wav.js?v=2b1fe9c", "./model/wave_edit.js": "./model/wave_edit.js?v=2b1fe9c", "./model/wave_resources.js": "./model/wave_resources.js?v=2b1fe9c", "./model/zip.js": "./model/zip.js?v=2b1fe9c", "./site.js": "./site.js?v=2b1fe9c", "./ui/app_controller.js": "./ui/app_controller.js?v=2b1fe9c", "./ui/break_panel.js": "./ui/break_panel.js?v=2b1fe9c", "./ui/connection_empty.js": "./ui/connection_empty.js?v=2b1fe9c", "./ui/curve_editor.js": "./ui/curve_editor.js?v=2b1fe9c", "./ui/dx7_editor.js": "./ui/dx7_editor.js?v=2b1fe9c", "./ui/dx7_editor_vm.js": "./ui/dx7_editor_vm.js?v=2b1fe9c", "./ui/engine_set.js": "./ui/engine_set.js?v=2b1fe9c", "./ui/knob_locks.js": "./ui/knob_locks.js?v=2b1fe9c", "./ui/lcd.js": "./ui/lcd.js?v=2b1fe9c", "./ui/manual.js": "./ui/manual.js?v=2b1fe9c", "./ui/manual_vm.js": "./ui/manual_vm.js?v=2b1fe9c", "./ui/midi_routing.js": "./ui/midi_routing.js?v=2b1fe9c", "./ui/palette.js": "./ui/palette.js?v=2b1fe9c", "./ui/palette_vm.js": "./ui/palette_vm.js?v=2b1fe9c", "./ui/panel_dock.js": "./ui/panel_dock.js?v=2b1fe9c", "./ui/panel_drawing.js": "./ui/panel_drawing.js?v=2b1fe9c", "./ui/panel_live.js": "./ui/panel_live.js?v=2b1fe9c", "./ui/panel_skin.js": "./ui/panel_skin.js?v=2b1fe9c", "./ui/performance_feedback.js": "./ui/performance_feedback.js?v=2b1fe9c", "./ui/popover_place.js": "./ui/popover_place.js?v=2b1fe9c", "./ui/potmap.js": "./ui/potmap.js?v=2b1fe9c", "./ui/potmap_vm.js": "./ui/potmap_vm.js?v=2b1fe9c", "./ui/presets.js": "./ui/presets.js?v=2b1fe9c", "./ui/routing.js": "./ui/routing.js?v=2b1fe9c", "./ui/routing_controller.js": "./ui/routing_controller.js?v=2b1fe9c", "./ui/routing_vm.js": "./ui/routing_vm.js?v=2b1fe9c", "./ui/sampler.js": "./ui/sampler.js?v=2b1fe9c", "./ui/sampler_vm.js": "./ui/sampler_vm.js?v=2b1fe9c", "./ui/sdcard.js": "./ui/sdcard.js?v=2b1fe9c", "./ui/sdcard_vm.js": "./ui/sdcard_vm.js?v=2b1fe9c", "./ui/session_footer.js": "./ui/session_footer.js?v=2b1fe9c", "./ui/settings.js": "./ui/settings.js?v=2b1fe9c", "./ui/settings_vm.js": "./ui/settings_vm.js?v=2b1fe9c", "./ui/slice_bar.js": "./ui/slice_bar.js?v=2b1fe9c", "./ui/voices.js": "./ui/voices.js?v=2b1fe9c", "./ui/voices_vm.js": "./ui/voices_vm.js?v=2b1fe9c", "./ui/wave_editor.js": "./ui/wave_editor.js?v=2b1fe9c", "./ui/wave_resources_editor.js": "./ui/wave_resources_editor.js?v=2b1fe9c", "./webdfu.js": "./webdfu.js?v=2b1fe9c"}}</script>
-  <script type="module" src="./app.js?v=2b1fe9c"></script>
+  <script type="importmap">{"imports": {"./app.js": "./app.js?v=876cd6e", "./audition.js": "./audition.js?v=876cd6e", "./audition_dx7.js": "./audition_dx7.js?v=876cd6e", "./build_flow.js": "./build_flow.js?v=876cd6e", "./cloud_build.js": "./cloud_build.js?v=876cd6e", "./firmware_info.js": "./firmware_info.js?v=876cd6e", "./hostlink/client.js": "./hostlink/client.js?v=876cd6e", "./hostlink/frame.js": "./hostlink/frame.js?v=876cd6e", "./hostlink/transport_sim.js": "./hostlink/transport_sim.js?v=876cd6e", "./hostlink/transport_sim_fs.js": "./hostlink/transport_sim_fs.js?v=876cd6e", "./hostlink/transport_webserial.js": "./hostlink/transport_webserial.js?v=876cd6e", "./model/adtof.js": "./model/adtof.js?v=876cd6e", "./model/blob.js": "./model/blob.js?v=876cd6e", "./model/break_embed.js": "./model/break_embed.js?v=876cd6e", "./model/break_engine.js": "./model/break_engine.js?v=876cd6e", "./model/break_generators.js": "./model/break_generators.js?v=876cd6e", "./model/break_grooves.js": "./model/break_grooves.js?v=876cd6e", "./model/break_pattern.js": "./model/break_pattern.js?v=876cd6e", "./model/break_presets.js": "./model/break_presets.js?v=876cd6e", "./model/break_preview.js": "./model/break_preview.js?v=876cd6e", "./model/break_repeat.js": "./model/break_repeat.js?v=876cd6e", "./model/capabilities.js": "./model/capabilities.js?v=876cd6e", "./model/classify.js": "./model/classify.js?v=876cd6e", "./model/curve_draft.js": "./model/curve_draft.js?v=876cd6e", "./model/curve_library.js": "./model/curve_library.js?v=876cd6e", "./model/curve_points.js": "./model/curve_points.js?v=876cd6e", "./model/destinations.js": "./model/destinations.js?v=876cd6e", "./model/dx7_banks.js": "./model/dx7_banks.js?v=876cd6e", "./model/dx7_catalog.js": "./model/dx7_catalog.js?v=876cd6e", "./model/dx7_sd.js": "./model/dx7_sd.js?v=876cd6e", "./model/dx7_store.js": "./model/dx7_store.js?v=876cd6e", "./model/dx7_syx.js": "./model/dx7_syx.js?v=876cd6e", "./model/engine_presets.js": "./model/engine_presets.js?v=876cd6e", "./model/firmware_panel.js": "./model/firmware_panel.js?v=876cd6e", "./model/firmware_profiles.js": "./model/firmware_profiles.js?v=876cd6e", "./model/hybrid.js": "./model/hybrid.js?v=876cd6e", "./model/key_map.js": "./model/key_map.js?v=876cd6e", "./model/knob_locks.js": "./model/knob_locks.js?v=876cd6e", "./model/led_skin.js": "./model/led_skin.js?v=876cd6e", "./model/link_jobs.js": "./model/link_jobs.js?v=876cd6e", "./model/loop_io.js": "./model/loop_io.js?v=876cd6e", "./model/merge.js": "./model/merge.js?v=876cd6e", "./model/midi_learn.js": "./model/midi_learn.js?v=876cd6e", "./model/module_set.js": "./model/module_set.js?v=876cd6e", "./model/onsets.js": "./model/onsets.js?v=876cd6e", "./model/palette.js": "./model/palette.js?v=876cd6e", "./model/palette_memory.js": "./model/palette_memory.js?v=876cd6e", "./model/panel_pots.js": "./model/panel_pots.js?v=876cd6e", "./model/panel_pots_data.js": "./model/panel_pots_data.js?v=876cd6e", "./model/potmap.js": "./model/potmap.js?v=876cd6e", "./model/preset_backup.js": "./model/preset_backup.js?v=876cd6e", "./model/rotate.js": "./model/rotate.js?v=876cd6e", "./model/routes.js": "./model/routes.js?v=876cd6e", "./model/sample_upload.js": "./model/sample_upload.js?v=876cd6e", "./model/sd_files.js": "./model/sd_files.js?v=876cd6e", "./model/session.js": "./model/session.js?v=876cd6e", "./model/settings.js": "./model/settings.js?v=876cd6e", "./model/slices.js": "./model/slices.js?v=876cd6e", "./model/tempo_hint.js": "./model/tempo_hint.js?v=876cd6e", "./model/timestretch.js": "./model/timestretch.js?v=876cd6e", "./model/voices.js": "./model/voices.js?v=876cd6e", "./model/wav.js": "./model/wav.js?v=876cd6e", "./model/wave_edit.js": "./model/wave_edit.js?v=876cd6e", "./model/wave_resources.js": "./model/wave_resources.js?v=876cd6e", "./model/zip.js": "./model/zip.js?v=876cd6e", "./site.js": "./site.js?v=876cd6e", "./ui/app_controller.js": "./ui/app_controller.js?v=876cd6e", "./ui/break_panel.js": "./ui/break_panel.js?v=876cd6e", "./ui/connection_empty.js": "./ui/connection_empty.js?v=876cd6e", "./ui/curve_editor.js": "./ui/curve_editor.js?v=876cd6e", "./ui/dx7_editor.js": "./ui/dx7_editor.js?v=876cd6e", "./ui/dx7_editor_vm.js": "./ui/dx7_editor_vm.js?v=876cd6e", "./ui/engine_set.js": "./ui/engine_set.js?v=876cd6e", "./ui/knob_locks.js": "./ui/knob_locks.js?v=876cd6e", "./ui/lcd.js": "./ui/lcd.js?v=876cd6e", "./ui/manual.js": "./ui/manual.js?v=876cd6e", "./ui/manual_vm.js": "./ui/manual_vm.js?v=876cd6e", "./ui/midi_routing.js": "./ui/midi_routing.js?v=876cd6e", "./ui/navigation.js": "./ui/navigation.js?v=876cd6e", "./ui/palette.js": "./ui/palette.js?v=876cd6e", "./ui/palette_vm.js": "./ui/palette_vm.js?v=876cd6e", "./ui/panel_dock.js": "./ui/panel_dock.js?v=876cd6e", "./ui/panel_drawing.js": "./ui/panel_drawing.js?v=876cd6e", "./ui/panel_live.js": "./ui/panel_live.js?v=876cd6e", "./ui/panel_skin.js": "./ui/panel_skin.js?v=876cd6e", "./ui/performance_feedback.js": "./ui/performance_feedback.js?v=876cd6e", "./ui/popover_place.js": "./ui/popover_place.js?v=876cd6e", "./ui/potmap.js": "./ui/potmap.js?v=876cd6e", "./ui/potmap_vm.js": "./ui/potmap_vm.js?v=876cd6e", "./ui/presets.js": "./ui/presets.js?v=876cd6e", "./ui/routing.js": "./ui/routing.js?v=876cd6e", "./ui/routing_controller.js": "./ui/routing_controller.js?v=876cd6e", "./ui/routing_vm.js": "./ui/routing_vm.js?v=876cd6e", "./ui/sampler.js": "./ui/sampler.js?v=876cd6e", "./ui/sampler_vm.js": "./ui/sampler_vm.js?v=876cd6e", "./ui/sdcard.js": "./ui/sdcard.js?v=876cd6e", "./ui/sdcard_vm.js": "./ui/sdcard_vm.js?v=876cd6e", "./ui/session_footer.js": "./ui/session_footer.js?v=876cd6e", "./ui/settings.js": "./ui/settings.js?v=876cd6e", "./ui/settings_vm.js": "./ui/settings_vm.js?v=876cd6e", "./ui/slice_bar.js": "./ui/slice_bar.js?v=876cd6e", "./ui/voices.js": "./ui/voices.js?v=876cd6e", "./ui/voices_vm.js": "./ui/voices_vm.js?v=876cd6e", "./ui/wave_editor.js": "./ui/wave_editor.js?v=876cd6e", "./ui/wave_resources_editor.js": "./ui/wave_resources_editor.js?v=876cd6e", "./webdfu.js": "./webdfu.js?v=876cd6e"}}</script>
+  <script type="module" src="./app.js?v=876cd6e"></script>
 </body>
 </html>

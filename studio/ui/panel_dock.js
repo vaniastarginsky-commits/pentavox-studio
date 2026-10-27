@@ -41,7 +41,7 @@ function button(text, className, handler) {
  * @param getSession the connected StudioSession; optional so the static dock still works without the app hook
  * @param onNavigate called with a tab name ('routing' or 'manual') when the readout points to where a control is set
  */
-export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings = () => null, getSession = () => null, onNavigate = () => {}, onLiveError = () => {}, decorate = () => {}, onSelect = () => {}, isActive = () => true }) {
+export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings = () => null, getSession = () => null, onNavigate = () => {}, onLiveError = () => {}, decorate = () => {}, onSelect = () => {}, inspectorRoot = null, isActive = () => true }) {
   const state = { page: 0, shift: false, selected: null, built: false, generation: 0 };
   let descriptor = null;
   let refs = null;
@@ -91,7 +91,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
   function placeBubble(control) {
     const bubble = refs?.readout;
     const target = refs?.drawing.querySelector(`[data-control="${control}"]`);
-    if (!bubble || !target || state.selected !== control) return;
+    if (inspectorRoot || !bubble || !target || state.selected !== control) return;
     const figure = bubble.parentElement.getBoundingClientRect();
     const spot = target.getBoundingClientRect();
     bubble.hidden = false;
@@ -104,14 +104,14 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
   }
 
   let hideTimer = null;
-  const hideBubbleSoon = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { if (refs) describe(null); }, 220); };
+  const hideBubbleSoon = () => { if (inspectorRoot) return; clearTimeout(hideTimer); hideTimer = setTimeout(() => { if (refs) describe(null); }, 220); };
   const keepBubble = () => clearTimeout(hideTimer);
 
   /** Tells the page that hosts the dock which page, layer and knob are shown (the colour inspector follows it). */
   function emitSelect(control) {
     const page = currentPage();
     if (!page) return;
-    onSelect({ page: page.index, pageName: page.name, shift: state.shift, pot: control?.startsWith('pot') ? Number(control.slice(3)) : undefined });
+    onSelect({ page: page.index, pageName: page.name, control, shift: state.shift, pot: control?.startsWith('pot') ? Number(control.slice(3)) : undefined });
   }
 
   function describe(control) {
@@ -121,21 +121,32 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     out.replaceChildren();
     const page = currentPage();
     const title = (context, name) => out.append(el('p', 'dock-context', context), el('h3', '', name));
-    const goto = (label, tab) => out.append(button(label, 'dock-link', () => onNavigate(tab)));
-    if (!control) { out.hidden = true; return; }
+    const goto = (label, tab) => out.append(button(label, 'dock-link', () => onNavigate(tab, { page: state.page, shift: state.shift, control })));
+    if (!control) {
+      out.hidden = !inspectorRoot;
+      if (inspectorRoot) { title('Live controls', 'Select a control'); out.append(el('p', 'dock-note', 'Select a knob, button or jack to see its function, value and gestures. Hold B1 shows the alternate layer.')); }
+      return;
+    }
+    out.hidden = false;
     // The description is a bubble over the drawing, so the module itself can use the whole dock.
     queueMicrotask(() => placeBubble(control));
     if (control.startsWith('pot')) {
       const id = Number(control.slice(3));
-      const runtimeFm=feedback?.fmLayer && /^(Plaits|Voice)/.test(page?.name);
-      const entry = runtimeFm ? {name:performanceView('fm',feedback).controls[id].label,live:false,b2:'Hold B2 and use the physical pot'} : page?.pots[id];
-      title(`${POT_POSITIONS[id]} · ${page?.name ?? ''}`, entry?.name || 'Not used on this page');
+      const mode = performanceMode();
+      const runtime = mode === 'slicer' || (mode === 'fm' && feedback?.fmLayer);
+      const entry = runtime && mode === 'fm' ? { name: performanceView('fm', feedback).controls[id].label, live: false, b2: 'Hold B2 and use the physical pot' } : page?.pots[id];
+      title(`${POT_POSITIONS[id]} · ${page?.name ?? ''}`, (state.shift && !runtime ? entry?.shift : entry?.name) || 'Not used on this page');
       const list = el('dl', 'dock-facts');
       list.append(el('dt', '', 'Hold B1'), el('dd', '', entry?.shift || (isCompactBuild(panelPages(descriptor)) ? 'Not used' : 'unchanged')));
       if (entry?.b2) list.append(el('dt', '', 'B2'), el('dd', '', entry.b2));
-      out.append(list);
-      if (entry?.live === false) out.append(el('p', 'dock-note', 'Use the physical pot. This firmware does not expose its live value to Studio.'));
-      goto('Set in CV routing', 'routing');
+      out.append(el('strong', 'dock-value', '—'), el('p', 'dock-pickup', ''), list);
+      if (runtime) out.append(el('p', 'dock-note dock-runtime-status', mode === 'fm' ? performanceView('fm', feedback).status : 'Use the module’s controls. B1 + tap B2 changes style, tap B2 makes a variation, hold B2 queues a Fill.'));
+      else if (state.shift && !entry?.shift) out.append(el('p', 'dock-note', 'This knob has no alternate function on this page. Its ring is dark while B1 is held.'));
+      else if (entry?.live === false) out.append(el('p', 'dock-note', 'Use the physical pot. This firmware does not expose its live value to Studio.'));
+      else out.append(el('p', 'dock-note', 'The coloured ring shows the value. Exposed normal-layer controls can be dragged here or adjusted with arrow keys; hold Shift for larger steps.'));
+      if (!runtime) goto('Set in CV routing', 'routing');
+      goto('Help for this control', 'manual');
+      updateInspectorValue();
       return;
     }
     if (/^b[123]$/.test(control)) {
@@ -161,14 +172,48 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     }
   }
 
+  function performanceMode() {
+    const page = currentPage();
+    return /^Slicer/.test(page?.name) && Number(descriptor?.slice?.version) >= 19 ? 'slicer'
+      : /^(Plaits|Voice) 1$/.test(page?.name) && descriptor?.panelFeedback ? 'fm' : null;
+  }
+
+  function updateInspectorValue() {
+    if (!refs || !state.selected?.startsWith('pot')) return;
+    const id = Number(state.selected.slice(3));
+    const value = refs.readout.querySelector('.dock-value');
+    const pickup = refs.readout.querySelector('.dock-pickup');
+    if (!value || !pickup) return;
+    const mode = performanceMode();
+    if (mode === 'slicer' || (mode === 'fm' && feedback?.fmLayer)) {
+      const view = performanceView(mode, feedback, state.shift);
+      const c = view.controls[id];
+      value.textContent = c.text;
+      const status = refs.readout.querySelector('.dock-runtime-status');
+      if (status && mode === 'fm') status.textContent = view.status;
+      pickup.textContent = !feedback ? 'Live values require compatible panel feedback firmware.'
+        : c.inactive ? 'Inactive for the selected source.'
+        : c.pickup ? `Move the physical pot to ${percentText(c.target)} to catch the value. Pot now: ${percentText(c.physical)}.`
+        : view.following ? 'Physical control caught.' : 'Stored runtime value; this is not the active physical layer.';
+      return;
+    }
+    const data = !state.shift ? liveValues.get(perfKey(state.page, id)) : null;
+    value.textContent = data?.text ?? '—';
+    pickup.textContent = data ? 'Value read from the module.' : state.shift ? 'Use the physical pot for this layer; no live value is exposed.' : 'Live value is not available for this control.';
+  }
+
+  let inspectorContext = '';
   function paintDrawing() {
     const page = currentPage();
     if (!page) return;
     if (!state.shift && liveValues.size) paintLivePots(refs.potNodes, page, liveValues);
     else paintPots(refs.potNodes, page, state.shift);
     decorate(refs.potNodes, page, state.shift);
-    const mode = /^Slicer/.test(page.name) && Number(descriptor?.slice?.version) >= 19 ? 'slicer' : /^(Plaits|Voice) 1$/.test(page.name) && descriptor?.panelFeedback ? 'fm' : null;
+    const mode = performanceMode();
     refs.feedback.hidden = !mode;
+    const context = `${state.page}:${state.shift}:${Boolean(feedback?.fmLayer)}`;
+    if (inspectorRoot && context !== inspectorContext) { inspectorContext = context; describe(state.selected); }
+    updateInspectorValue();
     refs.body.classList.toggle('has-performance', Boolean(mode));
     if (mode) {
       paintPerformanceFeedback(refs.feedback, mode, feedback, state.shift);
@@ -264,10 +309,10 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     const shiftToggle = button('Hold B1', 'dock-shift', () => { state.shift = !state.shift; paint(); });
     shiftToggle.title = 'Show what each knob does while B1 is held';
     const controls = el('div', 'dock-controls'); controls.append(tabs, shiftToggle);
-    const readout = el('div', 'dock-bubble'); readout.setAttribute('aria-live', 'polite'); readout.hidden = true;
+    const readout = el('div', inspectorRoot ? 'dock-inspector' : 'dock-bubble'); readout.setAttribute('aria-live', 'polite'); readout.hidden = true;
     const status = getSession() ? null : el('p', 'dock-status', 'Module not connected. This is the factory layout; press Connect, or Demo, to see live knob values.');
     body.classList.toggle('has-status', Boolean(status));
-    figure.append(readout);
+    if (inspectorRoot) inspectorRoot.replaceChildren(readout); else figure.append(readout);
     const feedbackPanel = el('section', 'performance-feedback'); feedbackPanel.hidden = true; feedbackPanel.setAttribute('aria-label', 'Performance controls');
     body.replaceChildren(...[status, controls, figure, feedbackPanel].filter(Boolean));
     readout.addEventListener('pointerenter', keepBubble);
@@ -296,6 +341,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     }) : null;
     potNodes.forEach((node) => bindLivePot(node, node.pot.id));
     state.built = true;
+    if (inspectorRoot && !state.selected) state.selected = 'pot0';
     paint();
     syncLive();
   }

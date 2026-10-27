@@ -258,8 +258,8 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
 
   // ---------------------------------------------------------------- skeleton (built once)
 
-  const exportButton = button('Download SD folder (.zip)'); exportButton.addEventListener('click', exportZip);
-  const cardButton = button('Write to SD card', 'primary'); cardButton.addEventListener('click', () => writeToCard(state.items));
+  const exportButton = button('Download prepared files (.zip)'); exportButton.addEventListener('click', exportZip);
+  const cardButton = button('Send prepared files to SD', 'primary'); cardButton.addEventListener('click', () => writeToCard(state.items));
 
   const cardBar = el('div', 'sdc-transfer'); cardBar.hidden = true;
   const workspace = el('div', 'sampler-workspace'); const main = el('section', 'sampler-main');
@@ -276,7 +276,10 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   listHead.append(el('h3', '', 'Files to convert'), listCount); listCard.append(listHead, list);
   filesPane.append(listCard, drop, planPanel);
   const editorHost = el('section', 'sampler-editor'); main.append(filesPane, editorHost);
-  workspace.append(main); root.replaceChildren(cardBar, workspace);
+  const workflow = el('header', 'sampler-workflow');
+  workflow.append(el('p', '', 'Prepare audio: choose files, trim and set tempo, then check the destination before sending.'));
+  const browse = button('SD card files', 'quiet-button'); browse.addEventListener('click', onOpenSdTab); workflow.append(browse);
+  workspace.append(main); root.replaceChildren(workflow, cardBar, workspace);
 
   // Speed is shown in the bar itself: live while a transfer runs, then the finished line stays for a while.
   let resultTimer = null;
@@ -300,9 +303,10 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
 
   function updateHeading() {
     const checked = validation();
-    exportButton.textContent = state.exporting ? 'Building archive…' : 'Download SD folder (.zip)'; exportButton.disabled = state.exporting || !state.items.length || !checked.valid;
+    exportButton.textContent = state.exporting ? 'Building archive…' : 'Download prepared files (.zip)'; exportButton.disabled = state.exporting || !state.items.length || !checked.valid;
     const connected = Boolean(getClient() && getInfo());
-    cardButton.textContent = state.card ? 'Working…' : 'Write to SD card'; cardButton.disabled = !connected || Boolean(state.card) || !state.items.length || !checked.valid;
+    workspace.classList.toggle('empty', !state.items.length);
+    cardButton.textContent = state.card ? 'Sending files…' : `Send ${state.items.length || ''} prepared ${state.items.length === 1 ? 'file' : 'files'} to SD`; cardButton.disabled = !connected || Boolean(state.card) || !state.items.length || !checked.valid;
     cardButton.title = !connected ? 'Connect the module first' : 'Write every file to its SLOT folder on the module\u2019s card';
   }
 
@@ -438,6 +442,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
         else note.append(el('span', '', item.stretchStatus || `${planned.fileName} · after conversion ${seconds(trimmedDuration)} / 48 kHz`));
         footer.append(note);
         const row = el('div', 'se-actions');
+        const active = state.upload;
         if (looper()) {
           // The looper image has no sampler slots: the converted file becomes a loop in /LOOPS, and can go straight into a loop slot.
           const ready = Boolean(getClient() && getInfo() && loopClient()) && trimmedDuration <= MAX_CLIP_SECONDS && !state.card && !loop.busy;
@@ -455,7 +460,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
         } else {
           const toCard = button('Write to SD card', 'primary'); toCard.disabled = !getClient() || !getInfo() || trimmedDuration > MAX_CLIP_SECONDS || Boolean(state.card) || !checked.valid; toCard.addEventListener('click', () => writeToCard([item]));
           const wav = button('Download WAV only'); wav.disabled = trimmedDuration > MAX_CLIP_SECONDS; wav.addEventListener('click', async () => { try { download(await wavFor(item), planned.fileName, 'audio/wav'); } catch (error) { onError(error); } }); row.append(toCard, wav, el('span', 'sx-dot', '·'));
-          const connected = Boolean(getClient() && getInfo()); const tooLong = trimmedDuration > MAX_CLIP_SECONDS; const active = state.upload;
+          const connected = Boolean(getClient() && getInfo()); const tooLong = trimmedDuration > MAX_CLIP_SECONDS;
           const actions = el('div', 'sample-send-actions');
           actions.append(el('span', 'send-label', connected ? 'Play on the module:' : 'Connect the module (top right) to play this on it'));
           for (let voice = 0; voice < 2; voice += 1) {
@@ -569,7 +574,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const pageX = window.scrollX, pageY = window.scrollY; const listScroll = [...planPanel.querySelectorAll('.sd-files')].map((node) => node.scrollTop);
     const focusedConfirm = planPanel.contains(document.activeElement) && document.activeElement.dataset?.confirmFor;
     planPanel.replaceChildren();
-    const sdCard = el('section', 'sx-card sd-card'); const top = el('header', 'sx-chead sd-card-head'); top.append(el('h3', '', 'SD card'));
+    const sdCard = el('section', 'sx-card sd-card'); const top = el('header', 'sx-chead sd-card-head'); top.append(el('h3', '', 'Module SD card'));
     const cardState = el('div', 'sd-live-state'); const body = el('div', 'sd-card-body');
     if (state.cardInfo) {
       const summary = cardSummary(state.cardInfo); const kind = summary.split(' · ')[0];
@@ -583,7 +588,10 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const actions = el('div', 'sd-live-actions'); actions.append(all, exportButton);
     body.append(cardState, actions);
     if (!checked.valid) { const warnings = el('div', 'sampler-warnings'); for (const error of checked.errors) warnings.append(el('p', '', error)); body.append(warnings); }
-    body.append(cardButton); sdCard.append(top, body); planPanel.append(sdCard);
+    const pending = currentPlan.length;
+    const destinations = [...new Set(currentPlan.map(item => `SLOT${item.slot}`))].join(', ');
+    const summary = el('p', 'sample-transfer-plan', pending ? `${pending} prepared ${pending === 1 ? 'file' : 'files'} → /${destinations}. ${checked.valid ? 'Ready to send.' : 'Resolve the warnings before sending.'}` : 'No prepared files queued. Choose audio to build a transfer plan.');
+    body.append(summary, cardButton); sdCard.append(top, body); planPanel.append(sdCard);
     const slots = el('div', `sd-slots${slotCount() === 2 ? ' two-slots' : ''}`); groups.forEach((group) => {
       const column = el('section', `sd-slot sx-card${group.overLimit ? ' over-limit' : ''}`); const header = el('header', 'sx-chead');
       header.append(el('strong', '', `Slot ${group.slot + 1}`), el('span', 'sd-slot-id', `SLOT${group.slot} · ${group.count}/16`), el('span', 'sp'));

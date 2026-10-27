@@ -1,0 +1,65 @@
+/* Focused sound-storage and movement workflows. Uses the existing console theme. */
+#presets-root { max-width: 1080px; }
+#presets-root .preset-list { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; gap: 4px; }
+#presets-root .preset-list .preset-row .preset-main small { display: block; }
+#presets-root .preset-session-state { margin: 10px 0 16px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+#presets-root .preset-workspace { display: grid; grid-template-columns: minmax(280px, 1.1fr) minmax(260px, 1fr); gap: 16px; align-items: start; }
+#presets-root .preset-list .preset-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 4px 10px 4px 0; }
+#presets-root .preset-list .preset-row.selected { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+#presets-root .preset-list .preset-pick { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: center; text-align: left; min-width: 0; min-height: 48px; padding: 6px 12px; border: 0; background: transparent; }
+#presets-root .preset-pick:hover:not(:disabled) { background: transparent; }
+#presets-root .preset-pick:focus-visible { outline-offset: -3px; }
+#presets-root .preset-main strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+#presets-root .preset-list .preset-load { min-height: 32px; padding: 5px 12px; }
+#presets-root .preset-detail { position: sticky; top: 16px; padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); min-width: 0; }
+#presets-root .preset-detail h2, #presets-root .preset-backup-section h2 { margin: 0 0 16px; font-size: 16px; }
+#presets-root .preset-name-field { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }
+#presets-root .preset-name-field input { width: 100%; box-sizing: border-box; min-height: 38px; }
+#presets-root .preset-detail-note { margin: 16px 0; font-size: 13px; line-height: 1.55; max-width: 50ch; }
+#presets-root .preset-save-current { min-height: 38px; padding: 8px 14px; }
+#presets-root .preset-name-note { margin: 18px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+#presets-root .preset-backup-section { margin-top: 20px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+#presets-root .preset-backup-section h2 { margin-bottom: 8px; }
+#presets-root .preset-backup-warning { margin: 0; max-width: 82ch; font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+#presets-root .preset-backup { margin: 12px 0 0; }
+#presets-root .preset-backup .midi-count { max-width: 100%; overflow-wrap: anywhere; }
+/* Presets owns its save destination and action; other pages retain the session save bar. */
+html[data-studio-tab="presets"] #session-footer { display: none !important; }
+
+#locks-root .lock-lede { max-width: 68ch; }
+#locks-root .lock-help { margin-top: 12px; color: var(--muted); font-size: 12.5px; }
+#locks-root .lock-help > summary { cursor: pointer; width: fit-content; padding: 6px 0; font-weight: 600; color: var(--text); }
+#locks-root .lock-help .lock-hint { margin: 6px 0; padding: 10px 12px; line-height: 1.6; background: var(--surface-2); border-radius: 6px; }
+#locks-root .lock-refresh-note { margin: 6px 0 0; font-size: 12px; }
+#locks-root .lock-card { align-content: start; gap: 12px; }
+#locks-root .lock-card.empty { justify-content: stretch; align-content: center; min-height: 128px; }
+#locks-root .lock-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+#locks-root .lock-metrics > span { display: grid; gap: 2px; min-width: 0; }
+#locks-root .lock-metrics > span:last-child { grid-column: 1 / -1; }
+#locks-root .lock-metrics small { color: var(--muted); font-size: 11.5px; }
+#locks-root .lock-metrics b { font-size: 12px; font-weight: 500; }
+#locks-root .lock-tools { justify-content: space-between; align-items: start; }
+#locks-root .lock-action-menu { min-width: 0; }
+#locks-root .lock-action-menu > summary { cursor: pointer; padding: 6px 11px; color: var(--text); font-size: 12.5px; line-height: 1.3; font-weight: 600; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); list-style: none; }
+#locks-root .lock-action-menu > summary::-webkit-details-marker { display: none; }
+#locks-root .lock-action-menu > summary::after { content: '⌄'; margin-left: 8px; color: var(--muted); }
+#locks-root .lock-action-menu[open] > summary { background: var(--surface-2); }
+#locks-root .lock-action-menu > summary:hover { background: var(--surface-2); }
+#locks-root .lock-action-choices { display: grid; gap: 3px; padding: 6px 0 0; }
+#locks-root .lock-action-choices button { white-space: normal; text-align: left; width: 100%; }
+#locks-root .lock-card.empty .lock-action-menu > summary { border-style: dashed; min-height: 38px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+@media (max-width: 760px) {
+  #presets-root .preset-workspace { grid-template-columns: minmax(0, 1fr); }
+  #presets-root .preset-detail { position: static; order: -1; padding: 16px; }
+  #presets-root .preset-detail h2 { margin-bottom: 12px; }
+  #presets-root .preset-detail-note { margin: 12px 0; }
+  #presets-root .preset-name-note { margin-top: 12px; }
+}
+@media (pointer: coarse) {
+  #presets-root .preset-list .preset-load, #presets-root .preset-save-current,
+  #locks-root .lock-action-menu > summary, #locks-root .lock-action-choices button, #locks-root .lock-tools > button { min-height: 44px; }
+}
+
+#locks-root .lock-available { margin: 14px 0; font-size: .82rem; color: var(--muted); }
+#locks-root .lock-actions .lock-action-menu { min-width: 165px; }
+#locks-root .lock-grid > .lock-empty { grid-column: 1 / -1; max-width: 62ch; padding: 28px 0; }

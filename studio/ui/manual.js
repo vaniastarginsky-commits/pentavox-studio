@@ -1,8 +1,17 @@
 import { baseCvFunction } from '../model/panel_pots.js';
 import { POT_POSITIONS, buttonCards, gestureLabel, jackLabel, jackList, manualSections, panelPages, richText, voiceSummary } from './manual_vm.js';
 import { drawPanel, paintPots } from './panel_drawing.js';
+import { settingsView } from './settings_vm.js';
 
 const SIG_LABELS = Object.freeze({ 'audio-in': 'Audio in', 'audio-out': 'Audio out', gate: 'Gate / CV', 'cv-bi': 'CV ±5 V', trig: 'Trigger' });
+
+/** Match complete search terms across names and explanations, without treating the query as markup. */
+export function searchManual(entries, query, limit = 20) {
+  const words = String(query).normalize('NFKD').toLowerCase().trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  return entries.filter(entry => words.every(word => `${entry.title} ${entry.text}`.normalize('NFKD').toLowerCase().includes(word))).slice(0, limit);
+}
+
 const ANCHORS = Object.freeze([['manual-panel', 'Panel'], ['manual-studio', 'Studio'], ['manual-module', 'Module'], ['manual-flash', 'Flashing'], ['manual-help', 'Help']]);
 
 function el(tag, className, text) {
@@ -55,6 +64,8 @@ export function mountManual(root, { getDescriptor, getSettings = () => null, loa
   let descriptor = null;
   let staticDoc = null;
   let refs = null;
+  let searchInput = null;
+  let runSearch = null;
 
   async function show() {
     const wanted = getDescriptor?.() ?? null;
@@ -261,8 +272,7 @@ export function mountManual(root, { getDescriptor, getSettings = () => null, loa
 
     const nav = el('nav', 'manual-nav'); nav.setAttribute('aria-label', 'Manual sections');
     for (const [id, label] of ANCHORS) {
-      const link = el('a', '', label); link.href = `#${id}`;
-      link.addEventListener('click', (event) => { event.preventDefault(); article.querySelector(`#${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      const link = el('a', '', label); link.href = `#manual/${id}`;
       nav.append(link);
     }
 
@@ -271,11 +281,86 @@ export function mountManual(root, { getDescriptor, getSettings = () => null, loa
     const parts = new Map([...staticDoc.querySelectorAll('section[id]')].map((node) => [node.id, document.importNode(node, true)]));
     if (parts.has('manual-studio')) article.append(parts.get('manual-studio'));
     article.append(buildModuleSection(pages));
+    const settings = getSettings();
+    if (settings) {
+      const section = heading('manual-settings', 'Module settings', 'These explanations follow the settings supported by the connected module.');
+      for (const group of settingsView(settings, { looper: Boolean(descriptor?.loopIo), sliceVersion: Number(descriptor?.slice?.version) || 0 })) {
+        section.append(el('h3', '', group.title));
+        for (const item of group.items) {
+          const help = el('p'); help.append(el('strong', '', item.label), document.createTextNode(`. ${item.hint || group.title}`)); section.append(help);
+        }
+      }
+      article.append(section);
+    }
     for (const id of ['manual-flash', 'manual-help']) if (parts.has(id)) article.append(parts.get(id));
+    const search = el('section', 'manual-search');
+    const label = el('label', '', 'Find a control, setting or gesture'); label.htmlFor = 'manual-search-input';
+    searchInput = el('input'); searchInput.id = 'manual-search-input'; searchInput.type = 'search'; searchInput.autocomplete = 'off'; searchInput.placeholder = 'Try “clock”, “B3” or “pickup”…';
+    const results = el('div', 'manual-search-results'); results.setAttribute('aria-live', 'polite');
+    const entries = [];
+    for (const page of pages) for (const pot of page.pots) {
+      entries.push({ title: `${page.name}: ${pot.name || 'Unused control'}`, text: [pot.shift ? `Hold B1: ${pot.shift}` : '', pot.b2, page.note].filter(Boolean).join(' '),
+        action: () => { state.page = page.index; state.shift = false; paintPanel(); describe(`pot${pot.id}`); refs.readout.scrollIntoView({ block: 'nearest' }); } });
+      if (pot.shift) entries.push({ title: `${page.name}: ${pot.shift}`, text: `Hold B1 · ${POT_POSITIONS[pot.id]} · ${pot.name}`,
+        action: () => { state.page = page.index; state.shift = true; paintPanel(); describe(`pot${pot.id}`); refs.readout.scrollIntoView({ block: 'nearest' }); } });
+    }
+    for (const card of buttonCards(descriptor)) for (const action of card.actions) entries.push({ title: `${card.name}: ${action.label}`, text: `${gestureLabel(action.gesture)} ${action.help}`,
+      action: () => { describe(card.id); refs.readout.scrollIntoView({ block: 'nearest' }); } });
+    for (const section of article.querySelectorAll('section[id]')) {
+      for (const node of section.querySelectorAll('h2, h3, h4, p, tr, li')) {
+        const text = node.textContent.trim();
+        if (text.length < 12 || !text) continue;
+        const title = /^H[234]$/.test(node.tagName) ? text : section.querySelector('h2')?.textContent ?? 'Manual';
+        entries.push({ title, text, action: () => {
+          article.querySelector('.manual-search-target')?.classList.remove('manual-search-target');
+          node.classList.add('manual-search-target'); node.tabIndex = -1; node.focus({ preventScroll: true }); node.scrollIntoView({ block: 'center' });
+        } });
+      }
+    }
+    for (const link of article.querySelectorAll('a[href^="#"]')) {
+      const target = link.getAttribute('href').slice(1);
+      if (!target.startsWith('manual/')) link.href = `#manual/${target}`;
+    }
+    runSearch = () => {
+      const matches = searchManual(entries, searchInput.value);
+      results.replaceChildren();
+      if (!searchInput.value.trim()) return;
+      if (!matches.length) { results.append(el('p', '', 'No matching help. Try a control name, B1, B2, B3 or clock.')); return; }
+      for (const entry of matches) {
+        const result = el('button', '', entry.title); result.type = 'button';
+        result.append(el('small', '', entry.text.length > 180 ? `${entry.text.slice(0, 177)}…` : entry.text));
+        result.addEventListener('click', entry.action); results.append(result);
+      }
+    };
+    searchInput.addEventListener('input', runSearch);
+    searchInput.addEventListener('keydown', event => {
+      if (event.key === 'ArrowDown' || event.key === 'Enter') { const first = results.querySelector('button'); if (first) { event.preventDefault(); first.focus(); } }
+      if (event.key === 'Escape') { searchInput.value = ''; runSearch(); }
+    });
+    search.append(label, searchInput, results); hero.after(search);
     root.replaceChildren(article);
     state.built = true;
     if (pages.length) paintPanel();
   }
 
-  return { show, refreshConnection };
+  let opening = 0;
+  async function openSection(section = '') {
+    const request = ++opening;
+    await show();
+    if (!state.built || request !== opening || root.closest('.tab-panel')?.hidden) return;
+    if (section.startsWith('search:')) {
+      try { searchInput.value = decodeURIComponent(section.slice(7)); } catch { searchInput.value = section.slice(7); }
+      runSearch(); searchInput.focus(); searchInput.scrollIntoView({ block: 'start' });
+    } else if (section.startsWith('control:')) {
+      const [, page, control, layer] = section.split(':');
+      const pages = panelPages(descriptor);
+      state.page = Math.max(0, Math.min(pages.length - 1, Number(page) || 0)); state.shift = layer === 'shift';
+      paintPanel();
+      if (/^(pot[0-5]|b[1-3]|usb|jack(?:[1-9]|10))$/.test(control)) describe(control);
+      refs.readout.scrollIntoView({ block: 'nearest' });
+    } else if (/^manual-[a-z-]+$/.test(section)) {
+      root.querySelector(`#${section}`)?.scrollIntoView({ block: 'start' });
+    }
+  }
+  return { show, openSection, refreshConnection };
 }

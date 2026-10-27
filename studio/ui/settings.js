@@ -10,7 +10,7 @@ function element(tag, className, text) {
 
 export function mountSettings(root, controller) {
   const RECENT_CHANGES = 3;   // the card shows this many entries of the changelog; the rest is behind "Show all"
-  const ui = { open: new Set(['input', 'clock']), logAll: false };
+  const ui = { open: new Set(['input', 'clock']), logAll: false, firmwareOpen: false };
   const firmware = { latest: null, builtAtMs: null, log: [] };
   root.classList.add('cc-page');
 
@@ -58,6 +58,7 @@ export function mountSettings(root, controller) {
     const line = element('div', 'cc-row2');
     const text = element('span', 'cc-rtext'); text.append(element('b', '', item.label));
     if (item.hint) text.append(element('small', '', item.hint));
+    const help = element('a', 'setting-help', 'Help'); help.href = `#manual/search:${encodeURIComponent(item.label)}`; help.setAttribute('aria-label', `Help for ${item.label}`); text.append(help);
     const ctrl = element('span', 'cc-ctrl');
     if (item.control === 'segmented') ctrl.append(...segmented(item, readOnly));
     else if (item.control === 'slider') ctrl.append(...slider(item, readOnly));
@@ -102,7 +103,7 @@ export function mountSettings(root, controller) {
     const groups = controller.settingsView();
     if (!groups.length) { root.append(element('p', 'cc-muted', 'This module firmware has no settings fields.')); return; }
     root.append(element('p', 'cc-lead', 'The same list as the module’s own Settings page (hold B2 + B3). Changes are heard at once; Save to slot keeps them.'));
-    root.append(firmwareCard());
+
     const list = element('div', 'cc-setlist');
     for (const group of groups) {
       const open = ui.open.has(group.key);
@@ -114,7 +115,11 @@ export function mountSettings(root, controller) {
       if (open) { const body = element('div', 'cc-setbody'); for (const item of group.items) body.append(row(item, view.readOnly)); card.append(body); }
       list.append(card);
     }
-    root.append(list);
+    const details = element('details', 'firmware-details'); details.open = ui.firmwareOpen;
+    details.addEventListener('toggle', () => { ui.firmwareOpen = details.open; });
+    const version = controller.session?.info?.fwVersion ?? 'Unknown version';
+    details.append(element('summary', '', `Firmware ${version} · version and change history`), firmwareCard());
+    root.append(list, details);
   }
 
   let disposed = false;
