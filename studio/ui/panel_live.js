@@ -1,4 +1,5 @@
 import { indexDescriptor, readField, writeField } from '../model/blob.js';
+import { decodePanelFeedback } from './performance_feedback.js';
 import { panelPages } from './manual_vm.js';
 
 const clamp01 = (value) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
@@ -43,6 +44,7 @@ export class PanelLive {
   constructor({
     getSession,
     onValues = () => {},
+    onFeedback = () => {},
     onError = () => {},
     isVisible = () => true,
     intervalMs = 100,
@@ -52,6 +54,7 @@ export class PanelLive {
   }) {
     this.getSession = getSession;
     this.onValues = onValues;
+    this.onFeedback = onFeedback;
     this.onError = onError;
     this.isVisible = isVisible;
     this.intervalMs = intervalMs;
@@ -127,6 +130,12 @@ export class PanelLive {
     try {
       const bytes = await session.client.getLive(session.info);
       if (this.#canRun(session)) this.onValues(decodePerf(session.descriptor, bytes));
+      if (this.#canRun(session) && session.descriptor.panelFeedback?.version === 1) {
+        try {
+          const { body } = await session.client.request(0x7c);
+          if (this.#canRun(session)) this.onFeedback(decodePanelFeedback(body));
+        } catch { if (this.#canRun(session)) this.onFeedback(null); }
+      }
       return true;
     } catch {
       // Connection lifecycle owns disconnect reporting. A poll is observational and must stay quiet.

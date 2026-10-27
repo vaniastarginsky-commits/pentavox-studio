@@ -71,7 +71,7 @@ export function paintPots(potNodes, page, shift = false) {
     const shifted = shift && entry.shift;
     group.style.setProperty('--ring', entry.colour ?? page.colour);
     const lit = Math.max(1, Math.round(entry.def * (RING_DOTS - 1)) + 1);
-    dots.forEach((dot, i) => dot.classList.toggle('lit', i < lit));
+    dots.forEach((dot, i) => { dot.classList.toggle('lit', i < lit); dot.classList.remove('pickup-dot', 'pickup-target'); });
     needle.setAttribute('transform', `rotate(${(RING_START + entry.def * 270).toFixed(1)} ${pot.x} ${pot.y})`);
     label.textContent = clip((shift && entry.shift ? entry.shift : entry.name) || '·');
     valueLabel.textContent = '';

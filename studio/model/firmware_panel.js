@@ -10,13 +10,20 @@ export function firmwarePanelPages(pages, descriptor) {
     if(single && /^(Voice|Plaits) [23]$/.test(source.name))continue;
     let page={...source,perfIndex:source.perfIndex??source.index,pots:source.pots.map(p=>({...p}))};
     if(/^(Voice|Plaits) 1$/.test(page.name)) {
-      const shifts=[single?'Engine':'', 'Twist',fw.sidechain?'Sidechain EQ':'','Reverb send','Attack','Delay send'];
-      page.pots=page.pots.map((p,i)=>({...p,shift:shifts[i],b2:single?'Tap: Slicer; hold: next bank':p.b2}));
+      const shifts=[single?'Engine':'', single && descriptor?.panelFeedback?'Octave':'Twist',fw.sidechain?'Sidechain EQ':'','Reverb send','Attack','Delay send'];
+      page.pots=page.pots.map((p,i)=>({...p,...(single && descriptor?.panelFeedback && i===0?{name:'Twist'}:{}),shift:shifts[i],b2:single?'Tap: Slicer; hold: next bank':p.b2}));
     }
     if(page.name==='Looper' && fw.looper) {
       const shifts=['File A','File B',single?'Direction A':'Direction',single?'Direction B':fw.sidechain?'Sidechain EQ':'','Reverb send','Delay send'];
       page.pots=page.pots.map((p,i)=>({...p,shift:shifts[i],b2:single?'Tap: Slicer; hold/release: record; 5 s: clear':p.b2}));
       page.note=single?'B1 is always Shift. Hold/release B2 to record. Short B2+B3: Undo/Redo. B1+B2 hold: save; B1+B2 tap: file page. Release B1 to load selected files. Blue/yellow identify A/B; directions are independent.':'Both slots play. Crossfader selects the recording slot; B1 chooses files and direction.';
+    }
+    if(page.name==='Slice' && single && Number(descriptor?.slice?.version)>=19) {
+      const names=['Loop','Density','Edit','Throw chance','Seed','Wet'];
+      const shifts=['Protect beat 1','Shuffle','Ghost','Finale','Throw level','Throw destination'];
+      const colours=['#2846ff','#ff6e00','#d2b46e','#00b4dc','#8c28dc','#28c85a'];
+      result.push({...page,name:'Slicer',perfIndex:-1,note:'B1 + tap B2: next style. B2: variation. Hold B2: Fill. Density chooses active phrases; Edit adjusts their events. Delay, reverb and sends stay unchanged.',pots:names.map((name,id)=>({id,name,shift:shifts[id],b2:'Variation / hold Fill; B1 + tap: style',live:false,def:id===1?1:id===2?.5:0,colour:colours[id]}))});
+      continue;
     }
     if(page.name==='Slice' && single) {
       const layers=[

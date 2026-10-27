@@ -1,6 +1,7 @@
 // The panel dock: the module's front panel, drawn to scale, beside the tabs where its knobs and jacks are configured.
 // It reads the same pager as the Manual tab (the connected module's descriptor, or the compact firmware's snapshot while nothing is connected),
 // shows what each knob does on each page, and points from a control to the tab that sets it.
+import { paintPerformanceFeedback, paintRuntimePots, performanceView } from './performance_feedback.js';
 import { baseCvFunction } from '../model/panel_pots.js';
 import { POT_POSITIONS, buttonCards, gestureLabel, isCompactBuild, jackLabel, jackList, panelPages } from './manual_vm.js';
 import { drawPanel, paintLivePots, paintPots } from './panel_drawing.js';
@@ -47,6 +48,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
   let live = null;
   let liveFields = new Map();
   let liveValues = new Map();
+  let feedback = null;
 
   const dockVisible = () => !root.hidden && !document.hidden && isActive() && globalThis.getComputedStyle?.(root).display !== 'none';
   const syncLive = () => live?.setActive(dockVisible());
@@ -70,7 +72,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
   }
 
   function refreshConnection() {
-    live?.dispose(); live = null; liveFields = new Map(); liveValues = new Map();
+    live?.dispose(); live = null; liveFields = new Map(); liveValues = new Map(); feedback = null;
     if (state.built) { state.built = false; descriptor = null; }
   }
 
@@ -125,7 +127,8 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     queueMicrotask(() => placeBubble(control));
     if (control.startsWith('pot')) {
       const id = Number(control.slice(3));
-      const entry = page?.pots[id];
+      const runtimeFm=feedback?.fmLayer && /^(Plaits|Voice)/.test(page?.name);
+      const entry = runtimeFm ? {name:performanceView('fm',feedback).controls[id].label,live:false,b2:'Hold B2 and use the physical pot'} : page?.pots[id];
       title(`${POT_POSITIONS[id]} · ${page?.name ?? ''}`, entry?.name || 'Not used on this page');
       const list = el('dl', 'dock-facts');
       list.append(el('dt', '', 'Hold B1'), el('dd', '', entry?.shift || (isCompactBuild(panelPages(descriptor)) ? 'Not used' : 'unchanged')));
@@ -164,6 +167,13 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     if (!state.shift && liveValues.size) paintLivePots(refs.potNodes, page, liveValues);
     else paintPots(refs.potNodes, page, state.shift);
     decorate(refs.potNodes, page, state.shift);
+    const mode = /^Slicer/.test(page.name) && Number(descriptor?.slice?.version) >= 19 ? 'slicer' : /^(Plaits|Voice) 1$/.test(page.name) && descriptor?.panelFeedback ? 'fm' : null;
+    refs.feedback.hidden = !mode;
+    refs.body.classList.toggle('has-performance', Boolean(mode));
+    if (mode) {
+      paintPerformanceFeedback(refs.feedback, mode, feedback, state.shift);
+      if (feedback && (mode === 'slicer' || feedback.fmLayer)) paintRuntimePots(refs.potNodes, mode, feedback, state.shift);
+    }
   }
 
   function paint() {
@@ -183,7 +193,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
   }
 
   function adjustPot(id, value, { flush = false } = {}) {
-    if (state.shift || !live) return false;
+    if (state.shift || !live || (feedback?.fmLayer && /^(Plaits|Voice)/.test(currentPage()?.name))) return false;
     const key = perfKey(state.page, id);
     const field = liveFields.get(key);
     const next = Math.max(0, Math.min(1, value));
@@ -258,12 +268,13 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     const status = getSession() ? null : el('p', 'dock-status', 'Module not connected. This is the factory layout; press Connect, or Demo, to see live knob values.');
     body.classList.toggle('has-status', Boolean(status));
     figure.append(readout);
-    body.replaceChildren(...[status, controls, figure].filter(Boolean));
+    const feedbackPanel = el('section', 'performance-feedback'); feedbackPanel.hidden = true; feedbackPanel.setAttribute('aria-label', 'Performance controls');
+    body.replaceChildren(...[status, controls, figure, feedbackPanel].filter(Boolean));
     readout.addEventListener('pointerenter', keepBubble);
     readout.addEventListener('pointerleave', hideBubbleSoon);
     figure.addEventListener('click', (event) => { if (!event.target.closest('[data-control], .dock-bubble')) describe(null); });
 
-    refs = { drawing, potNodes, tabs, shiftToggle, readout };
+    refs = { drawing, potNodes, tabs, shiftToggle, readout, body, feedback: feedbackPanel };
     for (const control of drawing.querySelectorAll('[data-control]')) {
       const id = control.dataset.control;
       control.addEventListener('mouseenter', () => { keepBubble(); describe(id); });
@@ -280,6 +291,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
       getSession,
       isVisible: dockVisible,
       onValues: (values) => { liveValues = values; if (refs) paintDrawing(); },
+      onFeedback: value => { feedback = value; if (refs) paintDrawing(); },
       onError: onLiveError,
     }) : null;
     potNodes.forEach((node) => bindLivePot(node, node.pot.id));
