@@ -20,7 +20,7 @@ export function firmwarePanelPages(pages, descriptor) {
     }
     if(page.name==='Slice' && single && Number(descriptor?.slice?.version)>=19) {
       const names=['Loop','Density','Edit','Throw chance','Seed','Wet'];
-      const shifts=['Protect beat 1','Shuffle','Ghost','Finale','Throw level','Throw destination'];
+      const shifts=['Evolve (seed)','Shuffle','Ghost','Finale','Throw level','Throw destination'];
       const colours=['#2846ff','#ff6e00','#d2b46e','#00b4dc','#8c28dc','#28c85a'];
       result.push({...page,name:'Slicer',perfIndex:-1,note:'B1 + tap B2: next style. B2: variation. Hold B2: Fill. Density chooses active phrases; Edit adjusts their events. Delay, reverb and sends stay unchanged.',pots:names.map((name,id)=>({id,name,shift:shifts[id],b2:'Variation / hold Fill; B1 + tap: style',live:false,def:id===1?1:id===2?.5:0,colour:colours[id]}))});
       continue;

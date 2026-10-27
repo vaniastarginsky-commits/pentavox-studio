@@ -18,7 +18,7 @@ export function decodePanelFeedback(bytes) {
 
 export function performanceView(mode, data, alternate = false) {
   const fm = mode === 'fm';
-  const labels = fm ? ['Rate', 'Wave', 'Depth', 'Law', 'Tracking', 'Source'] : alternate ? ['Protect beat 1', 'Shuffle', 'Ghost', 'Finale', 'Throw level', 'Throw destination'] : ['Loop', 'Density', 'Edit', 'Throw chance', 'Seed', 'Wet'];
+  const labels = fm ? ['Rate', 'Wave', 'Depth', 'Law', 'Tracking', 'Source'] : alternate ? ['Evolve (seed)', 'Shuffle', 'Ghost', 'Finale', 'Throw level', 'Throw destination'] : ['Loop', 'Density', 'Edit', 'Throw chance', 'Seed', 'Wet'];
   const values = data ? fm ? data.fm : alternate ? data.alternate : data.slice : null;
   const following = Boolean(data && (fm ? data.fmLayer : data.slicePage && data.shift === alternate));
   let status = fm ? 'Hold B2 on Plaits. First catch Depth at zero, then turn it up.' : 'B1 + tap B2: next style. B2: variation. Hold B2: Fill.';

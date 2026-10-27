@@ -19,7 +19,7 @@ export const polar = (cx, cy, radius, degrees) => [cx + radius * Math.sin((degre
 
 const hitCircle = (cx, cy, radius) => svg('circle', { cx, cy, r: radius, class: 'mp-hit' });
 
-export function drawPanel({ instrument = false } = {}) {
+export function drawPanel() {
   const { x, y, width, height } = PANEL;
   const drawing = svg('svg', { viewBox: `${x} ${y} ${width} ${height}`, class: 'mp-svg', role: 'group', 'aria-label': 'Front panel of the module, drawn to scale' });
   drawing.append(svg('rect', { x, y, width, height, rx: 1.4, class: 'mp-plate' }));
@@ -35,12 +35,6 @@ export function drawPanel({ instrument = false } = {}) {
       group.append(dot);
       return dot;
     });
-    if (instrument) {
-      for (const className of ['mp-arc-track', 'mp-arc']) group.append(svg('circle', {
-        cx: pot.x, cy: pot.y, r: 9.9, class: className,
-        'stroke-dasharray': '46.65 62.2', transform: `rotate(135 ${pot.x} ${pot.y})`,
-      }));
-    }
     const knob = svg('circle', { cx: pot.x, cy: pot.y, r: 6.5, class: 'mp-knob' });
     const needle = svg('line', { x1: pot.x, y1: pot.y - 2.2, x2: pot.x, y2: pot.y - 5.6, class: 'mp-needle' });
     const label = svg('text', { x: pot.x, y: pot.y + 13.8, class: 'mp-label', 'text-anchor': 'middle' });

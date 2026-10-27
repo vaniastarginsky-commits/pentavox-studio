@@ -19,11 +19,10 @@ export const VELOCITY = 128;
 const depthText = (value) => `${value > 0 ? '+' : value < 0 ? '\u2212' : ''}${Math.abs(value)} %`;
 const setFill = (input) => input.style.setProperty('--p', `${(Number(input.value) + 100) / 2}%`);
 export const ccLabel = (cc) => (cc === VELOCITY ? 'Note velocity' : CC_NAMES[cc] ? `CC ${cc} · ${CC_NAMES[cc]}` : `CC ${cc}`);
-export const midiLearnFeedback = ({ cc, channel }) => `Learned ${ccLabel(cc)} · Channel ${channel}`;
 
 export function mountMidiRouting(root, controller, { onError = () => {}, onUndo = null, learn = learnNextMessage } = {}) {
   root.classList.add('cc-page');
-  const ui = { extra: 0, used: 0, learning: null, learned: '', popover: null, query: '', filter: 'All' };   // blank rows the user asked for; a blank row that got a destination stops counting
+  const ui = { extra: 0, used: 0, learning: null, popover: null, query: '', filter: 'All' };   // blank rows the user asked for; a blank row that got a destination stops counting
 
   function ccSelect(route, readOnly) {
     const select = element('select', 'cc-ccsel'); select.disabled = readOnly; select.setAttribute('aria-label', `Controller of route ${route.index + 1}`);
@@ -40,7 +39,7 @@ export function mountMidiRouting(root, controller, { onError = () => {}, onUndo 
 
   function learnButton(route, readOnly) {
     const active = ui.learning?.index === route.index;
-    const button = element('button', `cc-quiet cc-learn${active ? ' on' : ''}`, active ? 'Cancel' : 'Learn');
+    const button = element('button', `cc-quiet cc-learn${active ? ' on' : ''}`, active ? '…' : 'Learn');
     button.type = 'button'; button.disabled = readOnly;
     button.title = active ? 'Listening: move a knob or press a key on your MIDI controller (Esc cancels)' : 'Fill controller and channel from the next MIDI message your controller sends';
     button.setAttribute('aria-label', active ? `Cancel learning for route ${route.index + 1}` : `Learn controller of route ${route.index + 1}`);
@@ -48,14 +47,12 @@ export function mountMidiRouting(root, controller, { onError = () => {}, onUndo 
       if (active) { stopLearning(); return; }
       stopLearning();
       const abort = new AbortController();
-      ui.learned = ''; ui.learning = { index: route.index, abort };
+      ui.learning = { index: route.index, abort };
       render();
       try {
         const { cc, channel } = await learn({ signal: abort.signal });
-        if (abort.signal.aborted || ui.learning?.abort !== abort) return;
         controller.updateMidiRoute(route.index, 'cc', cc);
         controller.updateMidiRoute(route.index, 'ch', channel);
-        ui.learned = midiLearnFeedback({ cc, channel });
       } catch (error) {
         if (error?.name !== 'AbortError') onError(error);
       } finally {
@@ -83,7 +80,6 @@ export function mountMidiRouting(root, controller, { onError = () => {}, onUndo 
     const wrap = element('div', 'cc-dwrap');
     const label = route.dest === 0 ? 'Choose a parameter…' : entry ? `${entry.group} · ${entry.name}` : controller.destinations.label(route.dest);   // a removed destination stays visible
     const button = element('button', `cc-dbtn${route.dest === 0 ? ' empty' : ''}`); button.type = 'button'; button.disabled = readOnly; button.title = label;
-    button.dataset.midiPicker = String(route.index);
     if (route.dest === 0 || !entry) button.append(element('span', 'cc-muted', label));
     else { const text = element('span', 'cc-dtext'); text.append(element('small', '', entry.group), element('strong', '', entry.name)); button.append(text); }
     button.setAttribute('aria-haspopup', 'listbox'); button.setAttribute('aria-label', `Destination of route ${route.index + 1}: ${label}`);
@@ -91,7 +87,6 @@ export function mountMidiRouting(root, controller, { onError = () => {}, onUndo 
     wrap.append(button);
     if (ui.popover !== route.index) return wrap;
     const pop = element('div', 'cc-pop'); pop.addEventListener('click', (event) => event.stopPropagation());
-    pop.addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); ui.popover = null; render(); root.querySelector(`[data-midi-picker="${route.index}"]`)?.focus(); } });
     const search = document.createElement('input'); search.type = 'search'; search.placeholder = 'Search parameters'; search.value = ui.query; search.setAttribute('aria-label', 'Search parameters');
     const list = element('div', 'cc-poplist'); list.setAttribute('role', 'listbox');
     const choose = (id) => {
@@ -123,8 +118,8 @@ export function mountMidiRouting(root, controller, { onError = () => {}, onUndo 
     };
     search.addEventListener('input', () => { ui.query = search.value; fill(); });
     search.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); ui.popover = null; render(); root.querySelector(`[data-midi-picker="${route.index}"]`)?.focus(); }
-      else if (event.key === 'Enter') { event.preventDefault(); const first = matches()[0]?.items[0]; if (first) choose(first.id); }
+      if (event.key === 'Escape') { ui.popover = null; render(); button.focus(); }
+      else if (event.key === 'Enter') { const first = matches()[0]?.items[0]; if (first) choose(first.id); }
       else if (event.key === 'ArrowDown') { event.preventDefault(); list.querySelector('.cc-pi')?.focus(); }
     });
     pop.append(search, list); fill(); wrap.append(pop);
@@ -162,15 +157,9 @@ export function mountMidiRouting(root, controller, { onError = () => {}, onUndo 
     const visible = [...used.filter((route) => ui.filter === 'All' || tabOf(route.dest) === ui.filter), ...blank];
 
     const head = element('div', 'cc-head');
-    head.append(element('p', 'cc-lead', 'MIDI controller → parameter. Use Learn to capture a control and its channel; depth sets how much it adds.'));
+    head.append(element('p', 'cc-lead', 'One table for the module: a row listens to a controller (or note velocity) on a channel and adds its value times the depth to a parameter. A negative depth inverts; several rows may drive one parameter.'));
     const count = element('span', 'cc-count'); count.append(element('b', '', String(used.length)), ` of ${view.slots}`);
     head.append(count);
-    if (ui.learning || ui.learned) {
-      const feedback = element('div', 'workflow-midi-feedback'); feedback.setAttribute('role', 'status');
-      feedback.append(element('span', '', ui.learning ? `Move a MIDI control · Route ${ui.learning.index + 1}` : ui.learned));
-      if (ui.learning) { const cancel = element('button', '', 'Cancel'); cancel.type = 'button'; cancel.addEventListener('click', stopLearning); feedback.append(cancel); }
-      head.append(feedback);
-    }
 
     const card = element('section', 'cc-card');
     const header = element('header');

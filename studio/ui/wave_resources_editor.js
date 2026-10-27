@@ -44,19 +44,12 @@ export function explicitWaveResources(resources, kinds) {
   return normalizeResources(Object.fromEntries([...kinds].map((key) => [key, resources[key]])));
 }
 
-export function waveBuildMessage(kind) {
-  const engine = kind === 'terrain' ? 'Wave Terrain' : 'Wavetable';
-  return `Saved in this browser for the next build. Select ${engine} in Engines to include these resources. The connected module is unchanged.`;
-}
-
 export function mountWaveResourcesEditor({ getResources = defaultResources, onChange = () => {}, onError = () => {} } = {}) {
   const dialog = el('dialog', 'wr-dialog'); dialog.setAttribute('aria-label', 'Customize waves'); document.body.append(dialog);
   const header = el('header', 'wr-header'); const title = el('h2', '', 'Customize waves'); const close = button('Close', () => dialog.close()); header.append(title, close);
   const tabs = el('div', 'wr-tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Wave resource type');
   const layout = el('div', 'wr-layout'); const sidebar = el('section', 'wr-library'); const body = el('section', 'wr-detail'); const status = el('p', 'wr-status'); status.setAttribute('role', 'status');
-  const buildState = el('span', 'workflow-build-state');
-  const openEngines = button('Open Engines', () => globalThis.dispatchEvent(new CustomEvent('pentavox-navigate', { detail: { tab: 'palette' } })), 'workflow-open-engines');
-  const footer = el('footer', 'wr-footer'); footer.append(buildState, openEngines, button('Done', () => dialog.close(), 'primary'));
+  const footer = el('footer', 'wr-footer'); footer.append(el('span', '', 'Saved in this Studio project. BUILD includes banks when their matching engine is selected.'), button('Done', () => dialog.close(), 'primary'));
   dialog.append(header, tabs, layout, status, footer); layout.append(sidebar, body);
   let draft = null; let persistedKinds = new Set(); let kind = 'wavetable'; let selected = 0; let factory = null; let community = []; let loading = null; let destroyed = false;
   let x = .5; let y = .5; let radius = .3; let view = 'surface'; let context = null; let source = null; let timer = null; let busy = false;
@@ -83,10 +76,10 @@ export function mountWaveResourcesEditor({ getResources = defaultResources, onCh
     return loading;
   }
   async function guard(action) { if (busy) return; busy = true; try { await action(); } catch (error) { notice(error.message || String(error), true); onError(error); } finally { busy = false; } }
-  function add(entry) { if (entries().length >= 16) throw new Error('A bank can contain at most 16 entries. Remove an entry first.'); entries().push(entry); selected = entries().length - 1; save(); notice('Added to this browser’s draft. Select the matching engine to include it in your next build.'); render(); }
+  function add(entry) { if (entries().length >= 16) throw new Error('A bank can contain at most 16 entries. Remove an entry first.'); entries().push(entry); selected = entries().length - 1; save(); notice('Added. The next BUILD will include this bank.'); render(); }
   function renderLibrary() {
-    sidebar.replaceChildren(); sidebar.append(el('h3', '', 'Resources'));
-    sidebar.append(el('p', 'wr-hint', kind === 'wavetable' ? 'Harmonics banks for the Wavetable engine.' : 'Surfaces for the Wave Terrain engine.'));
+    sidebar.replaceChildren(); sidebar.append(el('h3', '', kind === 'wavetable' ? 'Harmonics banks' : 'Terrain order'));
+    sidebar.append(el('p', 'wr-hint', kind === 'wavetable' ? 'Used by Wavetable only. Add Wavetable to an active voice set to include these banks in BUILD.' : 'Used by Wave Terrain only. Add Wave Terrain to an active voice set to include these surfaces in BUILD.'));
     sidebar.append(el('p', 'wr-hint', 'Order follows the Harmonics knob. Use the arrows to move an entry.'));
     const list = el('ol', 'wr-entry-list');
     entries().forEach((entry, index) => {
@@ -112,33 +105,31 @@ export function mountWaveResourcesEditor({ getResources = defaultResources, onCh
   function renderDetail() {
     body.replaceChildren(); const entry = entries()[selected]; if (!entry) return;
     const heading = el('div', 'wr-detail-heading'); heading.append(el('h3', '', entryName(entry)), el('span', 'wr-hint', entry.type === 'factory' ? 'Factory' : kind === 'wavetable' ? '64 waves · 128 samples' : '64 × 64 sampled surface')); body.append(heading);
-    body.append(el('h4', 'workflow-preview-title', 'Preview'));
-    const samples = samplesFor(entry); const canvas = el('canvas', 'wr-canvas'); canvas.width = 720; canvas.height = samples ? 320 : 90; canvas.classList.toggle('preview-unavailable', !samples); canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', kind === 'wavetable' ? 'Selected wave shape' : 'Sampled terrain surface'); body.append(canvas);
+    const samples = samplesFor(entry); const canvas = el('canvas', 'wr-canvas'); canvas.width = 720; canvas.height = 320; canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', kind === 'wavetable' ? 'Selected wave shape' : 'Sampled terrain surface'); body.append(canvas);
     const plot = () => draw(canvas, samples, kind, { x, y, radius, view }); plot();
-    const controls = el('div', 'wr-controls'); controls.hidden = !samples; controls.append(label('X', range('Preview X position', x, (value) => { x = value; stop(); plot(); })), label('Y', range('Preview Y position', y, (value) => { y = value; stop(); plot(); })));
+    const controls = el('div', 'wr-controls'); controls.append(label('X', range('Preview X position', x, (value) => { x = value; stop(); plot(); })), label('Y', range('Preview Y position', y, (value) => { y = value; stop(); plot(); })));
     if (kind === 'terrain') { controls.append(label('Orbit size', range('Preview orbit size', radius * 2, (value) => { radius = value / 2; stop(); plot(); }))); const toggle = button(view === 'surface' ? 'Show 2D' : 'Show 3D', () => { view = view === 'surface' ? 'map' : 'surface'; renderDetail(); }); controls.append(toggle); }
     const audition = button('Preview C3', () => guard(() => play(samples))); audition.disabled = !samples; controls.append(audition, button('Stop', stop)); body.append(controls);
     body.append(el('p', 'wr-hint', samples ? kind === 'wavetable' ? `${entry.type === 'factory' ? 'Factory preview is approximate. ' : ''}Raw bank audition reads the saved wave grid at X / Y. The firmware engine adds processing, so its sound may differ.` : `${entry.type === 'factory' ? 'Factory preview is approximate. ' : ''}Raw bank audition follows a circular orbit over the saved surface. X / Y move its centre. The firmware engine adds processing, so its sound may differ.` : 'Factory preview data is unavailable. This entry still uses the original factory resource on the module.'));
     if (entry.type !== 'factory') { const name = el('input'); name.type = 'text'; name.value = entry.name; name.maxLength = 80; name.addEventListener('change', () => guard(() => { entry.name = name.value.trim() || 'Untitled'; save(); render(); })); body.append(label('Name', name)); }
-    const editor = el('details', 'wr-equation workflow-disclosure'); editor.open = entry.type !== 'factory' && Boolean(entry.equation); editor.append(el('summary', '', entry.type === 'factory' ? 'Create from equation' : 'Edit or create an equation'));
+    const editor = el('section', 'wr-equation'); editor.append(el('h4', '', entry.type === 'factory' ? 'Create from equation' : 'Edit or create an equation'));
     const name = el('input'); name.type = 'text'; name.value = entry.type === 'factory' ? kind === 'terrain' ? 'My terrain' : 'My wave bank' : entry.name; name.maxLength = 80; const equation = el('textarea'); equation.rows = 3; equation.spellcheck = false; equation.value = entry.equation ?? EXAMPLES[kind][0][1];
     editor.append(label('New bank name', name), label('Equation', equation), el('p', 'wr-hint', kind === 'wavetable' ? 'phi: 0…2π over a cycle. x / y: positions in the wave grid. Functions: sin, cos, tan, abs, sqrt, exp, log, min, max. Use ^ for powers.' : 'x / y: −1…1 across the surface. Functions: sin, cos, tan, abs, sqrt, exp, log, min, max. Use ^ for powers.'));
     const exampleRow = el('div', 'wr-examples'); for (const [text, value] of EXAMPLES[kind]) exampleRow.append(button(text, () => { equation.value = value; })); editor.append(exampleRow);
-    const generate = (replace) => guard(() => { const sampled = (kind === 'wavetable' ? sampleWavetableEquation : sampleTerrainEquation)(name.value.trim() || 'Untitled', equation.value); stop(); if (replace) { entries()[selected] = sampled; save(); notice('Updated in this browser’s draft. Select the matching engine to include it in your next build.'); render(); } else add(sampled); });
+    const generate = (replace) => guard(() => { const sampled = (kind === 'wavetable' ? sampleWavetableEquation : sampleTerrainEquation)(name.value.trim() || 'Untitled', equation.value); stop(); if (replace) { entries()[selected] = sampled; save(); notice('Updated. The next BUILD will include these samples.'); render(); } else add(sampled); });
     const equationActions = el('div', 'wr-actions'); const create = button('Add sampled bank', () => generate(false), 'primary'); create.disabled = entries().length >= 16; equationActions.append(create); if (entry.type !== 'factory') equationActions.append(button('Replace selected', () => generate(true))); editor.append(equationActions); body.append(editor);
-    const importSection = el('details', 'workflow-disclosure'); importSection.append(el('summary', '', 'Import and export'));
     const imports = el('div', 'wr-imports'); const wavMode = el('select'); wavMode.setAttribute('aria-label', 'WAV layout'); for (const [value, text] of [['64', 'WAV: 64 waves'], ['1', 'WAV: single cycle']]) { const option = el('option', '', text); option.value = value; wavMode.append(option); } const input = el('input'); input.type = 'file'; input.accept = kind === 'wavetable' ? '.json,.wav,application/json,audio/wav' : '.json,application/json'; input.hidden = true;
     input.addEventListener('change', () => guard(async () => {
       const file = input.files?.[0]; if (!file) return;
       if (file.size > 16 * 1024 * 1024) throw new Error('Choose a file smaller than 16 MB.');
       if (/\.wav$/i.test(file.name)) { if (kind !== 'wavetable') throw new Error('WAV import is available in Wave Tables.'); add(await importWavetableWav(file.name.replace(/\.wav$/i, ''), await file.arrayBuffer(), { waveCount: Number(wavMode.value) })); }
-      else { const imported = importPaletteResources(JSON.parse(await file.text())); draft = normalizeResources({ ...draft, ...imported }); selected = 0; stop(); save(Object.keys(imported)); notice('Imported into this browser’s draft. Select the matching engines to include these resources in your next build.'); render(); }
+      else { const imported = importPaletteResources(JSON.parse(await file.text())); draft = normalizeResources({ ...draft, ...imported }); selected = 0; stop(); save(Object.keys(imported)); notice('Imported wave banks. The next BUILD will include them.'); render(); }
       input.value = '';
     })); if (kind === 'wavetable') imports.append(wavMode); imports.append(input, button(kind === 'wavetable' ? 'Import Palette JSON / WAV' : 'Import Palette JSON', () => { input.value = ''; input.click(); }));
-    imports.append(button('Export wave banks', () => { const blob = new Blob([JSON.stringify({ resources: draft }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const anchor = el('a'); anchor.href = url; anchor.download = 'pentavox-wave-banks.json'; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); })); importSection.append(imports); body.append(importSection);
-    if (kind === 'wavetable') importSection.append(el('p', 'wr-hint', 'Choose the WAV layout before importing: 64 consecutive waves, or one cycle repeated across the bank. Each wave is resampled to 128 samples. Palette JSON imports both wave sections.'));
+    imports.append(button('Export wave banks', () => { const blob = new Blob([JSON.stringify({ resources: draft }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const anchor = el('a'); anchor.href = url; anchor.download = 'pentavox-wave-banks.json'; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); })); body.append(imports);
+    if (kind === 'wavetable') body.append(el('p', 'wr-hint', 'Choose the WAV layout before importing: 64 consecutive waves, or one cycle repeated across the bank. Each wave is resampled to 128 samples. Palette JSON imports both wave sections.'));
   }
-  function render() { if (!draft || destroyed) return; buildState.textContent = waveBuildMessage(kind); for (const [key, tab] of Object.entries(tabButtons)) { tab.setAttribute('aria-selected', String(key === kind)); tab.tabIndex = key === kind ? 0 : -1; } renderLibrary(); renderDetail(); }
+  function render() { if (!draft || destroyed) return; for (const [key, tab] of Object.entries(tabButtons)) { tab.setAttribute('aria-selected', String(key === kind)); tab.tabIndex = key === kind ? 0 : -1; } renderLibrary(); renderDetail(); }
   tabs.addEventListener('keydown', (event) => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return; event.preventDefault(); kind = event.key === 'Home' ? 'wavetable' : event.key === 'End' ? 'terrain' : kind === 'wavetable' ? 'terrain' : 'wavetable'; selected = 0; stop(); notice(); render(); tabButtons[kind].focus(); });
   dialog.addEventListener('close', stop);
   return {
