@@ -116,6 +116,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
 
   function describe(control) {
     state.selected = control;
+    if (inspectorRoot) inspectorRoot.dataset.control = control ?? '';
     emitSelect(control);
     const out = refs.readout;
     out.replaceChildren();
@@ -143,7 +144,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
       if (runtime) out.append(el('p', 'dock-note dock-runtime-status', mode === 'fm' ? performanceView('fm', feedback).status : 'Use the module’s controls. B1 + tap B2 changes style, tap B2 makes a variation, hold B2 queues a Fill.'));
       else if (state.shift && !entry?.shift) out.append(el('p', 'dock-note', 'This knob has no alternate function on this page. Its ring is dark while B1 is held.'));
       else if (entry?.live === false) out.append(el('p', 'dock-note', 'Use the physical pot. This firmware does not expose its live value to Studio.'));
-      else out.append(el('p', 'dock-note', 'The coloured ring shows the value. Exposed normal-layer controls can be dragged here or adjusted with arrow keys; hold Shift for larger steps.'));
+      else out.append(el('p', 'dock-note', 'The pointer shows the value. Exposed normal-layer controls can be dragged here or adjusted with arrow keys; hold Shift for larger steps.'));
       if (!runtime) goto('Set in CV routing', 'routing');
       goto('Help for this control', 'manual');
       updateInspectorValue();
@@ -288,7 +289,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     const body = root.querySelector('.dock-body');
     if (!pages.length) { body.replaceChildren(el('p', 'dock-note', 'This firmware does not describe its pages.')); state.built = true; return; }
     state.page = Math.min(state.page, pages.length - 1);
-    const { drawing, potNodes } = drawPanel();
+    const { drawing, potNodes } = drawPanel({ instrument: Boolean(inspectorRoot) });
     const figure = el('figure', 'dock-figure'); figure.append(drawing);
     const fullViewBox = drawing.getAttribute('viewBox');
     let showJacks = false;
@@ -323,7 +324,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
         showJacks = !showJacks; framePanel(); jacks.textContent = showJacks ? 'Knobs only' : 'Show jacks';
         jacks.setAttribute('aria-pressed', String(showJacks));
       });
-      jacks.setAttribute('aria-pressed', 'false'); controls.append(jacks);
+      jacks.setAttribute('aria-pressed', 'false'); jacks.title = 'Full panel with the module LED colours and jack assignments'; controls.append(jacks);
     }
     const readout = el('div', inspectorRoot ? 'dock-inspector' : 'dock-bubble'); readout.setAttribute('aria-live', 'polite'); readout.hidden = true;
     const status = getSession() ? null : el('p', 'dock-status', 'Module not connected. This is the factory layout; press Connect, or Demo, to see live knob values.');

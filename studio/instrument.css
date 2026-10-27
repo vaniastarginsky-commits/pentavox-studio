@@ -320,3 +320,62 @@ html[data-studio-tab="settings"] .module-nav a[href="#settings"], html[data-stud
 #panel-tab .dock-jacks-toggle { background: none; border: 0; padding: 3px 6px; font-size: 11px; color: var(--muted); margin-left: auto; }
 #panel-tab .dock-jacks-toggle:hover { color: var(--accent); }
 #panel-tab .controls-only .mp-plate, #panel-tab .controls-only .mp-inset, #panel-tab .controls-only .mp-mount { display: none; }
+
+/* Instrument visual language: charcoal, warm paper, three distinct control hues. */
+:root { --serif: 'Arial', 'Helvetica Neue', sans-serif; --serif-display: var(--serif); --accent: #7950cf; --accent-strong: #6e42c0; --accent-soft: #ebe3f5; --knob-cap: #283641; --knob-edge: #3a4b58; }
+:root[data-theme="dark"] {
+  --bg: #101920; --surface: #16232c; --surface-2: #1d2c36; --line: #2c3d48; --text: #dce6ee; --muted: #98aaba;
+  --accent: #ac7af5; --accent-strong: #905de1; --accent-ink: #fff; --accent-soft: #29233e; --empty-plot: #111d26; --tile-hover: #243540;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101920; --surface: #16232c; --surface-2: #1d2c36; --line: #2c3d48; --text: #dce6ee; --muted: #98aaba;
+    --accent: #ac7af5; --accent-strong: #905de1; --accent-ink: #fff; --accent-soft: #29233e; --empty-plot: #111d26; --tile-hover: #243540;
+  }
+}
+.side .brand-wordmark b { font-size: 15px; letter-spacing: 1.2px; font-weight: 500; text-transform: uppercase; }
+.side .brand-wordmark small { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; }
+.side .tabs a, .side .tabs a.sub, .side .tabs #sdcard-nav { font-weight: 400; }
+.content > .app-header { background: var(--bg); border-color: var(--line); }
+html:not([data-studio-tab="palette"]) .page-head h2 { font-size: 19px; font-weight: 600; letter-spacing: -.3px; }
+button { font-weight: 500; }
+#panel-tab .panel-live-section { gap: 0; max-width: 940px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); overflow: hidden; }
+#panel-tab .panel-dock.as-page { background: none; border: 0; border-radius: 0; padding: 12px; }
+#panel-tab .panel-control-inspector { border: 0; border-left: 1px solid var(--line); border-radius: 0; background: none; padding: 20px; margin: 12px 0; }
+#panel-tab .dock-figure { background: none; }
+#panel-tab .dock-pages { border: 0; background: none; padding: 0; }
+#panel-tab .dock-page { font-weight: 500; }
+#panel-tab .dock-page.active { color: var(--accent); background: var(--accent-soft); box-shadow: none; }
+#panel-tab .dock-page::before { width: 6px; height: 6px; }
+#panel-tab .dock-inspector h3 { font-size: 24px; letter-spacing: -.4px; }
+#panel-tab .dock-inspector .dock-context { font-size: 11px; }
+#panel-tab .dock-inspector .dock-note { line-height: 1.65; }
+#panel-tab .dock-value { font-size: 30px; font-weight: 500; }
+#panel-tab .mp-arc, #panel-tab .mp-arc-track { display: none; fill: none; stroke-width: 1.45; stroke-linecap: round; pointer-events: none; }
+#panel-tab .controls-only .mp-arc-track { display: block; stroke: var(--line); stroke-width: 2.4; }
+#panel-tab .controls-only .mp-arc { display: block; stroke: var(--ring); }
+#panel-tab .controls-only .mp-dot { display: none; }
+#panel-tab .controls-only .mp-knob { fill: var(--knob-cap); stroke: var(--knob-edge); stroke-width: .45; filter: drop-shadow(0px .7px .5px #0007); }
+#panel-tab .controls-only .mp-needle { stroke: #eff4f8; stroke-width: .85; }
+#panel-tab .controls-only .mp-cap { fill: var(--knob-cap); stroke: var(--knob-edge); stroke-width: .6; }
+#panel-tab .controls-only .mp-cap-text { fill: #c5d4df; }
+#panel-tab .controls-only .mp-label { font-family: var(--serif); font-weight: 500; }
+#panel-tab .panel-page[data-section="live"] [data-control="pot0"], #panel-tab .panel-page[data-section="live"] [data-control="pot3"], #panel-control-inspector[data-control="pot0"], #panel-control-inspector[data-control="pot3"] { --control-hue: #24c8cf; }
+#panel-tab .panel-page[data-section="live"] [data-control="pot1"], #panel-tab .panel-page[data-section="live"] [data-control="pot4"], #panel-control-inspector[data-control="pot1"], #panel-control-inspector[data-control="pot4"] { --control-hue: #f4ad42; }
+#panel-tab .panel-page[data-section="live"] [data-control="pot2"], #panel-tab .panel-page[data-section="live"] [data-control="pot5"], #panel-control-inspector[data-control="pot2"], #panel-control-inspector[data-control="pot5"] { --control-hue: #a876ef; }
+#panel-tab .panel-page[data-section="live"] .controls-only .mp-arc { stroke: var(--control-hue, var(--ring)); }
+#panel-tab .panel-control-inspector h3::before { content: ''; display: inline-block; width: 8px; height: 8px; background: var(--control-hue, var(--accent)); border-radius: 50%; margin-right: 9px; vertical-align: middle; }
+#panel-tab .controls-only .mp-pot.muted .mp-arc { opacity: .15; }
+#panel-tab .controls-only .mp-pot.selected .mp-knob, #panel-tab .controls-only .mp-pot:focus-visible .mp-knob { stroke: var(--control-hue, var(--accent)); }
+#panel-tab .skin-root { background: var(--surface); }
+.instrument-settings-card { background: transparent; border: 0; border-radius: 0; padding: 10px 16px 14px; }
+.instrument-settings-card h2 { border-bottom: 1px solid var(--line); font-size: 15px; font-weight: 600; }
+.instrument-settings-grid { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 6px; }
+.instrument-setting .cc-seg button.active { background: var(--accent); color: var(--accent-ink); }
+#presets-root .preset-list .preset-row { background: transparent; }
+#presets-root .preset-main strong { font-weight: 500; }
+#presets-root .preset-detail { background: transparent; }
+@media (max-width: 760px) { #panel-tab .panel-control-inspector { border-left: 0; border-top: 1px solid var(--line); margin: 0 12px 12px; } }
+#panel-tab .controls-only .mp-control:focus-visible { outline: none; }
+#panel-tab .controls-only .mp-control:focus-visible .mp-knob { stroke: var(--control-hue, var(--accent)); stroke-width: .85; }
+#panel-tab .controls-only .mp-control:focus-visible .mp-cap { stroke: var(--accent); stroke-width: .85; }
