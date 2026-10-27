@@ -1,7 +1,7 @@
 import { decodeBank, encodeBank } from './break_pattern.js';
 export const TARGET_SAMPLE_RATE = 48000;
 export const MAX_FRAMES = 1440000;
-export const MAX_SLICE_POINTS = 32;
+export const MAX_SLICE_POINTS = 64;
 export const NORMALIZE_PEAK = 10 ** (-1 / 20);
 
 function copyChannels(channels) {
@@ -81,14 +81,13 @@ function writeTag(bytes, offset, tag) { for (let i = 0; i < 4; i += 1) bytes[off
 export const PLAY_MODES = ['Normal', 'Forward', 'Random', 'Repeat', 'Break', 'Break Gate'];   // Break plays the file's patterns (needs a clock); Break Gate waits for the sequencer's C3 (note 60) to start it and stops when the trigger does not come again at the end of the cycle
 export const PLAY_STEPS = ['1 beat', '1/2 beat', '1/4 beat', '2 beats', '1 bar'];   // the firmware's step codes 0-4
 export const PLAY_FILTERS = ['All', 'Kicks', 'Snares', 'Hats'];                     // acid bits 15-16: play only this drum type
-// `pvxt` chunk: one type bitmask per cue point (1 kick, 2 snare, 4 hat, 0 other), so the module can play or trigger by drum type.
-const LABEL_BITS = { kick: 1, snare: 2, hat: 4 };
+// `pvxt` chunk: one type bitmask per cue point (1 kick, 2 snare, 4 hat, 8 tom, 16 cymbal, 32 perc, 0 other), so the module can play or trigger by drum type.
+const LABEL_BITS = { kick: 1, snare: 2, hat: 4, tom: 8, cymbal: 16, perc: 32 };
 export function labelMask(label) { let mask = 0; for (const part of String(label).split('+')) mask |= LABEL_BITS[part] ?? 0; return mask; }
 export function maskLabel(mask) {
   const hat = (mask & 4) !== 0;
-  if (mask & 1) return hat ? 'kick+hat' : 'kick';
-  if (mask & 2) return hat ? 'snare+hat' : 'snare';
-  return hat ? 'hat' : 'other';
+  const main = mask & 1 ? 'kick' : mask & 2 ? 'snare' : mask & 8 ? 'tom' : mask & 32 ? 'perc' : mask & 16 ? 'cymbal' : null;   // a hat may run under any of them
+  return main ? (hat ? `${main}+hat` : main) : hat ? 'hat' : 'other';
 }
 export const SLICE_PLAY_VALID = 0x4000;
 export function acidFlags({ hasCue, oneShot, playMode = 0, step = 0, filter = 0 }) {

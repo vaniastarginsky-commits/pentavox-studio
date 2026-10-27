@@ -65,8 +65,8 @@ function scaleOf(field) {
   return { lo, hi };
 }
 
-const tempoTimeMsFromRaw = (raw) => Math.round(5 * (200 ** raw));
-const tempoTimeRawFromMs = (ms) => Math.log(ms / 5) / Math.log(200);
+const tempoTimeMsFromRaw = (raw) => Math.round(5 * (400 ** raw));
+const tempoTimeRawFromMs = (ms) => Math.log(ms / 5) / Math.log(400);
 
 export function displayFromRaw(field, raw) {
   if (field.id === 'transport.bpm') return raw;
@@ -137,7 +137,7 @@ export function settingsView(table, { looper = false, sliceVersion = 0 } = {}) {
       } else if (spec.tempoTime) {
         Object.assign(item, {
           min: 5,
-          max: 1000,
+          max: 2000,
           step: 1,
           unit: ' ms',
           value: displayFromRaw(field, raw),

@@ -863,6 +863,33 @@
   "tone": "red",
   "trigger": "Fires a new hi-hat hit with velocity taken from LEVEL."
  },
+ "jumpup_bass": {
+  "artworkKind": null,
+  "controls": {
+   "harmonics": "Bend of the oscillator stack (centre is straight, either side leans it) and its detune.",
+   "macro": "TWIST: depth and speed (it follows the note) of the slow zig-zag movement.",
+   "morph": "Where the band-reject filter and the phaser sit, and the wavetable position.",
+   "timbre": "Distortion and compression drive."
+  },
+  "description": "A bright, dense, grimey jump-up bass modelled on a commercial patch: a wavetable-style oscillator stack built from the harmonic recipe of a spectral reese table, bend warp, a clean direct sub, a resonant band-reject filter, a phaser, tube distortion, a flanger, a three-band compressor and a lifted top.",
+  "family": "Bass",
+  "icon": null,
+  "labId": "jumpup_bass",
+  "labels": [
+   "Bend",
+   "Drive",
+   "Reject",
+   "Motion"
+  ],
+  "name": "JumpUp",
+  "origin": "Community",
+  "outputs": [
+   "Mono: the full voice. Stereo: left channel; lows are shared by both sides, width lives above about 150 Hz.",
+   "Mono: copy of OUT. Stereo: right channel."
+  ],
+  "tone": "#d1493f",
+  "trigger": "Normal LPG/envelope behaviour: the engine drones while the gate is open and the sub never leaves the note."
+ },
  "kick": {
   "artworkKind": null,
   "controls": {
@@ -1078,6 +1105,33 @@
   ],
   "tone": "#DC4A2C",
   "trigger": "Speaks the selected word once."
+ },
+ "neuro2_bass": {
+  "artworkKind": null,
+  "controls": {
+   "harmonics": "Sync ratio of the second oscillator (the growl sweep) and the bend of the first.",
+   "macro": "TWIST: depth and speed (it follows the note) of the internal movement.",
+   "morph": "Where the phaser-filter notches and the moving resonance sit.",
+   "timbre": "Distortion, rectifier and compression drive."
+  },
+  "description": "A neurofunk bass built from a decoded commercial-style patch: a bent saw and a hard-synced oscillator pair into a phaser-type filter, then distortion with a rectifier, a three-band compressor, a moving resonance and a clean mono sub.",
+  "family": "Bass",
+  "icon": null,
+  "labId": "neuro2_bass",
+  "labels": [
+   "Sync / Bend",
+   "Drive",
+   "Notches",
+   "Motion"
+  ],
+  "name": "Neuro",
+  "origin": "Community",
+  "outputs": [
+   "Mono: the full voice. Stereo: left channel; lows are shared by both sides, width lives above about 150 Hz.",
+   "Mono: copy of OUT. Stereo: right channel."
+  ],
+  "tone": "#d1493f",
+  "trigger": "Normal LPG/envelope behaviour: the engine drones while the gate is open and the sub never leaves the note."
  },
  "noise": {
   "artworkKind": "official",
@@ -1402,6 +1456,60 @@
   ],
   "tone": "#DC4A2C",
   "trigger": "Adds a brief pressure tongue to articulate the modeled pipe."
+ },
+ "reese_bass": {
+  "artworkKind": null,
+  "controls": {
+   "harmonics": "Detune and width, 4 to 60 cents between the saws. Never zero, so the Reese always beats.",
+   "macro": "TWIST: depth and speed of the internal notch and low-pass movement. At zero the sound is the classic static Reese.",
+   "morph": "Moves the two notch filters up the spectrum.",
+   "timbre": "Low-pass brightness and saturation, from soft cubic to an antialiased hard clip."
+  },
+  "description": "A classic Reese: three detuned band-limited saws over a fixed mono sub, two travelling notch filters, a low-pass and a soft-to-hard saturator. The beating comes from the detune alone, so the static sound is already alive.",
+  "family": "Bass",
+  "icon": null,
+  "labId": "reese_bass",
+  "labels": [
+   "Detune",
+   "Bright / Drive",
+   "Notches",
+   "Motion"
+  ],
+  "name": "Reece",
+  "origin": "Community",
+  "outputs": [
+   "Mono: the full voice. Stereo: left channel; lows are shared by both sides, width lives above about 150 Hz.",
+   "Mono: copy of OUT. Stereo: right channel."
+  ],
+  "tone": "#7a4bd1",
+  "trigger": "Normal LPG/envelope behaviour: the engine drones while the gate is open and the sub never leaves the note."
+ },
+ "reeze_bass": {
+  "artworkKind": null,
+  "controls": {
+   "harmonics": "Unison spread, 12 to 72 cents either side across 21 saws. Never zero, so the Reeze always beats.",
+   "macro": "TWIST: depth and speed of the internal notch and low-pass movement. At zero the sound is a static Reece with a slow phase-filter sweep.",
+   "morph": "Moves the voice-filter notch up the spectrum.",
+   "timbre": "Brightness, and from about 0.3 the Serum-style tail fades in: overload that stays below 6 kHz, shelves, compressor."
+  },
+  "description": "A Reece rebuilt against a measured Serum 2 reese bass: 21 detuned saws in Serum's unison law (5 + 16 voices, alternating left/right), a fixed sub, one note-following notch, then a tail of an 8-stage phase filter sweeping every 8 s, bass shelf, hard overload kept below 6 kHz and a slow compressor, with a legato glide of 159 ms per octave. Heavy: about 96 % of the callback with the tail on.",
+  "family": "Bass",
+  "icon": null,
+  "labId": "reeze_bass",
+  "labels": [
+   "Detune",
+   "Bright / Drive",
+   "Notch",
+   "Motion"
+  ],
+  "name": "Reeze",
+  "origin": "Community",
+  "outputs": [
+   "Mono: the full voice. Stereo: left channel; lows are shared by both sides, width lives above about 150 Hz.",
+   "Mono: copy of OUT. Stereo: right channel."
+  ],
+  "tone": "#7a4bd1",
+  "trigger": "Normal LPG/envelope behaviour: the engine drones while the gate is open and the sub never leaves the note."
  },
  "ring_mod": {
   "artworkKind": null,

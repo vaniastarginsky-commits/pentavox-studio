@@ -1,0 +1,9 @@
+{
+  "seed": 20261026,
+  "sampleRate": 48000,
+  "tuneLoops": 40,
+  "heldoutLoops": 20,
+  "sourceRoot": "/Users/weedhash/Documents/Native Instruments/Battery 4/Kits",
+  "tuneSets": ["Starkey_Battery4_DrumKit Samples", "zds battery 4 kit final Samples"],
+  "heldoutSets": ["Phon.o Kit Samples", "Om Unit - Battery 4 Kit Samples"]
+}

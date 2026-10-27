@@ -1,0 +1,36 @@
+
+tune: 40 loops, 1056 truth, 734 found, 67.3 ms/loop
+  15 ms P/R/F1 88.6% 61.6% 72.6% | 25 ms 92.8% 64.5% 76.1%
+  class accuracy 66.7% | ghost recall 60.6%
+  truth     correct/matched/total  accuracy
+  kick       224/292 /376     76.7%
+  snare      165/218 /315     75.7%
+  hat         59/134 /305     44.0%
+  tom          6/24  /39      25.0%
+  cymbal       0/0   /2        0.0%
+  perc         0/13  /19       0.0%
+  confusion columns: kick snare hat tom cymbal perc other
+  kick        224    41     5     7     1    13     1
+  snare        20   165    13    12     0     5     3
+  hat           8    34    59     1     0    12    20
+  tom           8     2     8     6     0     0     0
+  cymbal        0     0     0     0     0     0     0
+  perc          2     7     1     3     0     0     0
+
+heldout: 20 loops, 533 truth, 408 found, 68.4 ms/loop
+  15 ms P/R/F1 92.2% 70.5% 79.9% | 25 ms 95.3% 73.0% 82.7%
+  class accuracy 75.3% | ghost recall 67.9%
+  truth     correct/matched/total  accuracy
+  kick       138/170 /199     81.2%
+  snare      103/113 /158     91.2%
+  hat         51/72  /138     70.8%
+  tom          0/19  /21       0.0%
+  cymbal       0/2   /2        0.0%
+  perc         1/13  /15       7.7%
+  confusion columns: kick snare hat tom cymbal perc other
+  kick        138    19     0    11     0     2     0
+  snare         4   103     4     1     1     0     0
+  hat           2    16    51     0     1     0     2
+  tom          17     2     0     0     0     0     0
+  cymbal        0     2     0     0     0     0     0
+  perc          2     8     1     0     0     1     1

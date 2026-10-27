@@ -25,7 +25,7 @@ function fft(re, im) {
   }
 }
 
-function mixDown(channels) {
+export function mixDown(channels) {
   const length = channels[0]?.length ?? 0; const mono = new Float32Array(length);
   for (const channel of channels) for (let i = 0; i < length; i += 1) mono[i] += channel[i] / channels.length;
   return mono;
@@ -57,7 +57,7 @@ function spectralFlux(mono, firstBin = 0, lastBin = FRAME / 2) {
 // Move a flux peak to the start of the energy rise. First find the steepest
 // 1 ms RMS step near the frame, then walk back to where that rise left the
 // local noise floor; the steepest step itself can sit well inside a snare.
-function refine(mono, sampleRate, frameIndex) {
+export function refine(mono, sampleRate, frameIndex) {
   const block = Math.max(1, Math.round(sampleRate * 0.001));
   const from = Math.max(0, frameIndex * HOP - FRAME); const to = Math.min(mono.length - block, frameIndex * HOP + FRAME);
   const positions = []; const levels = []; let bestIndex = 0; let bestRise = 0; let previous = 0;
@@ -85,7 +85,7 @@ export const SHARP_RISE = 4;               // x4 = +12 dB over the previous 1 ms
 export const SHARP_BACK_SECONDS = 0.008;   // how far before the coarse time the attack may start
 export const SHARP_FORWARD_SECONDS = 0.002;
 export const PRE_ROLL_SECONDS = 0.00025;   // a marker sits this long before the first sample of the attack
-function sharpen(signal, sampleRate, time) {
+export function sharpen(signal, sampleRate, time) {
   const hold = Math.max(1, Math.round(0.0001 * sampleRate)); const lookback = Math.max(hold, Math.round(0.001 * sampleRate));
   const first = Math.max(lookback, Math.round((time - SHARP_BACK_SECONDS) * sampleRate)); const last = Math.min(signal.length - lookback - 1, Math.round((time + SHARP_FORWARD_SECONDS) * sampleRate));
   if (!(last > first)) return time;
@@ -105,9 +105,18 @@ function sharpen(signal, sampleRate, time) {
   return Math.max(0, onset / sampleRate - PRE_ROLL_SECONDS);
 }
 
+// Refine a coarse timestamp supplied by an external detector (for example a
+// 100 fps neural network) with the same sample-domain logic as the rule pass.
+export function refineOnsetTime(channels, sampleRate, time) {
+  if (!channels?.length || !channels[0]?.length || !(sampleRate > 0)) return time;
+  const mono = mixDown(channels);
+  return sharpen(mono, sampleRate, refine(mono, sampleRate, time * sampleRate / HOP));
+}
+
 // A hit makes the signal louder. The flux detector also fires on things that do not: the abrupt end of a gated kick, a click inside a tail.
 // Those leave the level where it was (-1..+1 dB over 10 ms), real hits, even soft hats and a ride, rise by 2.5 dB or more.
 export const MIN_LEVEL_RISE_DB = 2;
+export const MIN_HAT_LEVEL_RISE_DB = 0;
 export const LEVEL_WINDOW_SECONDS = 0.01;
 function levelRiseDb(mono, sampleRate, time) {
   const w = Math.max(1, Math.round(LEVEL_WINDOW_SECONDS * sampleRate)); const at = Math.round(time * sampleRate);
@@ -118,7 +127,7 @@ function levelRiseDb(mono, sampleRate, time) {
 
 // Adaptive-threshold peak picking on one flux curve. Strength is normalised by the curve's own maximum, so a quiet
 // band (hats) competes fairly with a loud one (kick).
-function pickPeaks(flux, sensitivity, hopSeconds, { multSpan = 2.8, floorSpan = 0.3, minTop = 1e-6 } = {}, flag = false) {
+function pickPeaks(flux, sensitivity, hopSeconds, { multSpan = 1.7, floorSpan = 0.15, minTop = 1e-6 } = {}, flag = false) {
   let top = 0; for (const v of flux) if (v > top) top = v;
   if (!(top > minTop)) return [];
   const s = Math.min(1, Math.max(0, sensitivity)); const radius = Math.max(2, Math.round(0.1 / hopSeconds));
@@ -149,7 +158,7 @@ function highPass(mono, sampleRate) {
   return out;
 }   // the second detector only listens above this: hats are far quieter than kick and snare
 
-export function detectOnsets(channels, sampleRate, { sensitivity = 0.5, maxOnsets = 31, hats = true } = {}) {
+export function detectOnsets(channels, sampleRate, { sensitivity = 0.5, maxOnsets = 63, hats = true } = {}) {
   if (!channels?.length || !channels[0]?.length) return [];
   const mono = mixDown(channels); const duration = mono.length / sampleRate; const hop = HOP / sampleRate;
   const flux = spectralFlux(mono); if (!flux.length) return [];
@@ -186,8 +195,13 @@ export function detectOnsets(channels, sampleRate, { sensitivity = 0.5, maxOnset
   // implicit onset, otherwise refinement of the opening hit can add a second
   // marker a few milliseconds into the very same kick.
   const place = (pick) => { const signal = pick.hat ? bright : mono; return sharpen(signal, sampleRate, refine(signal, sampleRate, pick.frame)); };
-  const real = (t) => t >= MIN_SPACING && t < duration - 0.005 && levelRiseDb(mono, sampleRate, t) >= MIN_LEVEL_RISE_DB;
-  const times = strongest.map((pick) => { const t = place(pick); if (real(t) || !pick.alt) return t; const other = place(pick.alt); return real(other) ? other : t; }).filter(real);
+  const real = (t, pick) => t >= MIN_SPACING && t < duration - 0.005
+    && levelRiseDb(mono, sampleRate, t) >= (pick?.hat ? MIN_HAT_LEVEL_RISE_DB : MIN_LEVEL_RISE_DB);
+  const placed = strongest.map((pick) => {
+    const t = place(pick); if (real(t, pick) || !pick.alt) return { t, pick };
+    const other = place(pick.alt); return real(other, pick.alt) ? { t: other, pick: pick.alt } : { t, pick };
+  }).filter(({ t, pick }) => real(t, pick));
+  const times = placed.map(({ t }) => t);
   const out = [];
   for (const t of times) if (!out.length || t - out[out.length - 1] >= MIN_SPACING) out.push(t);
   return out;

@@ -24,12 +24,16 @@ export const KICK_ABS_MIN_MID_RISE_DB = 20;       // ...or the hit is broadband 
 export const HAT_HIGH_MINUS_MID_DB = -4;          // hat: the >6 kHz band is at least this close to the mid band (kick ~-16, snare ~-8)
 export const HAT_ON_TAIL_BRIGHTER_DB = 6;         // a hit that only looks like a kick/snare because of a ringing tail: what it ADDED is brighter than that...
 export const HAT_ON_TAIL_HIGH_RISE_DB = 6;        // ...its >6 kHz band rose by this much, and more than its mid band did (kick/snare: mid rises more) -> a hat on the tail
-export const HAT_BRIGHT_HIGH_MINUS_MID_DB = 3.5;  // hat, whatever its decay (hats that ring, sit under a tail or are marked a little early show decay 0.7-2.9, so it cannot be required). Hand-labelled breaks (tests/fixtures/drum_loop_*): hats +5..+10 dB, snares -3..-13, kicks -12..-20, a ghost kick +1.8 (taken by the kick rule first)
+export const HAT_BRIGHT_HIGH_MINUS_MID_DB = 3.49; // admit borderline masked hats without crossing measured snare examples
 export const HAT_MAX_DECAY = 0.56;                // hat: last third of the window / first third (RMS), snares ring longer
 export const SNARE_MIN_MID_DB = -999;             // reserved: a snare is whatever mid-heavy hit is neither kick nor hat
 export const LATTICE_TOLERANCE_SECONDS = 0.025;   // a hit this close to the hat grid counts as on it
 export const LATTICE_REACH = 2;                   // ...when a plain hat sits within this many grid steps
-export const LATTICE_MIN_HATS = 3;                // fewer plain hats than this and no hat pattern is assumed
+export const LATTICE_MIN_HATS = 2;                // two plain hats can establish a local lattice in a short one-bar loop
+export const TOM_MIN_PEAK_HZ = 92;
+export const TOM_MAX_PEAK_HZ = 310;
+export const PERC_MAX_DECAY = 0.30;
+export const CYMBAL_MIN_LATE_DECAY = 0.42;
 
 function fft(re, im) {
   const n = re.length;
@@ -67,10 +71,11 @@ function bandEnergies(mono, sampleRate) {
   const re = new Float64Array(size); const im = new Float64Array(size);
   for (let i = 0; i < mono.length; i += 1) re[i] = mono[i] * (mono.length === 1 ? 1 : 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (mono.length - 1)));
   fft(re, im);
-  const out = { low: 0, mid: 0, pres: 0, high: 0 };
+  const out = { low: 0, mid: 0, pres: 0, high: 0, brightPeak: 0 };
   for (let k = 1; k <= size / 2; k += 1) {
     const hz = k * sampleRate / size; const energy = re[k] * re[k] + im[k] * im[k];
-    if (hz < LOW_HZ) out.low += energy; else if (hz < MID_HIGH_HZ) out.mid += energy; else if (hz < HIGH_HZ) out.pres += energy; else out.high += energy;
+    if (hz < LOW_HZ) out.low += energy; else if (hz < MID_HIGH_HZ) out.mid += energy;
+    else { if (energy > out.brightPeak) out.brightPeak = energy; if (hz < HIGH_HZ) out.pres += energy; else out.high += energy; }
   }
   return out;
 }
@@ -98,11 +103,12 @@ function kickBands(channels, sampleRate, time, limitTime) {
   const re = new Float64Array(size); const im = new Float64Array(size);
   for (let i = 0; i < mono.length; i += 1) re[i] = mono[i] * (mono.length === 1 ? 1 : 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (mono.length - 1)));
   fft(re, im);
-  const out = { low: 0, mid: 0, bright: 0 };
+  const out = { low: 0, mid: 0, bright: 0, peakEnergy: 0, peakHz: 0 };
   for (let k = 1; k <= size / 2; k += 1) {
     const hz = k * sampleRate / size; const energy = re[k] * re[k] + im[k] * im[k];
     if (hz < KICK_LOW_HZ[0]) continue;
-    if (hz < KICK_LOW_HZ[1]) out.low += energy; else if (hz < MID_HIGH_HZ) out.mid += energy; else out.bright += energy;
+    if (hz < KICK_LOW_HZ[1]) { out.low += energy; if (energy > out.peakEnergy) { out.peakEnergy = energy; out.peakHz = hz; } }
+    else if (hz < MID_HIGH_HZ) out.mid += energy; else out.bright += energy;
   }
   return out;
 }
@@ -131,22 +137,41 @@ export function hitFeatures(channels, sampleRate, time, limitTime) {
   const decay = rms(bright, bright.length - third) / Math.max(SILENCE_RMS * 0.1, rms(bright, 0, third));
   const kb = kickBands(channels, sampleRate, time, limitTime);
   const lowMinusBright = kb ? dB(kb.low) - dB(kb.bright) : -Infinity;
-  return { lowRise, brightRise, lowMinusBright, lowMinusMid: dB(post.low) - dB(post.mid), highMinusMid: dB(post.high) - dB(post.mid), brightMinusMid: dB(post.pres + post.high) - dB(post.mid), decay, rise, midRise, highRise, midDb: dB(post.mid) };
+  // Long bright decay separates a crash/ride from an open hat. The late window is deliberately well after the
+  // 40 ms attack analysis, and ends before the next marker when hits are close together.
+  const lateFirst = Math.floor((time + 0.11) * sampleRate); let lateLast = Math.min(length, Math.ceil((time + 0.23) * sampleRate));
+  if (Number.isFinite(limitTime) && limitTime > time) lateLast = Math.min(lateLast, Math.floor((limitTime - 0.005) * sampleRate));
+  let lateDecay = 0;
+  if (lateLast > lateFirst + Math.round(0.02 * sampleRate)) {
+    const late = highPass(mixWindow(channels, lateFirst, lateLast), sampleRate, DECAY_HIGH_PASS_HZ);
+    lateDecay = rms(late) / Math.max(SILENCE_RMS * 0.1, rms(bright, 0, third));
+  }
+  return { lowRise, brightRise, lowMinusBright, lowPeakHz: kb?.peakHz ?? 0, lowTonality: kb ? kb.peakEnergy / Math.max(1e-12, kb.low) : 0,
+    brightTonality: post.brightPeak / Math.max(1e-12, post.pres + post.high),
+    lowMinusMid: dB(post.low) - dB(post.mid), highMinusMid: dB(post.high) - dB(post.mid), brightMinusMid: dB(post.pres + post.high) - dB(post.mid), decay, lateDecay, rise, midRise, highRise, midDb: dB(post.mid) };
 }
 
-/** 'kick' | 'snare' | 'hat' | 'other' for one hit. */
+/** 'kick' | 'snare' | 'hat' | 'tom' | 'cymbal' | 'perc' | 'other' for one hit. */
 export function classifyHit(channels, sampleRate, time, limitTime) {
   const f = hitFeatures(channels, sampleRate, time, limitTime);
   if (!f || f.rise < MIN_RISE_DB) return 'other';
   const hatOnTail = f.decay <= HAT_MAX_DECAY && f.highRise >= HAT_ON_TAIL_HIGH_RISE_DB && f.highRise - f.midRise >= HAT_ON_TAIL_BRIGHTER_DB;
   // A kick is low-heavy with little above it (at most a click); a snare has as much or more mid and bright energy as low.
   const kickByRise = f.lowRise >= KICK_LOW_RISE_DB && f.lowRise - f.brightRise >= KICK_LOW_OVER_BRIGHT_RISE_DB
-    && f.lowMinusBright >= KICK_RISE_MIN_LOW_MINUS_BRIGHT_DB;
+    && f.lowMinusBright >= KICK_RISE_MIN_LOW_MINUS_BRIGHT_DB && f.lowMinusMid >= -10;
   const lowIsNew = f.lowRise >= KICK_ABS_MIN_LOW_RISE_DB || !Number.isFinite(f.lowRise) || f.midRise >= KICK_ABS_MIN_MID_RISE_DB;
-  if ((f.lowMinusBright >= KICK_LOW_MINUS_BRIGHT_DB && lowIsNew) || kickByRise) return hatOnTail ? 'hat' : 'kick';
+  const tonalLowMid = f.lowPeakHz >= TOM_MIN_PEAK_HZ && f.lowPeakHz <= TOM_MAX_PEAK_HZ && f.lowTonality >= 0.18
+    && f.lowMinusMid >= -5 && f.brightMinusMid <= -2;
+  if (tonalLowMid) return hatOnTail ? 'hat' : 'tom';
+  const lowDrum = (f.lowMinusBright >= KICK_LOW_MINUS_BRIGHT_DB && lowIsNew) || kickByRise;
+  if (lowDrum) return hatOnTail ? 'hat' : 'kick';
   // A hat is far brighter than any snare, however it decays and whatever rings under it (hand-labelled breaks: hats +5..+10, snares -3..-13, kicks -15..-20).
   const hatBySpectrum = f.highMinusMid >= HAT_BRIGHT_HIGH_MINUS_MID_DB;
-  if (f.highMinusMid >= HAT_HIGH_MINUS_MID_DB && (f.decay <= HAT_MAX_DECAY || hatBySpectrum)) return 'hat';
+  if (f.highMinusMid >= HAT_HIGH_MINUS_MID_DB && f.lateDecay >= CYMBAL_MIN_LATE_DECAY && f.brightTonality >= 0.035) return 'cymbal';
+  if (f.decay <= PERC_MAX_DECAY && !hatBySpectrum) return 'perc';
+  if (f.highMinusMid >= HAT_HIGH_MINUS_MID_DB && (f.decay <= HAT_MAX_DECAY || hatBySpectrum)) {
+    return 'hat';
+  }
   if (f.midDb >= SNARE_MIN_MID_DB) return hatOnTail ? 'hat' : 'snare';
   return 'other';
 }
@@ -156,12 +181,25 @@ export function classifyHit(channels, sampleRate, time, limitTime) {
 function layerHats(times, labels) {
   const hats = times.filter((_, i) => labels[i] === 'hat');
   if (hats.length < LATTICE_MIN_HATS) return labels;
-  const gaps = []; for (let i = 1; i < hats.length; i += 1) gaps.push(hats[i] - hats[i - 1]);
-  gaps.sort((a, b) => a - b);
-  const step = gaps[Math.floor(gaps.length * 0.25)];                      // the short gaps are the real step, long ones skip a layered hit
+  // Plain hats can be separated by several hidden hats (under kicks/snares). Try the small integer subdivisions
+  // of their gaps and keep the lattice that explains the most observed hits; this works for sparse one-bar breaks
+  // without inventing a tempo or requiring the classifier to hear through a loud snare.
+  const candidates = [];
+  for (let i = 1; i < hats.length; i += 1) for (let divisor = 1; divisor <= 4; divisor += 1) {
+    const candidate = (hats[i] - hats[i - 1]) / divisor; if (candidate > 0.03 && candidate < 0.35) candidates.push(candidate);
+  }
+  let step = 0; let best = -1;
+  for (const candidate of candidates) {
+    let score = 0;
+    for (const time of times) {
+      const nearest = Math.round((time - hats[0]) / candidate);
+      if (Math.abs(time - hats[0] - nearest * candidate) <= LATTICE_TOLERANCE_SECONDS) score += 1;
+    }
+    if (score > best || (score === best && candidate > step)) { best = score; step = candidate; }
+  }
   if (!(step > 0.03)) return labels;
   return labels.map((label, i) => {
-    if (label !== 'kick' && label !== 'snare') return label;
+    if (label !== 'kick' && label !== 'snare' && label !== 'tom' && label !== 'perc') return label;
     for (const hat of hats) {
       const steps = (times[i] - hat) / step; const nearest = Math.round(steps);
       if (nearest !== 0 && Math.abs(nearest) <= LATTICE_REACH && Math.abs(times[i] - hat - nearest * step) <= LATTICE_TOLERANCE_SECONDS) return `${label}+hat`;
@@ -170,7 +208,7 @@ function layerHats(times, labels) {
   });
 }
 
-/** Labels for a list of hit times: 'kick' | 'snare' | 'hat' | 'other', or 'kick+hat' / 'snare+hat' when a hat runs under it. */
+/** Labels for hit times, with `+hat` added to a compatible base drum when a hat lattice runs under it. */
 export function classifyHits(channels, sampleRate, times) {
   return layerHats(times, times.map((time, i) => classifyHit(channels, sampleRate, time, times[i + 1])));
 }

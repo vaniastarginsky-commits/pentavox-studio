@@ -3,6 +3,8 @@ import { bpmFromName, compareAudioTempo, reconcileTempo, weakBpmFromName } from 
 import { PLAY_FILTERS, PLAY_MODES, PLAY_STEPS } from '../model/wav.js';
 import { detectOnsets, estimateTempo } from '../model/onsets.js';
 import { classifyHits } from '../model/classify.js';
+import { detectHybrid } from '../model/hybrid.js';
+import { adtofActivations } from '../model/adtof.js';
 
 function el(tag, className, text) { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; }
 function button(text, className = '') { const node = el('button', className, text); node.type = 'button'; return node; }
@@ -19,13 +21,14 @@ export function createSliceBar(item, { editor, onChange = () => {} }) {
   const sensitivity = document.createElement('input'); sensitivity.type = 'range'; sensitivity.min = '0'; sensitivity.max = '1'; sensitivity.step = '0.05'; sensitivity.value = '0.5'; sensitivity.setAttribute('aria-label', 'Onset detection sensitivity');
   const paintSensitivity = () => sensitivity.style.setProperty('--p', `${Number(sensitivity.value) * 100}%`); sensitivity.addEventListener('input', paintSensitivity); paintSensitivity();
   const detectButton = button('Detect');
+  const neuralButton = button('Detect (neural)'); neuralButton.title = 'Rules plus the ADTOF neural network (non-commercial licence). Slower, loads about 13 MB the first time, and finds more hits and tells the drum types apart better.';
   const classifyButton = button('Classify');
-  const filterButtons = [['kick', 'Kicks'], ['snare', 'Snares'], ['hat', 'Hats']].map(([type, label]) => [type, button(label, 'sb-filter')]);
+  const filterButtons = [['kick', 'Kicks'], ['snare', 'Snares'], ['hat', 'Hats'], ['tom', 'Toms'], ['perc', 'Percs'], ['cymbal', 'Cymbals']].map(([type, label]) => [type, button(label, 'sb-filter')]);
   const clearButton = button('Clear'); const undoButton = button('Undo'); const redoButton = button('Redo');
   // Label the selected slice (click its number on the waveform first): Kick / Snare / Hat toggle, None clears; Delete removes its marker.
   const labelGroup = el('span', 'sb-group'); labelGroup.append(el('span', 'sb-hint', 'Label slice'));
   const labelSeg = el('span', 'sb-seg'); labelGroup.append(labelSeg);
-  const labelButtons = [['kick', 'Kick', 'K'], ['snare', 'Snare', 'S'], ['hat', 'Hat', 'H'], ['none', 'None', 'None']].map(([action, text, short]) => { const b = button(short, 'sb-filter'); b.dataset.action = action; b.title = `${text} for the selected slice (click a slice number on the waveform first)`; b.setAttribute('aria-label', text); labelSeg.append(b); return b; });
+  const labelButtons = [['kick', 'Kick', 'K'], ['snare', 'Snare', 'S'], ['hat', 'Hat', 'H'], ['tom', 'Tom', 'T'], ['perc', 'Percussion (clap, rim, shaker)', 'P'], ['cymbal', 'Cymbal (crash, ride)', 'C'], ['none', 'None', 'None']].map(([action, text, short]) => { const b = button(short, 'sb-filter'); b.dataset.action = action; b.title = `${text} for the selected slice (click a slice number on the waveform first)`; b.setAttribute('aria-label', text); labelSeg.append(b); return b; });
   const removeButton = button('Delete marker', 'sb-filter sb-delete'); removeButton.title = 'Remove the selected slice marker (the slice joins the one before it)'; labelGroup.append(removeButton);
   const oneShot = el('label', 'sb-toggle'); const oneShotInput = document.createElement('input'); oneShotInput.type = 'checkbox'; oneShot.append(oneShotInput, el('span', '', 'One-shot'));
   const playMode = document.createElement('select'); playMode.setAttribute('aria-label', 'How the module plays the slices on its clock');
@@ -43,7 +46,7 @@ export function createSliceBar(item, { editor, onChange = () => {} }) {
   beatsPerSlice.title = 'Beats in each slice for Beats'; beatsButton.title = 'Cut on the beat grid (needs a BPM)';
   const dot = () => el('span', 'sx-dot', '·');
   const row = () => el('div', 'sb-row');
-  const row1 = row(); row1.append(evenCount, evenButton, dot(), beatsPerSlice, el('span', 'sb-hint', 'beats each'), beatsButton, dot(), el('span', 'sb-hint', 'Sensitivity'), sensitivity, detectButton, classifyButton);
+  const row1 = row(); row1.append(evenCount, evenButton, dot(), beatsPerSlice, el('span', 'sb-hint', 'beats each'), beatsButton, dot(), el('span', 'sb-hint', 'Sensitivity'), sensitivity, detectButton, neuralButton, classifyButton);
   const row2 = row(); row2.append(el('span', 'sb-hint', 'Keep only'), ...filterButtons.map(([, node]) => node), clearButton, dot(), labelGroup);
   const row3 = row(); const playGroup = el('span', 'sb-group'); playGroup.append(el('span', 'sb-hint', 'Play mode'), playMode, playStep, el('span', 'sb-hint', 'only'), playFilter); row3.append(playGroup, oneShot);
   controls.append(row1, row2, row3, noteLine);
@@ -80,19 +83,30 @@ export function createSliceBar(item, { editor, onChange = () => {} }) {
   function classify() { item.slices.setLabels(classifyHits(item.audio.channels, item.audio.sampleRate, [0, ...item.slices.markers])); }
 
   evenButton.addEventListener('click', () => {
-    const count = Math.min(32, Math.max(2, Math.trunc(Number(evenCount.value) || 2))); evenCount.value = String(count);
+    const count = Math.min(MAX_MARKERS + 1, Math.max(2, Math.trunc(Number(evenCount.value) || 2))); evenCount.value = String(count);
     note = ''; item.slices.setMarkers(evenMarkers(item.duration, count)); changed();
   });
   beatsButton.addEventListener('click', () => {
     if (!(Number(item.bpm) > 0)) return;
     note = ''; item.slices.setMarkers(beatMarkers(item.duration, Number(item.bpm), Number(beatsPerSlice.value))); changed();
   });
-  detectButton.addEventListener('click', () => {
-    detectButton.textContent = 'Detecting…'; detectButton.disabled = true; clearTimeout(timer);
-    timer = setTimeout(() => {
+  const runDetect = (neural) => {
+    const busy = neural ? 'Thinking…' : 'Detecting…';
+    (neural ? neuralButton : detectButton).textContent = busy; detectButton.disabled = true; neuralButton.disabled = true; clearTimeout(timer);
+    timer = setTimeout(async () => {
       timer = null; if (destroyed) return;
-      const onsets = detectOnsets(item.audio.channels, item.audio.sampleRate, { sensitivity: Number(sensitivity.value), maxOnsets: MAX_MARKERS });
-      const sliceLabels = classifyHits(item.audio.channels, item.audio.sampleRate, [0, ...onsets]);
+      let onsets; let sliceLabels; let neuralNote = '';
+      const activations = neural ? await adtofActivations(item.audio.channels, item.audio.sampleRate) : null;
+      if (destroyed) return;
+      if (neural && !activations) neuralNote = 'neural detector unavailable, rules used';
+      if (activations) {
+        const hybrid = detectHybrid(item.audio.channels, item.audio.sampleRate, { activations, sensitivity: 1, maxOnsets: MAX_MARKERS });
+        onsets = hybrid.times.filter((time) => time > 0.001);
+        sliceLabels = [classifyHits(item.audio.channels, item.audio.sampleRate, [0])[0], ...onsets.map((time) => hybrid.labels[hybrid.times.indexOf(time)])];
+      } else {
+        onsets = detectOnsets(item.audio.channels, item.audio.sampleRate, { sensitivity: Number(sensitivity.value), maxOnsets: MAX_MARKERS });
+        sliceLabels = classifyHits(item.audio.channels, item.audio.sampleRate, [0, ...onsets]);
+      }
       // Tempo: fills empty fields, or redoes values that were themselves a guess (never a hand-typed or file-tagged one).
       // A BPM in the file name that fits the clip length beats the audio guess (settles half/double time).
       note = '';
@@ -119,9 +133,12 @@ export function createSliceBar(item, { editor, onChange = () => {} }) {
         } else note = 'tempo not detected: enter it by hand';
       }
       item.slices.setMarkers(onsets, sliceLabels);
-      detectButton.textContent = 'Detect'; detectButton.disabled = false; render(); changed();
+      if (neuralNote) note = note ? `${note}; ${neuralNote}` : neuralNote;
+      detectButton.textContent = 'Detect'; neuralButton.textContent = 'Detect (neural)'; detectButton.disabled = false; neuralButton.disabled = false; render(); changed();
     }, 0);
-  });
+  };
+  detectButton.addEventListener('click', () => runDetect(false));
+  neuralButton.addEventListener('click', () => runDetect(true));
   classifyButton.addEventListener('click', () => { note = ''; classify(); changed(); });
   for (const [type, node] of filterButtons) node.addEventListener('click', () => {
     const before = item.slices.markers.length; item.slices.keepLabel(type); const kept = item.slices.markers.length;

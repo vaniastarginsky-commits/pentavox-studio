@@ -2,7 +2,7 @@
 // conversion to the frame list the WAV writer needs. No DOM, no audio.
 import { snapTime } from './wave_edit.js';
 
-export const MAX_SLICES = 32;                 // firmware limit, slice 0 included
+export const MAX_SLICES = 64;                 // firmware limit, slice 0 included (64 since 2026-10-26; older firmware keeps the first 32 by position)
 export const MAX_MARKERS = MAX_SLICES - 1;    // interior boundaries only; slice 0 always starts at the beginning
 export const MARKER_SNAP = 0.00002;            // markers snap to 20 us, less than one sample at 48 kHz (selection handles keep their 1 ms)
 const snapMarker = (time) => snapTime(time, MARKER_SNAP);
@@ -56,7 +56,8 @@ export function exportSliceFrames(markers, trimStart, trimEnd, sampleRate) {
   return exportSlices(markers, [], trimStart, trimEnd, sampleRate).frames;
 }
 
-const LABELS = new Set(['kick', 'snare', 'hat', 'other', 'kick+hat', 'snare+hat']);   // a hat can run under a kick or a snare
+export const MAIN_LABELS = ['kick', 'snare', 'tom', 'perc', 'cymbal'];
+const LABELS = new Set(['hat', 'other', ...MAIN_LABELS, ...MAIN_LABELS.map((main) => `${main}+hat`)]);   // a hat can run under any of the others
 const hasType = (label, type) => String(label).split('+').includes(type);
 const cleanLabel = (label) => LABELS.has(label) ? label : 'other';
 const labelsFor = (labels, count) => Array.from({ length: count }, (_, i) => cleanLabel(labels?.[i]));
@@ -67,8 +68,8 @@ const same = (a, b) => a.oneShot === b.oneShot && a.markers.length === b.markers
 // toggles a hat that runs under them (or alone); None clears the label. Returns one of the LABELS.
 export function labelAfter(label, action) {
   const parts = String(label).split('+');
-  let main = parts.includes('kick') ? 'kick' : parts.includes('snare') ? 'snare' : null; let hat = parts.includes('hat');
-  if (action === 'kick' || action === 'snare') main = main === action ? null : action;
+  let main = MAIN_LABELS.find((name) => parts.includes(name)) ?? null; let hat = parts.includes('hat');
+  if (MAIN_LABELS.includes(action)) main = main === action ? null : action;
   else if (action === 'hat') hat = !hat;
   else if (action === 'none') { main = null; hat = false; }
   else return cleanLabel(label);
