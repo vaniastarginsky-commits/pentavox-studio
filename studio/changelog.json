@@ -1,4 +1,5 @@
 [
+  {"date": "2026-10-27", "area": "studio", "text": "Paired dark and light instrument themes. Settings has its own page and header shortcut. Knob record restores all nine graph windows, with Draw and Library directly in empty slots."},
   {"date": "2026-10-27", "area": "studio", "text": "Clearer navigation, Panel Live/Settings/Colours, selected-slot presets, audio transfer plans, movement creation, editor feedback and searchable contextual help. Engines keeps its workflow."},
   {"date": "2026-10-27", "area": "firmware", "text": "Engines: DnB basses Reece, Neuro, JumpUp, and Reeze, a Reece rebuilt against a Serum 2 patch. Reeze is heavy (about 96 % CPU). Library only, no audition yet."},
   {"date": "2026-10-27", "area": "studio", "text": "Memory meter: an estimate over the budget no longer blocks Build; the real linker check decides."},

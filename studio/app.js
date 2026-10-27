@@ -265,13 +265,12 @@ const pageDock = document.getElementById('panel-page-dock');
 const pageDockMount = mountPanelDock(pageDock, { ...dockOptions, inspectorRoot: document.getElementById('panel-control-inspector'), onSelect: (selection) => panelSkin.select(selection), isActive: () => activeTab === 'panel' && activePanelSection !== 'settings' });
 // Three task modes keep settings reachable without scrolling past the whole panel.
 function showPanelSection(name) {
-  activePanelSection = ['live', 'settings', 'colours'].includes(name) ? name : 'live';
+  activePanelSection = ['live', 'colours'].includes(name) ? name : 'live';
   const liveVisible = activePanelSection !== 'settings';
   document.querySelector('#panel-tab .panel-page').dataset.section = activePanelSection;
   document.getElementById('panel-live-section').hidden = !liveVisible;
   document.getElementById('panel-control-inspector').hidden = activePanelSection !== 'live';
   document.getElementById('panel-skin-root').hidden = activePanelSection !== 'colours';
-  document.getElementById('panel-settings-section').hidden = activePanelSection !== 'settings';
   document.querySelector('#panel-tab .panel-side').hidden = activePanelSection === 'live';
   for (const button of document.querySelectorAll('.panel-subtabs [data-sub]')) {
     const active = button.dataset.sub === activePanelSection;
@@ -282,7 +281,7 @@ function showPanelSection(name) {
 for (const button of document.querySelectorAll('.panel-subtabs [data-sub]')) {
   button.addEventListener('click', () => navigation.navigate('panel', button.dataset.sub));
   button.addEventListener('keydown', event => {
-    const modes = ['live', 'settings', 'colours'];
+    const modes = ['live', 'colours'];
     let index = modes.indexOf(activePanelSection);
     if (event.key === 'ArrowRight') index = (index + 1) % modes.length;
     else if (event.key === 'ArrowLeft') index = (index + modes.length - 1) % modes.length;
@@ -343,7 +342,7 @@ assetsPromise.then((assets) => {
 }).catch(showError);
 
 function syncFooter() {
-  const usesSession = ['routing', 'panel', 'midi'].includes(activeTab);
+  const usesSession = ['routing', 'panel', 'settings', 'midi'].includes(activeTab);
   sessionFooter.hidden = !controller || connectionStatus.dataset.state !== 'on' || !usesSession;
   refreshWorkspace();
 }
@@ -454,6 +453,15 @@ globalThis.navigator?.serial?.addEventListener?.('connect', () => scheduleAutoCo
 globalThis.addEventListener?.('pentavox-flash', (event) => { if (event.detail === 'done') scheduleAutoConnect(2500, 14); });   // the module restarts after a flash
 assetsPromise.then(() => scheduleAutoConnect(300, 3)).catch(() => {});
 demoButton.addEventListener('click', () => connect({ demo: true }));
+// Small navigation symbols share a single stroke and never replace the readable names.
+{
+  const paths = { palette:'M3 12h3l3-7 5 14 3-7h4', dx7:'M4 5h16M4 12h16M4 19h16', wavetable:'M3 8q4-6 9 0t9 0M3 16q4-6 9 0t9 0', terrain:'M3 19 8 5l5 14M9 19l7-14 5 14', sampler:'M4 9v6M8 5v14M12 8v8M16 3v18M20 9v6', presets:'M6 3h9l4 4v14H6zM9 10h7M9 14h7M9 18h4', routing:'M6 5v14M6 12h12M16 10l2 2-2 2', midi:'M4 4h16v16H4zM8 8h1M15 8h1M8 15h8', locks:'M3 12q4-12 9 0t9 0', panel:'M4 3h16v18H4zM8 8h1M15 8h1M8 15h1M15 15h1', settings:'M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2M8 12a4 4 0 1 0 8 0 4 4 0 1 0-8 0', manual:'M3 4h7l2 2 2-2h7v16h-7l-2 1-2-1H3zM12 6v15' };
+  for (const link of document.querySelectorAll('.tabs [data-tab]')) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('aria-hidden','true'); svg.classList.add('nav-icon');
+    const path = document.createElementNS(svg.namespaceURI, 'path'); path.setAttribute('d', paths[link.dataset.tab] ?? paths.presets); svg.append(path); link.prepend(svg);
+  }
+}
+
 document.querySelector('.skip-link').addEventListener('click', event => { event.preventDefault(); document.getElementById('main-workspace').focus(); });
 const menuButton = document.getElementById('menu-toggle');
 const navScrim = document.getElementById('nav-scrim');
@@ -546,13 +554,20 @@ function refreshWorkspace() {
     dx7: ['DX7 banks', 'Six-op patches on the SD card'], wavetable: ['Wave tables', 'Resources for the next firmware build'],
     terrain: ['Wave terrain', 'Resources for the next firmware build'], sampler: [loops ? 'Loops' : 'Sampler', loops ? 'Prepare audio and manage the loop library' : `Prepare audio and manage ${slots} sample slots`],
     presets: ['Presets', 'Stored sound sets'], routing: ['CV routing', 'Notes, modulation and knob mapping'], midi: ['MIDI routing', 'Controllers to sound parameters'],
-    locks: ['Knob record', 'Recorded and drawn movements'], panel: ['Panel', 'Live controls, settings and colours'], manual: ['Manual', 'Controls, gestures and Studio help'],
+    locks: ['Knob record', 'Recorded and drawn movements'], panel: ['Live panel', 'Controls and colours on the module'], settings: ['Settings', 'Clock, levels and module preferences'], manual: ['Manual', 'Controls, gestures and Studio help'],
   };
   const [title, crumb] = titles[activeTab] ?? [activeTab, ''];
   document.getElementById('page-title').textContent = title;
   document.getElementById('page-crumb').textContent = crumb;
   document.documentElement.dataset.studioTab = activeTab;
-  document.querySelector('.tabs [data-tab="sampler"]').textContent = loops ? 'Loops' : 'Sampler';
+  const samplerLink = document.querySelector('.tabs [data-tab="sampler"]');
+  for (const node of samplerLink.childNodes) if (node.nodeType === Node.TEXT_NODE) node.textContent = loops ? 'Loops' : 'Sampler';
+  const settingsLink = document.querySelector('.settings-shortcut');
+  if (activeTab === 'settings') settingsLink.setAttribute('aria-current','page'); else settingsLink.removeAttribute('aria-current');
+  const heading = document.getElementById('workspace-heading');
+  heading.hidden = ['palette', 'manual'].includes(activeTab);
+  document.getElementById('workspace-title').textContent = title;
+  document.getElementById('workspace-description').textContent = activeTab === 'locks' ? 'Record on the module. Shape it here.' : crumb;
   const status = document.getElementById('workspace-state');
   if (!status) return;
   let text = '';
@@ -560,7 +575,7 @@ function refreshWorkspace() {
   else if (activeTab === 'dx7') text = 'Prepare banks in Studio. Write banks to SD to use them on the module.';
   else if (activeTab === 'sampler') text = 'Audio preparation stays on this computer until you send files to the module’s SD card.';
   else if (activeTab === 'locks') text = connected ? 'Edits apply to the playing module. Curve files can also be kept on this computer.' : 'Connect to read recorded movements, or explore the Demo.';
-  else if (['panel', 'routing', 'midi'].includes(activeTab) && connected) text = controller?.view().readOnly ? `Read only. ${controller.view().reason ?? ''}` : session?.dirty ? 'Applied to module · Changes not saved to a sound slot' : 'Module connected · No pending sound changes';
+  else if (['panel', 'settings', 'routing', 'midi'].includes(activeTab) && connected) text = controller?.view().readOnly ? `Read only. ${controller.view().reason ?? ''}` : session?.dirty ? 'Applied to module · Changes not saved to a sound slot' : 'Module connected · No pending sound changes';
   if (demoMode && connected && !['wavetable', 'terrain', 'sampler', 'dx7'].includes(activeTab)) text = '';
   status.hidden = !text;
   if (status.textContent !== text) status.textContent = text;

@@ -37,19 +37,19 @@ function storedBpm() { try { return Number(localStorage.getItem(BPM_KEY)) || 120
 function rememberBpm(bpm) { try { localStorage.setItem(BPM_KEY, String(bpm)); } catch { /* a convenience only */ } }
 
 /** Loop shape as an SVG polyline: time left to right, knob position bottom to top. */
-export function loopShape(samples) {
+export function loopShape(samples, { clocked = false, span = 0 } = {}) {
   const svg = document.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('viewBox', '0 0 200 48');
-  svg.setAttribute('preserveAspectRatio', 'none');
-  svg.setAttribute('class', 'lock-shape');
-  svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-label', 'Recorded knob movement');
-  if (samples.length > 1) {
-    const step = 200 / (samples.length - 1);
-    const line = document.createElementNS(SVG_NS, 'polyline');
-    line.setAttribute('points', samples.map((value, frame) => `${(frame * step).toFixed(1)},${(46 - value * 44).toFixed(1)}`).join(' '));
-    svg.append(line);
+  svg.setAttribute('viewBox', '0 0 320 136'); svg.setAttribute('class', 'lock-shape');
+  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', samples.length ? 'Recorded knob movement' : 'Empty movement window');
+  const add = (tag, attrs, text) => { const n = document.createElementNS(SVG_NS, tag); for (const [k,v] of Object.entries(attrs)) n.setAttribute(k, String(v)); if (text !== undefined) n.textContent = text; svg.append(n); return n; };
+  for (let i = 0; i <= 4; i++) {
+    const x = 31 + i * 69; const y = 10 + i * 26;
+    add('line', { x1: x, x2: x, y1: 10, y2: 114, class: 'lock-gridline' });
+    add('line', { x1: 31, x2: 307, y1: y, y2: y, class: 'lock-gridline' });
+    if (i % 2 === 0) add('text', { x: 26, y: y + 3, 'text-anchor': 'end', class: 'lock-axis' }, `${100 - i * 25}%`);
+    if (samples.length && span) add('text', { x, y: 129, 'text-anchor': i === 4 ? 'end' : 'middle', class: 'lock-axis' }, `${Number((span * i / 4).toFixed(2))}${i === 4 ? clocked ? ' b' : ' s' : ''}`);
   }
+  if (samples.length > 1) add('polyline', { class: 'lock-trace', fill: 'none', points: samples.map((value, i) => `${(31 + i / (samples.length - 1) * 276).toFixed(1)},${(114 - Math.max(0, Math.min(1, value)) * 104).toFixed(1)}`).join(' ') });
   return svg;
 }
 
@@ -60,12 +60,13 @@ export function mountKnobLocks(root, { getSession, onError = () => {}, onSuccess
   let busy = false;
   const openMenus = new Set();
   let helpOpen = false;
+  let selectedSlot = 0;
   let editor = null;   // the open curve editor; polling never redraws under it
 
   function stopPolling() { if (timer) { clearInterval(timer); timer = null; } }
   function renderMessage(text) { root.replaceChildren(element('p', 'lock-empty', text)); }
   const destinations = () => getSession()?.destinations;
-  const cannotEdit = () => busy || Boolean(getSession()?.readOnly);
+  const cannotEdit = () => busy || !getSession()?.lockComponent || slots === null || Boolean(getSession()?.readOnly);
 
   function slotLoop(entry) {
     return { dest: entry.dest, exit: entry.exit, samples: entry.samples, musicalTicks: entry.musicalTicks, recordBase: entry.recordBase };
@@ -83,87 +84,72 @@ export function mountKnobLocks(root, { getSession, onError = () => {}, onSuccess
     return menu;
   }
 
-  function summaryCard(entry) {
-    const card = element('article', `lock-card${entry.active ? ` tone-${groupTone(entry.group)}` : ' empty'}`);
+  const timeOf = entry => entry.clocked ? `${Number((entry.musicalTicks / 96).toFixed(2))} beats` : `${entry.seconds.toFixed(1)} s`;
+  function summaryCard(entry, known) {
+    const card = element('article', `lock-card${entry.active ? ` tone-${groupTone(entry.group)}` : ' empty'}${entry.slot === selectedSlot ? ' selected' : ''}`);
     const head = element('header', 'lock-head');
-    head.append(element('span', 'lock-slot', `Loop ${entry.slot + 1}`), element('span', 'lock-secs', entry.active ? `${entry.seconds.toFixed(1)} s` : 'Free'));
+    const select = button('', () => { selectedSlot = entry.slot; render(); root.querySelector?.(`[data-select-slot="${entry.slot}"]`)?.focus({ preventScroll: true }); }, { className: 'lock-select' });
+    select.setAttribute('data-select-slot', String(entry.slot)); select.setAttribute('aria-label', `Select movement slot ${entry.slot + 1}`); select.setAttribute('aria-pressed', String(entry.slot === selectedSlot));
+    select.append(element('span', 'lock-slot', String(entry.slot + 1)), element('span', 'lock-window-title', entry.active ? entry.name : known ? 'Empty' : 'Not connected'));
+    if (entry.active) select.append(element('small', 'lock-owner', entry.group));
+    head.append(select);
+    if (entry.active) head.append(button('Edit', () => edit(entry.slot, draftFromLoop(slotLoop(entry), { bpm: storedBpm() })), { className: 'lock-card-edit', disabled: cannotEdit() }));
+    head.append(actionMenu(entry.slot, 'More', entry.active ? [
+      button('Replace from library', () => edit(entry.slot, draftFromLoop(slotLoop(entry), { bpm: storedBpm() }), { library: true }), { disabled: cannotEdit() }),
+      button('Open curve file', () => openFileInto(entry.slot), { disabled: cannotEdit() }),
+      button('Download curve', () => saveCurve(entry)),
+      button('Erase movement', () => eraseSlots([entry.slot], `Erased ${entry.group} · ${entry.name}`), { className: 'lock-erase', disabled: cannotEdit() }),
+    ] : [button('Open curve file', () => openFileInto(entry.slot), { disabled: cannotEdit() })]));
     card.append(head);
-    const title = element('div', 'lock-title');
-    title.append(element('b', '', entry.name), element('small', '', entry.group));
-    const open = element('button', 'lock-open');
-    open.type = 'button'; open.disabled = cannotEdit();
-    open.title = 'Open the curve editor';
+    if (!entry.active) {
+      const stage = element('div', 'lock-empty-stage'); stage.append(loopShape([]));
+      const choices = element('div', 'lock-empty-actions');
+      choices.append(button('Draw a curve', () => edit(entry.slot, newDraft({ bpm: storedBpm() })), { className: 'lock-draw', disabled: cannotEdit() }), button('Library', () => edit(entry.slot, newDraft({ bpm: storedBpm() }), { library: true }), { disabled: cannotEdit() }));
+      stage.append(choices); card.append(stage);
+      return card;
+    }
+    const open = button('', () => edit(entry.slot, draftFromLoop(slotLoop(entry), { bpm: storedBpm() })), { className: 'lock-open', disabled: cannotEdit() });
     open.setAttribute('aria-label', `Edit loop ${entry.slot + 1}: ${entry.group} ${entry.name}`);
-    open.append(loopShape(entry.samples));
-    open.addEventListener('click', () => edit(entry.slot, draftFromLoop(slotLoop(entry), { bpm: storedBpm() })));
-    card.append(title, open);
-    const facts = element('div', 'lock-metrics');
-    for (const [label, value] of [
-      ['Range', `${percent(entry.min)}–${percent(entry.max)}`],
-      ['Timing', entry.clocked ? `${entry.musicalTicks / 96} beats` : 'Free running'],
-      ['When stopped', entry.exit === 'Latch' ? 'Keep last value' : 'Return to knob'],
-    ]) { const fact = element('span'); fact.append(element('small', '', label), element('b', '', value)); facts.append(fact); }
-    card.append(facts);
-    const tools = element('div', 'lock-tools');
-    tools.append(
-      button('Edit curve', () => edit(entry.slot, draftFromLoop(slotLoop(entry), { bpm: storedBpm() })), { disabled: cannotEdit() }),
-      actionMenu(entry.slot, 'More', [
-        button('Replace from library', () => edit(entry.slot, draftFromLoop(slotLoop(entry), { bpm: storedBpm() }), { library: true }), { disabled: cannotEdit() }),
-        button('Open curve file', () => openFileInto(entry.slot), { disabled: cannotEdit() }),
-        button('Download curve', () => saveCurve(entry), { title: 'Download this curve as a file' }),
-        button('Erase movement', () => eraseSlots([entry.slot], `Erased ${entry.group} · ${entry.name}`), { className: 'lock-erase', disabled: busy }),
-      ]),
-    );
-    card.append(tools);
-    return card;
+    open.append(loopShape(entry.samples, { clocked: entry.clocked, span: entry.clocked ? entry.musicalTicks / 96 : entry.seconds })); card.append(open);
+    const facts = element('div', 'lock-window-facts'); facts.append(element('span', '', timeOf(entry)), element('span', '', entry.exit === 'Latch' ? 'Keep last value' : 'Returns to knob'));
+    card.append(facts); return card;
   }
 
   function render() {
-    if (!getSession()?.lockComponent) {
-      renderMessage(getSession() ? 'This firmware has no recorded knob movements.' : 'Connect Pentavox to see recorded knob movements.');
-      return;
-    }
-    const described = describeLocks(slots ?? [], destinations());
-    const used = described.filter((entry) => entry.active).length;
+    const session = getSession(); const known = slots !== null;
+    const placeholders = Array.from({ length: LOCK_SLOTS }, (_, slot) => ({ slot, active: false, dest: 0, samples: [], exit: 'Return', seconds: 0 }));
+    const described = describeLocks(slots ?? placeholders, destinations() ?? { byId: () => null });
+    const used = described.filter(entry => entry.active).length;
     const head = element('div', 'lock-toolbar');
-    const intro = element('div', 'lock-intro');
-    intro.append(element('h2', '', 'Knob record'), element('p', 'lock-lede', 'Edit recorded movements or add a curve. Changes apply to the playing module at once.'));
+    const hint = element('p', 'lock-record-hint', !session?.lockComponent ? session ? 'This firmware does not expose knob recording.' : 'Connect the module to read its movements, or explore the Demo.' : 'Hold B3 and turn a knob to record a movement.');
     const actions = element('div', 'lock-actions');
-    const count = element('span', 'lock-count'); count.append(element('b', '', String(used)), ` of ${LOCK_SLOTS} loops in use`);
-    actions.append(
-      count,
-      button('Refresh', () => poll(true)),
-      button('Erase all', () => eraseSlots(null, 'Erased all recorded movements'), { className: 'lock-erase-all', disabled: cannotEdit() || used === 0 }),
-    );
-    const free = described.filter(entry => !entry.active);
-    if (free.length) {
-      const slot = free[0].slot;
-      actions.prepend(actionMenu(slot, 'Add movement', [
-        button('Draw a curve', () => edit(slot, newDraft({ bpm: storedBpm() })), { disabled: cannotEdit() }),
-        button('Choose from library', () => edit(slot, newDraft({ bpm: storedBpm() }), { library: true }), { disabled: cannotEdit() }),
-        button('Open curve file', () => openFileInto(slot), { disabled: cannotEdit() }),
-      ]));
-    }
-    head.append(intro, actions);
-    const help = element('details', 'lock-help'); help.open = helpOpen;
-    help.append(element('summary', '', 'Record on the module'));
-    help.addEventListener('toggle', () => { helpOpen = help.open; });
-    const hint = element('p', 'lock-hint');
-    hint.append('Hold ', keycap('B3'), ' and move a knob: it records until you let go, then loops. Hold ', keycap('B1'), ' + ', keycap('B3'), ' and move a knob to erase its loop; keep holding the chord to erase every loop on the module.');
-    help.append(hint, element('p', 'lock-refresh-note', 'Studio checks for new recordings every 2 seconds while this page is open.'));
+    const free = described.find(entry => !entry.active);
+    actions.append(button('Import curve', () => openFileInto(free?.slot ?? selectedSlot), { disabled: cannotEdit() }), button('Refresh', () => poll(true), { disabled: busy || !session?.lockComponent }), element('span', 'lock-count', known ? `${used} of ${LOCK_SLOTS} slots` : `${LOCK_SLOTS} movement slots`));
+    head.append(hint, actions);
     const grid = element('div', 'lock-grid');
-    for (const entry of described.filter(entry => entry.active)) grid.append(summaryCard(entry));
-    const available = element('p', 'lock-available', free.length ? `Free slots: ${free.map(entry => entry.slot + 1).join(', ')}. Add movement uses slot ${free[0].slot + 1}.` : 'All movement slots are in use. Edit or erase an existing movement to make room.');
-    if (!used) grid.append(element('p', 'lock-empty', 'No recorded movements yet. Hold B3 and move a knob on the module, or add a curve here.'));
-    root.replaceChildren(head, available, help, grid);
+    for (const entry of described) grid.append(summaryCard(entry, known));
+    const selected = described.find(entry => entry.slot === selectedSlot) ?? described[0];
+    const bar = element('div', `lock-selection-bar tone-${groupTone(selected?.group)}`);
+    bar.append(element('b', '', selected?.active ? `${selected.name} · ${selected.group}` : `Slot ${selectedSlot + 1} · ${known ? 'Empty' : 'Awaiting connection'}`));
+    if (selected?.active) bar.append(element('span', '', timeOf(selected)), element('span', '', selected.exit === 'Latch' ? 'Keep last value' : 'Returns to knob'));
+    bar.append(button(selected?.active ? 'Edit curve' : 'Draw a curve', () => selected?.active ? edit(selected.slot, draftFromLoop(slotLoop(selected), { bpm: storedBpm() })) : edit(selectedSlot, newDraft({ bpm: storedBpm() })), { className: 'primary', disabled: cannotEdit() }));
+    const help = element('details', 'lock-help'); help.open = helpOpen;
+    help.append(element('summary', '', 'Recording gestures & erase'));
+    help.addEventListener('toggle', () => { helpOpen = help.open; });
+    const text = element('p', 'lock-hint'); text.append('Hold ', keycap('B3'), ' and move a knob to record. Hold ', keycap('B1'), ' + ', keycap('B3'), ' and move a knob to erase its movement. Keep holding the chord to erase every movement.');
+    help.append(text, button('Erase all movements', () => eraseSlots(null, 'Erased all recorded movements'), { className: 'lock-erase-all', disabled: cannotEdit() || !used }));
+    root.replaceChildren(head, grid, bar, help);
   }
 
   async function poll(announce = false) {
     const session = getSession();
     if (!session?.lockComponent || busy || editor) return;
     try {
-      slots = await session.readKnobLocks();
-      if (!root.contains?.(document.activeElement) || announce) render();
+      const next = await session.readKnobLocks();
+      const changed = JSON.stringify(next) !== JSON.stringify(slots);
+      const focused = root.contains?.(document.activeElement);
+      slots = next;
+      if (changed || announce) { render(); if (focused) root.querySelector?.(`[data-select-slot="${selectedSlot}"]`)?.focus({ preventScroll: true }); }
     }
     catch (error) { stopPolling(); if (announce || visible) onError(error); }
   }
@@ -197,6 +183,7 @@ export function mountKnobLocks(root, { getSession, onError = () => {}, onSuccess
   function edit(slot, draft, { library = false } = {}) {
     const session = getSession();
     if (!session || editor || cannotEdit()) return;
+    selectedSlot = slot;
     const handle = openEditor({
       draft,
       destinations: destinations(),
@@ -245,10 +232,10 @@ export function mountKnobLocks(root, { getSession, onError = () => {}, onSuccess
   function refreshConnection() {
     slots = null; openMenus.clear(); stopPolling();
     editor?.close();
-    if (visible) show(); else renderMessage(getSession() ? 'Open this tab to read the module.' : 'Connect Pentavox to see recorded knob movements.');
+    if (visible) show(); else render();
   }
 
-  renderMessage('Connect Pentavox to see recorded knob movements.');
+  render();
   return { show, hide, refreshConnection };
 }
 
