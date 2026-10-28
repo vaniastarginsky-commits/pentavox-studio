@@ -1,3 +1,4 @@
+import { mountRoutingPanel } from './ui/routing_panel.js';
 import { HostLinkClient } from './hostlink/client.js';
 import { SimTransport } from './hostlink/transport_sim.js';
 import { openWebSerial } from './hostlink/transport_webserial.js';
@@ -11,7 +12,6 @@ import { mountPresets } from './ui/presets.js';
 import { mountDx7Editor } from './ui/dx7_editor.js';
 import { mountMidiRouting } from './ui/midi_routing.js';
 import { RoutingController } from './ui/routing_controller.js';
-import { mountSessionFooter } from './ui/session_footer.js';
 import { mountVoice } from './ui/voices.js';
 import { mountSampler } from './ui/sampler.js';
 import { mountSdCard } from './ui/sdcard.js';
@@ -36,7 +36,6 @@ const potMapRoot = Object.assign(document.createElement('div'), { id: 'potmap-ro
 const settingsRoot = document.querySelector('#settings-root');
 const presetsRoot = document.querySelector('#presets-root');
 const midiRoot = document.querySelector('#midi-root');
-const sessionFooter = document.querySelector('#session-footer');
 const toast = document.querySelector('#toast');
 let client;
 let session;
@@ -47,7 +46,7 @@ let unmountPotMap;
 let unmountSettings;
 let unmountPresets;
 let unmountMidi;
-let unmountFooter;
+let unmountCvPanel, unmountMidiPanel;
 let unmountVoices = [];
 let unsubscribePaletteLive;
 let unsubscribeDraft;
@@ -342,8 +341,6 @@ assetsPromise.then((assets) => {
 }).catch(showError);
 
 function syncFooter() {
-  const usesSession = ['routing', 'panel', 'settings', 'midi'].includes(activeTab);
-  sessionFooter.hidden = !controller || connectionStatus.dataset.state !== 'on' || !usesSession;
   refreshWorkspace();
 }
 
@@ -401,14 +398,16 @@ async function connect({ demo = false, auto = false } = {}) {
     client.onDisconnect(markDisconnected);
     session.onBusy = (busy) => document.body.classList.toggle('studio-busy', busy);
     controller?.dispose(); controller = new RoutingController(session, session.destinations, { onError: showError });
-    unmountRouting?.(); unmountPotMap?.(); unmountSettings?.(); unmountPresets?.(); unmountMidi?.(); unmountFooter?.(); unmountVoices.forEach((dispose) => dispose()); unsubscribePaletteLive?.(); unsubscribeDraft?.();
+    unmountCvPanel?.(); unmountMidiPanel?.();
+    unmountRouting?.(); unmountPotMap?.(); unmountSettings?.(); unmountPresets?.(); unmountMidi?.(); unmountVoices.forEach((dispose) => dispose()); unsubscribePaletteLive?.(); unsubscribeDraft?.();
     routingRoot.classList.remove('disconnected'); unmountRouting = mountRouting(routingRoot, controller, { potMapHost: potMapRoot });
     unmountPotMap = mountPotMap(potMapRoot, controller);
     settingsRoot.classList.remove('disconnected'); unmountSettings = mountSettings(settingsRoot, controller);
     presetsRoot.classList.remove('disconnected'); unmountPresets = mountPresets(presetsRoot, controller, { onError: showError, onSuccess: showSuccess });
+    unmountCvPanel = mountRoutingPanel(document.getElementById('cv-panel-helper'), controller, 'cv', { onError: showError, onSuccess: showSuccess, isConnected: () => connectionStatus.dataset.state === 'on' });
+    unmountMidiPanel = mountRoutingPanel(document.getElementById('midi-panel-helper'), controller, 'midi', { onError: showError, onSuccess: showSuccess, isConnected: () => connectionStatus.dataset.state === 'on' });
     midiRoot.classList.remove('disconnected'); unmountMidi = mountMidiRouting(midiRoot, controller, { onError: showError, onUndo: showUndo });
     unmountVoices = [];
-    unmountFooter = mountSessionFooter(sessionFooter, controller);
     unsubscribePaletteLive = controller.subscribe(() => paletteMount?.refreshLive());
     unsubscribeDraft = controller.subscribe(() => { persistDraft(); refreshWorkspace(); });
     paletteMount?.refreshLive();
@@ -547,13 +546,14 @@ asPage(dx7Editor.dialog, () => document.getElementById('dx7-tab'));
 // Context says where this editor's changes go, using only observed state.
 function refreshWorkspace() {
   const connected = connectionStatus.dataset.state === 'on';
+  for (const id of ['cv-panel-helper', 'midi-panel-helper']) document.getElementById(id).hidden = !connected;
   const loops = Boolean(session?.loopIo);
   const slots = session?.sampleSlotCount ?? 4;
   const titles = {
     palette: ['Engines', `${buildVoiceCount === 1 ? 'One voice' : 'Two voices'}, ${buildVoiceCount === 1 ? 'four' : 'three'} banks of eight`],
     dx7: ['DX7 banks', 'Six-op patches on the SD card'], wavetable: ['Wave tables', 'Resources for the next firmware build'],
     terrain: ['Wave terrain', 'Resources for the next firmware build'], sampler: [loops ? 'Loops' : 'Sampler', loops ? 'Prepare audio and manage the loop library' : `Prepare audio and manage ${slots} sample slots`],
-    presets: ['Presets', 'Stored sound sets'], routing: ['CV routing', 'Notes, modulation and knob mapping'], midi: ['MIDI routing', 'Controllers to sound parameters'],
+    presets: ['Setup presets', 'Stored module configurations'], routing: ['CV routing', 'Notes, modulation and knob mapping'], midi: ['MIDI routing', 'Controllers to sound parameters'],
     locks: ['Knob record', 'Recorded and drawn movements'], panel: ['Live panel', 'Controls and colours on the module'], settings: ['Settings', 'Clock, levels and module preferences'], manual: ['Manual', 'Controls, gestures and Studio help'],
   };
   const [title, crumb] = titles[activeTab] ?? [activeTab, ''];
@@ -575,9 +575,9 @@ function refreshWorkspace() {
   else if (activeTab === 'dx7') text = 'Prepare banks in Studio. Write banks to SD to use them on the module.';
   else if (activeTab === 'sampler') text = 'Audio preparation stays on this computer until you send files to the module’s SD card.';
   else if (activeTab === 'locks') text = connected ? 'Edits apply to the playing module. Curve files can also be kept on this computer.' : 'Connect to read recorded movements, or explore the Demo.';
-  else if (['panel', 'settings', 'routing', 'midi'].includes(activeTab) && connected) text = controller?.view().readOnly ? `Read only. ${controller.view().reason ?? ''}` : session?.dirty ? 'Applied to module · Changes not saved to a sound slot' : 'Module connected · No pending sound changes';
+  else if (['panel', 'settings', 'routing', 'midi'].includes(activeTab) && connected) text = controller?.view().readOnly ? `Read only. ${controller.view().reason ?? ''}` : '';
   if (demoMode && connected && !['wavetable', 'terrain', 'sampler', 'dx7'].includes(activeTab)) text = '';
-  status.hidden = !text || (connected && !session?.dirty && !controller?.view().readOnly);
+  status.hidden = !text || (connected && !controller?.view().readOnly);
   if (status.textContent !== text) status.textContent = text;
 }
 navigation.render();

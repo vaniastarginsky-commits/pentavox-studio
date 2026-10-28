@@ -379,3 +379,48 @@ button { font-weight: 500; }
 #panel-tab .controls-only .mp-control:focus-visible { outline: none; }
 #panel-tab .controls-only .mp-control:focus-visible .mp-knob { stroke: var(--control-hue, var(--accent)); stroke-width: .85; }
 #panel-tab .controls-only .mp-control:focus-visible .mp-cap { stroke: var(--accent); stroke-width: .85; }
+
+/* Configuration belongs to the module; slot operations belong only to Setup presets. */
+.settings-columns { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; max-width: 1280px; }
+.settings-stack { display: grid; gap: 10px; min-width: 0; align-content: start; }
+.settings-stack .instrument-settings-card { margin: 0; padding: 12px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.settings-stack .instrument-settings-extra { margin: 0; }
+.settings-stack .instrument-settings-extra > .instrument-settings-fields { display: grid; grid-template-columns: minmax(0, 1fr); padding-bottom: 14px; }
+.settings-stack .instrument-settings-extra .instrument-setting { display: grid; grid-template-columns: minmax(140px, .8fr) minmax(0, 1.4fr); align-items: center; gap: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.settings-stack .cc-ctrl { flex-wrap: wrap; }
+.settings-stack .cc-mini { flex: 1; min-width: 70px; }
+.instrument-setting .cc-rtext { padding-right: 26px; }
+.setting-help-wrap { position: absolute; right: 0; top: 0; display: inline-flex; }
+.instrument-setting .setting-help { position: static; width: 20px; height: 20px; padding: 0; margin: 0; font: 12px/18px var(--serif); background: none; cursor: help; }
+.setting-tooltip { position: fixed; z-index: 100; box-sizing: border-box; padding: 12px 14px; max-height: 180px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); color: var(--text); font: 400 13px/1.6 var(--serif); box-shadow: 0 8px 24px #0004; text-align: left; }
+.setting-tooltip[hidden] { display: none; }
+.routing-panel-guide { margin: 0 0 12px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.routing-panel-guide > summary { width: fit-content; cursor: pointer; font-size: 12px; color: var(--accent); padding: 5px 0; }
+.routing-panel-body { display: grid; grid-template-columns: minmax(240px, 300px) minmax(240px, 1fr); gap: 24px; max-width: 800px; margin-top: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.routing-panel-controls { display: flex; gap: 8px; }
+.routing-panel-controls select { min-width: 0; flex: 1; }
+.routing-panel-controls button { font-size: 11px; }
+.routing-panel-controls button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+.routing-panel-knobs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.routing-panel-knob { display: grid; justify-items: center; gap: 5px; padding: 8px; background: none; border: 1px solid transparent; font-size: 11px; font-weight: 400; }
+.routing-panel-cap { width: 32px; height: 32px; border-radius: 50%; background: var(--knob-cap); border: 3px solid var(--accent); position: relative; }
+.routing-panel-cap::after { content: ''; position: absolute; left: calc(50% - 1px); top: 3px; height: 10px; width: 2px; background: #dce6ee; }
+.routing-panel-knob[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.routing-panel-knob.unavailable { opacity: .45; }
+.routing-panel-inspector { display: grid; align-content: start; gap: 12px; min-width: 0; }
+.routing-panel-inspector h3 { margin: 0; font-size: 17px; }
+.routing-panel-explanation { margin: 0; font-size: 12px; line-height: 1.6; color: var(--muted); max-width: 50ch; }
+.routing-panel-field { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
+.routing-panel-field input { width: 95px; }
+.routing-panel-inspector > button { justify-self: start; }
+@media (max-width: 800px) {
+  .settings-columns { grid-template-columns: minmax(0, 1fr); }
+  .settings-stack .instrument-settings-extra .instrument-setting { grid-template-columns: minmax(100px, .8fr) minmax(0, 1.4fr); }
+  .routing-panel-body { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .routing-panel-knobs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.routing-panel-controls select, .routing-panel-field select, .routing-panel-field input { min-height: 32px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--text); font: 13px var(--serif); box-sizing: border-box; }
+.routing-panel-knob[data-pot="0"], .routing-panel-knob[data-pot="3"] { --guide-hue: #24c8cf; }
+.routing-panel-knob[data-pot="1"], .routing-panel-knob[data-pot="4"] { --guide-hue: #f4ad42; }
+.routing-panel-knob[data-pot="2"], .routing-panel-knob[data-pot="5"] { --guide-hue: #a876ef; }
+.routing-panel-cap { border-color: var(--guide-hue, var(--accent)); }

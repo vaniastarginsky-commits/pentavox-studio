@@ -4,7 +4,7 @@ const TASKS = {
   'routing-root': ['Connect to edit CV routes', 'Choose where notes come from, route CV to sound parameters and remap the panel knobs.', 'CV input → Timbre · Depth +50%'],
   'midi-root': ['Connect to edit MIDI routes', 'Use MIDI Learn to assign a controller, then choose a parameter and its depth.', 'MIDI CC → Parameter · Depth'],
   'settings-root': ['Connect to edit module settings', 'Set input and output levels, clock, tempo and the options your firmware supports.', 'Clock source · Tempo · Input / output'],
-  'presets-root': ['Connect to manage stored sounds', 'Load a sound set from the module, save the playing sound or download a backup.', 'Playing sound → Stored slot'],
+  'presets-root': ['Connect to manage setup presets', 'Load a configuration from the module, save the current configuration or download a backup.', 'Current setup → Stored slot'],
 };
 
 export function connectionEmptyCopy(id) { return TASKS[id] ?? ['Connect your module', 'Connect to read this module’s settings, or explore the Demo.', 'Studio ↔ Pentavox']; }

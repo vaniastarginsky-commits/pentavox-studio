@@ -1,3 +1,4 @@
+import { settingHelp } from './setting_help.js';
 import { builtAt, loadLatestCloudMeta } from '../build_flow.js';
 import { changelogEntries, firmwareRows, loadChangelog } from '../firmware_info.js';
 
@@ -25,7 +26,7 @@ function element(tag, className, text) {
 
 export function mountSettings(root, controller) {
   const RECENT_CHANGES = 3;   // the card shows this many entries of the changelog; the rest is behind "Show all"
-  const ui = { open: new Set(['input', 'clock']), logAll: false, firmwareOpen: false };
+  const ui = { open: new Set(['sampler']), logAll: false, firmwareOpen: false };
   const firmware = { latest: null, builtAtMs: null, log: [] };
   root.classList.add('cc-page', 'instrument-settings');
 
@@ -73,7 +74,7 @@ export function mountSettings(root, controller) {
     const line = element('div', `instrument-setting${item.id === 'transport.bpm' ? ' setting-tempo' : item.id === 'transport.source' ? ' setting-source' : ''}`); line.dataset.setting = item.id;
     const text = element('span', 'cc-rtext'); text.append(element('b', '', item.label));
     if (item.hint) { const hint = element('small', '', item.hint.split('. ')[0]); hint.title = item.hint; text.append(hint); }
-    const help = element('a', 'setting-help', '?'); help.href = `#manual/search:${encodeURIComponent(item.label)}`; help.setAttribute('aria-label', `Help for ${item.label}`); text.append(help);
+    text.append(settingHelp(item));
     const ctrl = element('span', 'cc-ctrl');
     if (item.id === 'transport.bpm') {
       const input = document.createElement('input'); input.type = 'number'; input.min = item.min; input.max = item.max; input.step = item.step; input.value = item.value; input.inputMode = 'numeric'; input.setAttribute('aria-label', item.label); input.disabled = readOnly;
@@ -122,7 +123,8 @@ export function mountSettings(root, controller) {
     const groups = controller.settingsView();
     if (!groups.length) { root.append(element('p', 'cc-muted', 'This module firmware has no settings fields.')); return; }
     const { panels, advanced } = settingsLayout(groups);
-    const list = element('div', 'instrument-settings-grid');
+    const list = element('div', 'settings-columns');
+    const stacks = [element('div', 'settings-stack'), element('div', 'settings-stack')]; list.append(...stacks);
     for (const group of panels) {
       const card = element('section', 'instrument-settings-card'); card.dataset.group = group.key;
       card.append(element('h2', '', group.title));
@@ -130,7 +132,7 @@ export function mountSettings(root, controller) {
       const items = group.key === 'clock' ? [...group.items].sort((a,b) => (a.id === 'transport.bpm' ? -2 : a.id === 'transport.source' ? -1 : 0) - (b.id === 'transport.bpm' ? -2 : b.id === 'transport.source' ? -1 : 0)) : group.items;
       for (const item of items) body.append(row(item, view.readOnly));
       card.append(body);
-      list.append(card);
+      stacks[group.key === 'clock' ? 0 : 1].append(card);
     }
     const extra = element('section', 'instrument-settings-advanced');
     for (const group of advanced) {
@@ -139,13 +141,13 @@ export function mountSettings(root, controller) {
       card.append(element('summary', '', group.title));
       card.addEventListener('toggle', () => { if (card.open) ui.open.add(group.key); else ui.open.delete(group.key); });
       const body = element('div', 'instrument-settings-fields'); for (const item of group.items) body.append(row(item, view.readOnly));
-      card.append(body); extra.append(card);
+      card.append(body); stacks[['clock-transition', 'sampler'].includes(group.key) ? 0 : 1].append(card);
     }
     const details = element('details', 'firmware-details'); details.open = ui.firmwareOpen;
     details.addEventListener('toggle', () => { ui.firmwareOpen = details.open; });
     const version = controller.session?.info?.fwVersion ?? 'Unknown version';
     details.append(element('summary', '', 'Firmware and change history'), firmwareCard());
-    root.append(list, extra, details);
+    root.append(list, details);
   }
 
   let disposed = false;
