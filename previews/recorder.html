@@ -1,4 +1,4 @@
-<!doctype html><html lang="en" data-theme="dark"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Pentavox · Recorder preview</title><style>html,body{min-width:0!important}button{touch-action:manipulation} @media(max-width:600px){main{padding:20px 16px}header{flex-wrap:wrap;gap:12px}nav{flex-wrap:wrap}button{min-height:44px}h1{letter-spacing:normal}.preview{grid-template-columns:minmax(0,1fr);min-height:100dvh}.preview>.side{padding:20px;min-height:0}.preview-nav{display:none}.preview .loop-recorder{margin-top:16px;padding-top:14px}.preview-main{padding:20px}.loop-recorder-target button{min-width:54px;min-height:44px}.loop-recorder-target>span{font-size:13px}.loop-recorder-state{font-size:12px}.loop-recorder-details{font-size:12px}}</style><style>:root {
+<!doctype html><html lang="en" data-theme="dark"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Pentavox · Recorder preview</title><style>:root {
   color-scheme: light dark;
   --bg: #f4f1eb;
   --surface: #fffdf8;
@@ -1166,7 +1166,21 @@ button { font-weight: 500; }
 .loop-recorder-error { margin: 8px 0 0; color: var(--danger,#c85168); font-size: 11px; line-height: 1.4; }
 .loop-recorder[data-state="recording"] .loop-recorder-state { color: var(--danger,#c85168); }
 .loop-recorder[data-state="waiting"] .loop-recorder-state { color: var(--amber); }
-</style><style>body{margin:0}.preview{display:grid;grid-template-columns:228px 1fr;min-height:100vh}.side{padding:24px 14px}.preview-main{padding:36px;max-width:850px}.preview-main h1{font-size:25px;margin:0 0 8px}.preview-main>p{color:var(--muted);line-height:1.6}.preview-nav{display:grid;gap:6px;padding:16px 0}.preview-nav a{padding:9px 8px;color:var(--muted);text-decoration:none;font-size:13px}.preview-nav a.active{color:var(--text);background:var(--accent-soft);border-radius:5px}.preview-controls{display:flex;flex-wrap:wrap;gap:8px;margin:25px 0}.preview-controls button{padding:9px 13px;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:5px;font:inherit;cursor:pointer}.preview-description{border-top:1px solid var(--line);padding-top:20px;display:grid;gap:16px;line-height:1.5}.preview-description p{margin:0;font-size:14px}.preview-description span{color:var(--muted)}@media(max-width:650px){.preview{grid-template-columns:190px 1fr}.preview-main{padding:24px 18px}}</style><style>html,body{min-width:0!important}button{touch-action:manipulation} @media(max-width:600px){main{padding:20px 16px}header{flex-wrap:wrap;gap:12px}nav{flex-wrap:wrap}button{min-height:44px}h1{letter-spacing:normal}.preview{grid-template-columns:minmax(0,1fr);min-height:100dvh}.preview>.side{padding:20px;min-height:0}.preview-nav{display:none}.preview .loop-recorder{margin-top:16px;padding-top:14px}.preview-main{padding:20px}.loop-recorder-target button{min-width:54px;min-height:44px}.loop-recorder-target>span{font-size:13px}.loop-recorder-state{font-size:12px}.loop-recorder-details{font-size:12px}}</style><div class="preview"><aside class="side"><div class="brand-wordmark"><b>Pentavox</b><small>Studio</small></div><nav class="preview-nav"><a>Engines</a><a>DX7 banks</a><a>Wave tables</a><a class="active">Loops</a><a>CV routing</a><a>MIDI routing</a><a>Knob record</a><a>Settings</a><a>Setup presets</a><a>Manual</a></nav><section id="recorder" aria-label="Loop recorder"></section></aside><main class="preview-main"><h1>Loop recorder</h1><p>Choose where the next take goes. The A/B crossfader only changes what you hear.</p><div class="preview-controls"><button id="start">Start recording</button><button id="finish">Finish take</button><button id="theme">Light / dark</button></div><div class="preview-description"><p><b>Independent recording target</b><br><span>The selector stays available beside every workspace. A is blue, B is amber.</span></p><p><b>One glance before recording</b><br><span>The source, length and actual recording state come from the module.</span></p><p><b>Protected while recording</b><br><span>A/B selection is locked until the current take finishes.</span></p><p><b>Hardware controls</b><br><span>B2+B3: tap to record/stop, hold to save. Master upper-right: record A/B in the no-Phaser build.</span></p></div><p style="margin-top:28px;font-size:12px">Interactive preview with a simulated module. No hardware commands are sent.</p></main></div><script type="module">class HostLinkError extends Error {constructor(message,options={}){super(message);Object.assign(this,options);}}
+
+/* Six physical positions stay two columns wide, including on phones. */
+.routing-panel-knobs { grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr); align-items:center; }
+.routing-panel-button { grid-column:2; justify-self:center; display:grid; place-items:center; width:24px; height:24px; border:1px solid var(--line); border-radius:50%; color:var(--muted); font-size:9px; }
+.routing-panel-button.active { color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+.routing-panel-pair { margin:0; font-size:12px; color:var(--muted); }
+.routing-panel-usages { display:flex; flex-wrap:wrap; gap:5px; align-items:center; font-size:11px; color:var(--muted); }
+.routing-panel-usages:empty { display:none; }
+.routing-panel-route { padding:3px 6px; border:1px solid var(--line); border-radius:4px; }
+.routing-panel-learn { justify-self:start; font-size:12px; padding:6px 9px; }
+.routing-panel-field input[aria-invalid="true"] { border-color:var(--danger,#c85168); }
+.performance-destinations { display:flex; flex-wrap:wrap; gap:6px; color:var(--text); }
+.performance-destinations span::before { content:''; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--destination-colour); margin-right:5px; }
+</style><style>body{margin:0}.preview{display:grid;grid-template-columns:228px 1fr;min-height:100vh}.side{padding:24px 14px}.preview-main{padding:36px;max-width:850px}.preview-main h1{font-size:25px;margin:0 0 8px}.preview-main>p{color:var(--muted);line-height:1.6}.preview-nav{display:grid;gap:6px;padding:16px 0}.preview-nav a{padding:9px 8px;color:var(--muted);text-decoration:none;font-size:13px}.preview-nav a.active{color:var(--text);background:var(--accent-soft);border-radius:5px}.preview-controls{display:flex;flex-wrap:wrap;gap:8px;margin:25px 0}.preview-controls button{padding:9px 13px;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:5px;font:inherit;cursor:pointer}.preview-description{border-top:1px solid var(--line);padding-top:20px;display:grid;gap:16px;line-height:1.5}.preview-description p{margin:0;font-size:14px}.preview-description span{color:var(--muted)}@media(max-width:650px){.preview{grid-template-columns:190px 1fr}.preview-main{padding:24px 18px}}@media(max-width:600px){.preview{grid-template-columns:1fr}.preview-nav{display:none}.side{padding:16px}.preview-main{padding:20px 16px}.preview-controls button{min-height:44px}html,body{min-width:0!important}}</style><div class="preview"><aside class="side"><div class="brand-wordmark"><b>Pentavox</b><small>Studio</small></div><nav class="preview-nav"><a>Engines</a><a>DX7 banks</a><a>Wave tables</a><a class="active">Loops</a><a>CV routing</a><a>MIDI routing</a><a>Knob record</a><a>Settings</a><a>Setup presets</a><a>Manual</a></nav><section id="recorder" aria-label="Loop recorder"></section></aside><main class="preview-main"><h1>Loop recorder</h1><p>Choose where the next take goes. The A/B crossfader only changes what you hear.</p><div class="preview-controls"><button id="start">Start recording</button><button id="finish">Finish take</button><button id="no-clock">No clock</button><button id="reverse">Reverse loop</button><button id="no-sd">No SD card</button><button id="theme">Light / dark</button></div><div class="preview-description"><p><b>Independent recording target</b><br><span>The selector stays available beside every workspace. A is blue, B is amber.</span></p><p><b>One glance before recording</b><br><span>The source, length and actual recording state come from the module.</span></p><p><b>Protected while recording</b><br><span>A/B selection is locked until the current take finishes.</span></p><p><b>Hardware controls</b><br><span>B2+B3: tap to record/stop, hold to save. Master upper-right: record A/B in the no-Phaser build.</span></p></div><p style="margin-top:28px;font-size:12px">Interactive preview with a simulated module. No hardware commands are sent.</p></main></div><script type="module">
+class HostLinkError extends Error {}
 // The looper image's loop files: /LOOPS/NNNN.WAV on the module's card, and the HostLink commands 0x78..0x7A that save the playing loop,
 // load a numbered file into a loop slot and report how that went (fw/include/pentavox/hw/loop_io_extension.h). Pure functions and a small client.
 
@@ -1235,6 +1249,10 @@ function parseLoopStatus(body) {
     if(target>1 || body[1]>1 || mode>4 || source>2 || ![4,8,16].includes(bars))
       throw new HostLinkError('LOOP_STATUS: invalid recorder state',{code:'BAD_STATUS'});
     recorder={target,mode,source,bars};
+    if(body.length>=25) {
+      if(body[24]>5)throw new HostLinkError('LOOP_STATUS: invalid refusal reason',{code:'BAD_STATUS'});
+      recorder.refusalCount=body[23];recorder.refusalReason=body[24];
+    }
   }
   return {
     ...(recorder?{recorder}:{}),
@@ -1290,6 +1308,15 @@ class LoopIoClient {
     }
   }
 }
+
+const RECORDING_REFUSALS=Object.freeze({
+  1:'No clock. Start the transport or provide a clock before recording.',
+  2:'The take does not fit in memory at this tempo. Choose a shorter length.',
+  3:'Cannot overdub a reversed loop. Switch this slot to forward playback.',
+  4:'This loop is being saved or loaded. Wait for the transfer to finish.',
+  5:'This slot has no undo/redo history yet.',
+});
+const recordingRefusal=reason=>RECORDING_REFUSALS[reason]??'';
 const supportsRecordTarget = descriptor => Number(descriptor?.loopIo?.version)>=2 && descriptor.loopIo.recordTarget===true;
 function recorderView(status) {
   if (!status?.recorder) return null;
@@ -1329,29 +1356,39 @@ class LoopRecorder {
     finally{if(this.operation===operation)this.operation=null;}
   }
 }
+
 function mountLoopRecorder(root,{getSession,onOpenLooper=()=>{}}) {
   root.className='loop-recorder';root.hidden=true;
   root.innerHTML='<div class="loop-recorder-heading"><button type="button" class="loop-recorder-open">Loop recorder</button><span class="loop-recorder-state" role="status"></span></div><div class="loop-recorder-target"><span>Record to</span><div role="group" aria-label="Recording target"><button type="button" data-record-slot="0" aria-pressed="true">A</button><button type="button" data-record-slot="1" aria-pressed="false">B</button></div></div><p class="loop-recorder-details"></p><p class="loop-recorder-error" role="alert" hidden></p>';
   const state=root.querySelector('.loop-recorder-state'),details=root.querySelector('.loop-recorder-details'),error=root.querySelector('.loop-recorder-error');
-  const buttons=[...root.querySelectorAll('[data-record-slot]')];let current=null,pending=false;
+  const buttons=[...root.querySelectorAll('[data-record-slot]')];let current=null,pending=false,lastRefusal=null,lastIoFailure=null,errorKind='';
   function render(status){
     current=status;const session=getSession(),vm=recorderView(status);
     root.hidden=!supportsRecordTarget(session?.descriptor);if(root.hidden)return;
     root.dataset.state=vm?.recording?'recording':vm?.waiting?'waiting':'idle';
+    const event=status?.recorder?.refusalCount;
+    if(event!==undefined){
+      if(lastRefusal!==null && event!==lastRefusal){errorKind='record';error.textContent=recordingRefusal(status.recorder.refusalReason);error.hidden=!error.textContent;}
+      lastRefusal=event;
+    }
+    if(status && status.io!==3)lastIoFailure=null;
+    if(status?.io===3 && status.reason && lastIoFailure!==`${status.lastNumber}:${status.reason}:${status.ms}`){
+      lastIoFailure=`${status.lastNumber}:${status.reason}:${status.ms}`;errorKind='io';error.textContent=describeLoopFailure(status.reason,'The loop transfer failed.');error.hidden=false;
+    }
+    if(vm?.busy && errorKind==='record')error.hidden=true;
     state.textContent=vm?.state??'Reading…';
     details.textContent=vm?`${vm.source} · ${vm.bars} bars`:'Waiting for the module';
     for(const b of buttons){b.disabled=pending || !vm || vm.busy || session?.busy || session?.readOnly || session?.pending;b.setAttribute('aria-pressed',String(Number(b.dataset.recordSlot)===vm?.slot));}
   }
   const recorder=new LoopRecorder({getSession,onStatus:render,isVisible:()=>!document.hidden,onError:e=>{
-    error.textContent=e?.status===9?'Finish the take before changing its target.':e?.message??'Could not change the recording target.';error.hidden=false;
+    errorKind='target';error.textContent=e?.status===9?'Finish the take before changing its target.':e?.message??'Could not change the recording target.';error.hidden=false;
   }});
-  buttons.forEach(button=>button.addEventListener('click',async()=>{error.hidden=true;pending=true;render(current);try{await recorder.select(Number(button.dataset.recordSlot));}finally{pending=false;render(current);}}));
+  buttons.forEach(button=>button.addEventListener('click',async()=>{error.hidden=true;errorKind='';pending=true;render(current);try{await recorder.select(Number(button.dataset.recordSlot));}finally{pending=false;render(current);}}));
   root.querySelector('.loop-recorder-open').addEventListener('click',onOpenLooper);
-  return {refreshConnection(){error.hidden=true;recorder.refresh();},dispose(){recorder.dispose();}};
+  return {refreshConnection(){error.hidden=true;lastRefusal=null;lastIoFailure=null;errorKind='';recorder.refresh();},dispose(){recorder.dispose();}};
 }
 
-
-let target=0,active=0,mode=0;const session={descriptor:{loopIo:{version:2,recordTarget:true}},client:{async request(type,payload){if(payload?.length){if(mode!==0)throw Object.assign(new Error('Recording is active'),{status:9});target=payload[0];}const body=new Uint8Array(23);body[1]=active;body[19]=target;body[20]=mode;body[21]=1;body[22]=8;return {body};}}};
+let target=0,active=0,mode=0,refusalCount=0,refusalReason=0,io=0;const session={descriptor:{loopIo:{version:3,recordTarget:true,recordFeedback:true}},client:{async request(type,payload){if(payload?.length){if(mode!==0)throw Object.assign(new Error('Recording is active'),{status:9});target=payload[0];}const body=new Uint8Array(25);body[0]=io;body[18]=io===3?2:0;body[1]=active;body[19]=target;body[20]=mode;body[21]=1;body[22]=8;body[23]=refusalCount;body[24]=refusalReason;return {body};}}};
 const recorder=mountLoopRecorder(document.querySelector('#recorder'),{getSession:()=>session});recorder.refreshConnection();
-document.querySelector('#start').onclick=()=>{active=target;mode=2;recorder.refreshConnection()};document.querySelector('#finish').onclick=()=>{mode=0;recorder.refreshConnection()};document.querySelector('#theme').onclick=()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'};
+document.querySelector('#start').onclick=()=>{active=target;mode=2;io=0;recorder.refreshConnection()};document.querySelector('#finish').onclick=()=>{mode=0;recorder.refreshConnection()};document.querySelector('#no-clock').onclick=()=>{mode=0;io=0;refusalReason=1;refusalCount=(refusalCount+1)%256};document.querySelector('#reverse').onclick=()=>{mode=0;io=0;refusalReason=3;refusalCount=(refusalCount+1)%256};document.querySelector('#no-sd').onclick=()=>{mode=0;io=3};document.querySelector('#theme').onclick=()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'};
 </script></html>
