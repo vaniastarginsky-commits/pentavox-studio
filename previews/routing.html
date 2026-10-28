@@ -1496,7 +1496,9 @@ function load(json) {
 // Read-only performance controls. Wire layout: hw/panel_feedback.h, version 1.
 const FM_COLOURS = ['#00b4ff', '#aa46ff', '#ff6e00', '#ff50a0', '#46d264', '#ffbe28'];
 const SLICE_COLOURS = ['#2846ff', '#ff6e00', '#d2b46e', '#00b4dc', '#8c28dc', '#28c85a'];
-const THROW_DESTINATION_COLOURS = ['#ff8700','#00a0d2'];
+const REVERB_MODEL_COLOURS = ['#0000ff','#3f00ff','#ffb300','#00ffff','#ff00ff','#00ff00','#ff0000','#ff4600','#a0bedc'];
+const THROW_DESTINATION_COLOURS = ['#ff8700',REVERB_MODEL_COLOURS[1]];
+const blendColour=(a,b,x)=>`rgb(${[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-x)+parseInt(b.slice(i,i+2),16)*x)).join(' ')})`;
 const STYLES = ['Jungle', 'Break', 'IDM', 'Glitch', 'Calm'];
 const WAVES = ['Sine', 'Triangle', 'Saw', 'Square', 'Sample & hold', 'Noise'];
 const percent = x => `${Math.round(x * 100)}%`;
@@ -1562,8 +1564,9 @@ function performanceView(mode, data, alternate = false, lite = false) {
     const caught = !following || Boolean(data.caught & (1 << i));
     let colour = fm && data && i === 3 ? (data.exponential ? '#ff50a0' : '#00b4be') : fm && data && i === 4 ? (data.tracked ? '#46d264' : '#288c6e') : fm && data && i === 5 ? ['#ffbe28','#0096ff','#b450dc'][data.source] : !fm && lite && alternate && i === 0 ? '#ff6e00' : (fm ? FM_COLOURS : SLICE_COLOURS)[i];
     const destinationMix = !fm && alternate && i === (lite ? 3 : 5) ? values?.[i] ?? .5 : null;
-    if(destinationMix!==null)colour=`rgb(${Math.round(255*(1-destinationMix))} ${Math.round(135+25*destinationMix)} ${Math.round(210*destinationMix)})`;
-    return { destinationMix, label, value: shownValue, raw: values?.[i] ?? 0, text, inactive, pickup: !caught, physical: data?.physical[i] ?? 0, target: data?.logical[i] ?? 0, colour };
+    const destinationColours=[THROW_DESTINATION_COLOURS[0],REVERB_MODEL_COLOURS[data?.reverbModel]??REVERB_MODEL_COLOURS[1]];
+    if(destinationMix!==null)colour=blendColour(...destinationColours,destinationMix);
+    return { destinationMix, destinationColours, label, value: shownValue, raw: values?.[i] ?? 0, text, inactive, pickup: !caught, physical: data?.physical[i] ?? 0, target: data?.logical[i] ?? 0, colour };
   }) };
 }
 
@@ -1582,7 +1585,7 @@ function paintPerformanceFeedback(root, mode, data, alternate = false, lite = fa
     if(c.destinationMix!==null) {
       const legend=el('small','performance-destinations');
       const d=el('span','',`Delay ${percent(Math.min(1,2-2*c.destinationMix))}`),r=el('span','',`Reverb ${percent(Math.min(1,2*c.destinationMix))}`);
-      d.style.setProperty('--destination-colour',THROW_DESTINATION_COLOURS[0]);r.style.setProperty('--destination-colour',THROW_DESTINATION_COLOURS[1]);legend.append(d,' · ',r);cell.append(legend);
+      d.style.setProperty('--destination-colour',c.destinationColours[0]);r.style.setProperty('--destination-colour',c.destinationColours[1]);legend.append(d,' · ',r);cell.append(legend);
     }
     cell.append(el('small', 'performance-pickup', c.inactive ? 'Not used for external input' : c.pickup ? `Catch at ${percent(c.target)} · pot ${percent(c.physical)}` : vm.following ? 'Control caught' : 'Use the module’s controls'));
     grid.append(cell);
@@ -1606,7 +1609,7 @@ function paintRuntimePots(nodes, mode, data, alternate = false, lite = false) {
     dots.forEach(dot=>dot.style.removeProperty('--ring'));
     if(c.destinationMix!==null) {
       const last=dots.length-1;const cursor=Math.round(c.destinationMix*last);
-      dots.forEach((dot,i)=>{const x=i/last;dot.style.setProperty('--ring',`rgb(${Math.round(255*(1-x))} ${Math.round(135+25*x)} ${Math.round(210*x)})`);dot.classList.toggle('lit',i===cursor || (i===0 && c.destinationMix<1) || (i===last && c.destinationMix>0));});
+      dots.forEach((dot,i)=>{const x=i/last;dot.style.setProperty('--ring',blendColour(...c.destinationColours,x));dot.classList.toggle('lit',i===cursor || (i===0 && c.destinationMix<1) || (i===last && c.destinationMix>0));});
     }
     if (c.pickup) dots[Math.round(c.target * (dots.length - 1))]?.classList.add('pickup-target');
     if (c.pickup) dots[Math.min(dots.length - 1, Math.floor(c.physical * dots.length))]?.classList.add('pickup-dot');
