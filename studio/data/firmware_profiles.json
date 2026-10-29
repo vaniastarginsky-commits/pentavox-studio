@@ -99,7 +99,8 @@
         "PLAITS_FM": "1",
         "PANEL_AXI": "1",
         "PANEL_SDRAM": "0",
-        "PLAIN_ITCM": "0"
+        "PLAIN_ITCM": "0",
+        "MIDI_D2": "1"
       },
       "engineBanks": 4
     }
