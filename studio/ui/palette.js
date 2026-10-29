@@ -389,15 +389,15 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     const row = el('div', `eg-slot${state.selected[voice] === slot.index && state.voice === voice ? ' sel' : ''}${slot.live ? ' mine' : ''}${unique ? ' uniq' : ''}${state.diff && !unique ? ' shared' : ''}${state.hl === key ? ' hl' : ''}`);
     row.dataset.v = String(voice); row.dataset.i = String(slot.index); row.draggable = true; row.tabIndex = 0; row.setAttribute('role', 'button');
     row.setAttribute('aria-label', `Voice ${voice + 1}, slot ${slot.globalNumber}: ${slot.name}${slot.live ? ' (playing on the module)' : ''}`);
-    const name = el('span', 'eg-nm'); const title=el('span','eg-name-line');title.append(el('b','',slot.name));if(dense)title.append(fmBadges(slot.id));name.append(title);
+    const name = el('span', 'eg-nm'); name.append(el('b','',slot.dx7Bank?'Six-op FM':slot.name));
     if (dense) row.title = `${slot.name} · ${slot.sizeLabel}`;
     if (slot.dx7Bank) {
       const chip = button(slot.dx7Bank, 'eg-dx7'); chip.dataset.act = 'dx7'; chip.title = `DX7 bank ${slot.dx7Bank} (SD /DX7/BANK_${slot.dx7Bank}.SYX): click to edit the DX7 banks, Shift-click for the next bank`;
       name.append(chip);
     }
-    if (!dense) { const meta=el('small','eg-slot-meta');meta.append(el('span','eg-meta-text',`${slot.category} · ${slot.sizeLabel}`),fmBadges(slot.id));name.append(meta); }
+    if (!dense) name.append(el('small','',`${slot.number.replace(/^0/, '')} · ${slot.category} · ${slot.sizeLabel}`));
     const play = button('▶', 'eg-play'); play.dataset.act = 'play'; play.title = 'Audition this engine'; play.setAttribute('aria-label', `Audition ${slot.name}`);
-    const pills = el('span', `eg-pills${dense || state.profile==='single-plaits' ? ' sqs' : ''}`); pills.append(pill('stereo', slot, dense || state.profile==='single-plaits'), pill('sync', slot, dense || state.profile==='single-plaits'));
+    const pills = el('span', `eg-pills${dense ? ' sqs' : ''}`); pills.append(pill('stereo', slot, dense), pill('sync', slot, dense),fmBadges(slot.id));
     const live = slot.live ? el('i', 'eg-live-dot') : null; if (live) live.title = 'Plays on the module now';
     row.append(el('span', 'eg-nn', slot.number), ...(live ? [live] : []), icon(slot.category, slot.icon, slot.id, slot.bank), name, pills, play);
     return row;
@@ -417,7 +417,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     target.append(legend);
     for (const voice of shownVoices()) {
       const others = new Set(); for (let v = 0; v < total; ++v) if (v !== voice) for (const slot of model.slotsOf(v)) others.add(slotKey(slot));
-      const section = el('section', `eg-voice ${dense ? 'dense' : 'comfy'}`); section.dataset.voice = String(voice);
+      const section = el('section', `eg-voice ${dense ? 'dense' : 'comfy'}${state.profile==='single-plaits'?' has-fm':''}`); section.dataset.voice = String(voice);
       const head = el('header'); const preset = model.matchingPreset(voice);
       head.append(el('h4', '', `Voice ${voice + 1}`), el('span', 'eg-src', PRESET_LABEL[preset] ?? 'Custom set'));
       const liveIndex = liveIndexFor(voice);
@@ -429,7 +429,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
         bulk.title = `Turn ${label.split(':')[0]} on for every slot of this voice that supports it (or off when all are on)`;
         head.append(bulk);
       }
-      const banks = el('div', 'eg-banks'); banks.style.setProperty('--banks',model.slotsOf(voice).length/8);
+      const banks = el('div', 'eg-banks'); banks.dataset.banks=String(model.slotsOf(voice).length/8); banks.style.setProperty('--banks',model.slotsOf(voice).length/8);
       for (const bank of bankCardsView(model, voice, liveIndex)) {
         const column = el('div', `eg-bank bank-${bank.colour}`); column.append(el('h5', '', `Bank ${bank.name}`));
         for (const slot of bank.slots) column.append(slotRow(slot, voice, dense, others));
