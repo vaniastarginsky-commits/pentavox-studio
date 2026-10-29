@@ -228,6 +228,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
   function paint() {
     const page = currentPage();
     if (!page) return;
+    if (latchedSlice()) state.shift = false;
     paintDrawing();
     emitSelect(state.selected);
     for (const tab of refs.tabs.querySelectorAll('[data-page]')) {
