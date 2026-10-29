@@ -15,7 +15,7 @@ const MODERN_SHIFT = {
 export function panelGuidePages(controller,layer=0) {
   const pages=[...(controller.potMapView?.()[layer]?.pages??[])];
   if(Number(controller.session.descriptor?.slice?.version)>=20 && Number(controller.session.descriptor?.pentavox?.activePlaits)===1) {
-    const controls=performanceView('slicer',null,layer===1,true,Number(controller.session.descriptor?.slice?.version)>=21,Number(controller.session.descriptor?.slice?.version)>=22).controls;
+    const controls=performanceView('slicer',null,layer===1,true,Number(controller.session.descriptor?.slice?.version)>=21,Number(controller.session.descriptor?.slice?.version)>=22,Number(controller.session.descriptor?.slice?.version)>=23).controls;
     pages.push({page:controller.session.descriptor.slice.page,label:Number(controller.session.descriptor?.slice?.version)>=21?(layer===1?'Slicer · Rhythm':'Slicer · Main'):'Slicer',runtime:true,
       cells:controls.map((c,pot)=>({pot,title:c.label,builtIn:c.label,off:false,assigned:false,colour:c.colour}))});
   }

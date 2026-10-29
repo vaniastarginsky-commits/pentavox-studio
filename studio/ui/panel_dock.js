@@ -190,7 +190,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     if (!value || !pickup) return;
     const mode = performanceMode();
     if (mode === 'slicer' || (mode === 'fm' && feedback?.fmLayer)) {
-      const view = performanceView(mode, feedback, runtimeAlternate(), Number(descriptor?.slice?.version) >= 20, latchedSlice(), Number(descriptor?.slice?.version) >= 22);
+      const view = performanceView(mode, feedback, runtimeAlternate(), Number(descriptor?.slice?.version) >= 20, latchedSlice(), Number(descriptor?.slice?.version) >= 22, Number(descriptor?.slice?.version) >= 23);
       const c = view.controls[id];
       value.textContent = c.text;
       const status = refs.readout.querySelector('.dock-runtime-status');
@@ -220,8 +220,8 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     updateInspectorValue();
     refs.body.classList.toggle('has-performance', Boolean(mode));
     if (mode) {
-      paintPerformanceFeedback(refs.feedback, mode, feedback, runtimeAlternate(), Number(descriptor?.slice?.version) >= 20, latchedSlice(), Number(descriptor?.slice?.version) >= 22);
-      if (feedback && (mode === 'slicer' || feedback.fmLayer)) paintRuntimePots(refs.potNodes, mode, feedback, runtimeAlternate(), Number(descriptor?.slice?.version) >= 20, latchedSlice(), Number(descriptor?.slice?.version) >= 22);
+      paintPerformanceFeedback(refs.feedback, mode, feedback, runtimeAlternate(), Number(descriptor?.slice?.version) >= 20, latchedSlice(), Number(descriptor?.slice?.version) >= 22, Number(descriptor?.slice?.version) >= 23);
+      if (feedback && (mode === 'slicer' || feedback.fmLayer)) paintRuntimePots(refs.potNodes, mode, feedback, runtimeAlternate(), Number(descriptor?.slice?.version) >= 20, latchedSlice(), Number(descriptor?.slice?.version) >= 22, Number(descriptor?.slice?.version) >= 23);
     }
   }
 
