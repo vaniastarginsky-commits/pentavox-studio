@@ -138,10 +138,10 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
       const entry = runtime && mode === 'fm' ? { name: performanceView('fm', feedback).controls[id].label, live: false, b2: 'Hold B2 and use the physical pot' } : page?.pots[id];
       title(`${POT_POSITIONS[id]} · ${page?.name ?? ''}`, (state.shift && !runtime ? entry?.shift : entry?.name) || 'Not used on this page');
       const list = el('dl', 'dock-facts');
-      list.append(el('dt', '', 'Hold B1'), el('dd', '', entry?.shift || (isCompactBuild(panelPages(descriptor)) ? 'Not used' : 'unchanged')));
+      if(!latchedSlice()) list.append(el('dt', '', 'Hold B1'), el('dd', '', entry?.shift || (isCompactBuild(panelPages(descriptor)) ? 'Not used' : 'unchanged')));
       if (entry?.b2) list.append(el('dt', '', 'B2'), el('dd', '', entry.b2));
       out.append(el('strong', 'dock-value', '—'), el('p', 'dock-pickup', ''), list);
-      if (runtime) out.append(el('p', 'dock-note dock-runtime-status', mode === 'fm' ? performanceView('fm', feedback).status : 'Use the module’s controls. B1 + tap B2 changes style, tap B2 makes a variation, hold B2 queues a Fill.'));
+      if (runtime) out.append(el('p', 'dock-note dock-runtime-status', mode === 'fm' ? performanceView('fm', feedback).status : latchedSlice() ? 'B2 switches Main / Rhythm. Hold B2: Fill. B1 + tap B2: recall demo.' : 'Use the module’s controls. B1 + tap B2 changes style, tap B2 makes a variation, hold B2 queues a Fill.'));
       else if (state.shift && !entry?.shift) out.append(el('p', 'dock-note', 'This knob has no alternate function on this page. Its ring is dark while B1 is held.'));
       else if (entry?.live === false) out.append(el('p', 'dock-note', 'Use the physical pot. This firmware does not expose its live value to Studio.'));
       else out.append(el('p', 'dock-note', 'The pointer shows the value. Exposed normal-layer controls can be dragged here or adjusted with arrow keys; hold Shift for larger steps.'));
@@ -173,6 +173,9 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     }
   }
 
+  const latchedSlice = () => Number(descriptor?.slice?.version)>=21 && /^Slicer/.test(currentPage()?.name);
+  const runtimeAlternate = () => latchedSlice() ? /Rhythm$/.test(currentPage()?.name) : state.shift;
+
   function performanceMode() {
     const page = currentPage();
     return /^Slicer/.test(page?.name) && Number(descriptor?.slice?.version) >= 19 ? 'slicer'
@@ -187,7 +190,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     if (!value || !pickup) return;
     const mode = performanceMode();
     if (mode === 'slicer' || (mode === 'fm' && feedback?.fmLayer)) {
-      const view = performanceView(mode, feedback, state.shift, Number(descriptor?.slice?.version) >= 20);
+      const view = performanceView(mode, feedback, runtimeAlternate(), Number(descriptor?.slice?.version) >= 20, latchedSlice());
       const c = view.controls[id];
       value.textContent = c.text;
       const status = refs.readout.querySelector('.dock-runtime-status');
@@ -217,8 +220,8 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     updateInspectorValue();
     refs.body.classList.toggle('has-performance', Boolean(mode));
     if (mode) {
-      paintPerformanceFeedback(refs.feedback, mode, feedback, state.shift, Number(descriptor?.slice?.version) >= 20);
-      if (feedback && (mode === 'slicer' || feedback.fmLayer)) paintRuntimePots(refs.potNodes, mode, feedback, state.shift, Number(descriptor?.slice?.version) >= 20);
+      paintPerformanceFeedback(refs.feedback, mode, feedback, runtimeAlternate(), Number(descriptor?.slice?.version) >= 20, latchedSlice());
+      if (feedback && (mode === 'slicer' || feedback.fmLayer)) paintRuntimePots(refs.potNodes, mode, feedback, runtimeAlternate(), Number(descriptor?.slice?.version) >= 20, latchedSlice());
     }
   }
 
@@ -233,6 +236,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
       tab.tabIndex = active ? 0 : -1;
       tab.classList.toggle('active', active);
     }
+    refs.shiftToggle.hidden = latchedSlice();
     refs.shiftToggle.setAttribute('aria-pressed', String(state.shift));
     refs.tabs.querySelector('.active')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
     describe(state.selected);

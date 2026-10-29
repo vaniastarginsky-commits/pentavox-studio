@@ -24,6 +24,11 @@ export function firmwarePanelPages(pages, descriptor) {
       const lite=Number(descriptor?.slice?.version)>=20;
       const shifts=lite?['Retrigger','Shuffle','Ghost','Throw destination','Seed','Finale']:['Evolve (seed)','Shuffle','Ghost','Finale','Throw level','Throw destination'];
       const colours=['#2846ff','#ff6e00','#d2b46e','#00b4dc','#8c28dc','#28c85a'];
+      if(Number(descriptor?.slice?.version)>=21) {
+        for(const [name,labels] of [['Slicer · Main',names],['Slicer · Rhythm',shifts]])
+          result.push({...page,name,perfIndex:-1,note:'B2 switches Main / Rhythm and keeps the page selected. Hold B2: Fill. B1 + tap B2: recall demo. B1 tap: back. Seed and Seed chance choose variations; FX settings stay unchanged.',pots:labels.map((name,id)=>({id,name,shift:'',b2:'Next page / hold Fill; B1 + tap: recall demo',live:false,def:0,colour:colours[id]}))});
+        continue;
+      }
       result.push({...page,name:'Slicer',perfIndex:-1,note:lite?'Jungle demo script. B2: variation; hold: Fill. B1 + tap B2: recall demo. Seed chance changes the seed only at four-bar phrase boundaries; Retrigger is off by default. FX settings stay unchanged.':'B1 + tap B2: next style. B2: variation. Hold B2: Fill. Density chooses active phrases; Edit adjusts their events. Delay, reverb and sends stay unchanged.',pots:names.map((name,id)=>({id,name,shift:shifts[id],b2:lite?'Variation / hold Fill; B1 + tap: recall demo':'Variation / hold Fill; B1 + tap: style',live:false,def:id===1?1:id===2?.5:0,colour:colours[id]}))});
       continue;
     }

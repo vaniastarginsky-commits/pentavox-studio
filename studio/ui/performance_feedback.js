@@ -19,12 +19,13 @@ export function decodePanelFeedback(bytes) {
   return { ...(bytes[0]===2?{reverbModel:bytes[50]}:{}), page: bytes[1], fmLayer: Boolean(bytes[2] & 1), shift: Boolean(bytes[2] & 2), fmAvailable: Boolean(bytes[2] & 4), slicePage: Boolean(bytes[2] & 8), inputPresent: Boolean(bytes[2] & 16), caught: bytes[3], physical: values(4), logical: values(10), style: bytes[16], fill: bytes[17], applied: view.getUint32(18, true), slice: values(22), alternate: values(28), fm: values(34), capabilities: bytes[40], wave: bytes[41], source: bytes[42], exponential: Boolean(bytes[43]), tracked: Boolean(bytes[44]), seed: view.getUint32(45, true), rateZone: bytes[49] };
 }
 
-export function performanceView(mode, data, alternate = false, lite = false) {
+export function performanceView(mode, data, alternate = false, lite = false, latched = false) {
   const fm = mode === 'fm';
   const labels = fm ? ['Rate', 'Wave', 'Depth', 'Law', 'Tracking', 'Source'] : alternate ? (lite ? ['Retrigger', 'Shuffle', 'Ghost', 'Throw destination', 'Seed', 'Finale'] : ['Evolve (seed)', 'Shuffle', 'Ghost', 'Finale', 'Throw level', 'Throw destination']) : (lite ? ['Loop', 'Activity', 'Detail', 'Throw', 'Seed chance', 'Mix'] : ['Loop', 'Density', 'Edit', 'Throw chance', 'Seed', 'Wet']);
   const values = data ? fm ? data.fm : alternate ? data.alternate : data.slice : null;
   const following = Boolean(data && (fm ? data.fmLayer : data.slicePage && data.shift === alternate));
   let status = fm ? 'Hold B2 on Plaits. First catch Depth at zero, then turn it up.' : lite ? 'B1 + tap B2: recall Jungle demo. B2: variation. Hold B2: Fill.' : 'B1 + tap B2: next style. B2: variation. Hold B2: Fill.';
+  if(!fm && latched) status='B2: Main / Rhythm pages. Hold B2: Fill. B1 + tap B2: recall demo. Seed is on Rhythm.';
   const events = [];
   if (data && fm) {
     if (!data.fmAvailable) status = 'FM is not included in this firmware.';
@@ -48,7 +49,7 @@ export function performanceView(mode, data, alternate = false, lite = false) {
     if (values && !fm) {
       if ((!alternate && i === 3) || (lite && alternate && i === 0)) shownValue = chance(values[i]);
 
-      if (alternate && (lite ? [1,2,5] : [1,2,3]).includes(i)) { const edit = data.slice[2]; const gain = edit <= .5 ? edit * 2 : 1 + (edit - .5); shownValue = Math.min(1, chance(values[i]) * gain); }
+      if (alternate && (lite ? (latched ? [2] : [1,2,5]) : [1,2,3]).includes(i)) { const edit = data.slice[2]; const gain = edit <= .5 ? edit * 2 : 1 + (edit - .5); shownValue = Math.min(1, chance(values[i]) * gain); }
     }
     let text = values ? percent(shownValue) : '—';
     if (values && fm) {
@@ -75,8 +76,8 @@ export function performanceView(mode, data, alternate = false, lite = false) {
   }) };
 }
 
-export function paintPerformanceFeedback(root, mode, data, alternate = false, lite = false) {
-  const vm = performanceView(mode, data, alternate, lite);
+export function paintPerformanceFeedback(root, mode, data, alternate = false, lite = false, latched = false) {
+  const vm = performanceView(mode, data, alternate, lite, latched);
   root.replaceChildren();
   const el = (tag, cls, text) => { const n = document.createElement(tag); n.className = cls; if (text !== undefined) n.textContent = text; return n; };
   root.append(el('h3', 'performance-title', vm.title), el('p', 'performance-status', vm.status));
@@ -100,8 +101,8 @@ export function paintPerformanceFeedback(root, mode, data, alternate = false, li
 }
 
 /** Runtime pots remain read-only; never turn a Slicer/FM control into a stored sampler/Plaits slider. */
-export function paintRuntimePots(nodes, mode, data, alternate = false, lite = false) {
-  const vm = performanceView(mode, data, alternate, lite);
+export function paintRuntimePots(nodes, mode, data, alternate = false, lite = false, latched = false) {
+  const vm = performanceView(mode, data, alternate, lite, latched);
   for (const { pot, group, dots, needle, label, valueLabel } of nodes) {
     const c = vm.controls[pot.id];
     group.style.setProperty('--ring', c.colour);
