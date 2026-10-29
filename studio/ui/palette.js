@@ -1,4 +1,4 @@
-import { engineFmCapabilities } from '../model/fm_capabilities.js';
+import { engineFmCapabilities, engineFmBadges } from '../model/fm_capabilities.js';
 import { singlePlaitsMemory } from '../model/palette_memory.js';
 import { FIRMWARE_PROFILES, firmwareProfile, recipeForProfile } from '../model/firmware_profiles.js';
 import { setDifferences, adoptModuleSet } from '../model/module_set.js';
@@ -373,21 +373,31 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     return node;
   }
 
+  function fmBadges(id) {
+    const group=el('span','eg-fm-badges');
+    if(state.profile==='single-plaits') for(const info of engineFmBadges(id)) {
+      const badge=el('span',`eg-fm-badge ${info.kind}`,info.label);
+      badge.title=info.description;badge.dataset.tooltip=info.description;
+      badge.tabIndex=0;badge.setAttribute('aria-label',info.description);group.append(badge);
+    }
+    return group;
+  }
+
   function slotRow(slot, voice, dense, others) {
     const key = slotKey(slot);
     const unique = state.diff && !others.has(key);
     const row = el('div', `eg-slot${state.selected[voice] === slot.index && state.voice === voice ? ' sel' : ''}${slot.live ? ' mine' : ''}${unique ? ' uniq' : ''}${state.diff && !unique ? ' shared' : ''}${state.hl === key ? ' hl' : ''}`);
     row.dataset.v = String(voice); row.dataset.i = String(slot.index); row.draggable = true; row.tabIndex = 0; row.setAttribute('role', 'button');
     row.setAttribute('aria-label', `Voice ${voice + 1}, slot ${slot.globalNumber}: ${slot.name}${slot.live ? ' (playing on the module)' : ''}`);
-    const name = el('span', 'eg-nm'); name.append(el('b', '', slot.name));
+    const name = el('span', 'eg-nm'); const title=el('span','eg-name-line');title.append(el('b','',slot.name));if(dense)title.append(fmBadges(slot.id));name.append(title);
     if (dense) row.title = `${slot.name} · ${slot.sizeLabel}`;
     if (slot.dx7Bank) {
       const chip = button(slot.dx7Bank, 'eg-dx7'); chip.dataset.act = 'dx7'; chip.title = `DX7 bank ${slot.dx7Bank} (SD /DX7/BANK_${slot.dx7Bank}.SYX): click to edit the DX7 banks, Shift-click for the next bank`;
       name.append(chip);
     }
-    if (!dense) name.append(el('small', '', `${slot.number.replace(/^0/, '')} · ${slot.category} · ${slot.sizeLabel}`));
+    if (!dense) { const meta=el('small','eg-slot-meta');meta.append(el('span','eg-meta-text',`${slot.category} · ${slot.sizeLabel}`),fmBadges(slot.id));name.append(meta); }
     const play = button('▶', 'eg-play'); play.dataset.act = 'play'; play.title = 'Audition this engine'; play.setAttribute('aria-label', `Audition ${slot.name}`);
-    const pills = el('span', `eg-pills${dense ? ' sqs' : ''}`); pills.append(pill('stereo', slot, dense), pill('sync', slot, dense));
+    const pills = el('span', `eg-pills${dense || state.profile==='single-plaits' ? ' sqs' : ''}`); pills.append(pill('stereo', slot, dense || state.profile==='single-plaits'), pill('sync', slot, dense || state.profile==='single-plaits'));
     const live = slot.live ? el('i', 'eg-live-dot') : null; if (live) live.title = 'Plays on the module now';
     row.append(el('span', 'eg-nn', slot.number), ...(live ? [live] : []), icon(slot.category, slot.icon, slot.id, slot.bank), name, pills, play);
     return row;
@@ -400,6 +410,10 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     const total = voiceTotal();
     const legend = el('div', 'eg-legend');
     legend.innerHTML = `<span class="eg-pill st on static">${SVG_STEREO}<span>Stereo</span></span><span>two output channels (the voice switches it on the module)</span><span class="eg-pill sy on static">${SVG_SYNC}<span>Sync In</span></span><span>restarts the timbre on the bar reset</span><span class="eg-pill static off">${SVG_SYNC}<span>Sync In</span></span><span>off<span class="eg-faint"> · hatched: the engine cannot</span></span>`;
+    if(state.profile==='single-plaits') {
+      const capabilities=[...new Set(model.slotsOf(0).map(s=>s.id))].map(engineFmCapabilities);
+      legend.replaceChildren(el('span','',`TZFM ${capabilities.filter(c=>c.linear).length}/${capabilities.length} models · Audio-rate FM ${capabilities.filter(c=>c.fast).length}/${capabilities.length} · Included automatically`),el('span','eg-faint','Stereo / Sync icons: click to enable'));
+    }
     target.append(legend);
     for (const voice of shownVoices()) {
       const others = new Set(); for (let v = 0; v < total; ++v) if (v !== voice) for (const slot of model.slotsOf(v)) others.add(slotKey(slot));
@@ -544,7 +558,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
       const wrapper = el('article', `eg-lib${item.inSet ? ' in-set' : ''}${open ? ' expanded' : ''}`);
       wrapper.draggable = true; wrapper.dataset.id = item.key;
       const row = el('div', 'eg-lib-row'); row.tabIndex = 0; row.setAttribute('role', 'button'); row.setAttribute('aria-expanded', String(open)); row.setAttribute('aria-label', `${item.name}: show details`);
-      const copy = el('span', 'eg-lib-copy'); copy.append(el('b', '', item.name), el('small', '', `${item.category} · ${item.sizeLabel}`));
+      const copy = el('span', 'eg-lib-copy');const title=el('span','eg-name-line');title.append(el('b','',item.name),fmBadges(item.id));copy.append(title, el('small', '', `${item.category} · ${item.sizeLabel}`));
       const caps = el('span', 'eg-caps');
       if (item.dx7Bank) caps.append(el('span', 'eg-cap-text', `DX7 ${item.dx7Bank}`));
       if (item.stereo) { const cap = svg(SVG_STEREO, 'cap'); cap.title = 'Stereo'; caps.append(cap); }

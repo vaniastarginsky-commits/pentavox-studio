@@ -2,3 +2,12 @@
 const LINEAR = new Set(["additive", "f_m", "swarm", "virtual_analog_crossfade", "virtual_analog_dual", "virtual_analog", "waveshaping", "wavetable", "buzz", "digital_modulation", "fold", "harmonics", "loopback", "phase_distortion", "phase_flock", "phase_weave", "pulsar", "raw_fm", "ring_mod", "saw_swarm", "sideband", "spectral_spiral", "toy", "triple", "virtual_analog_v_c_f", "vosim", "vowel_fof", "wave_scan", "wave_terrain"]);
 const FAST = new Set(["f_m", "virtual_analog_crossfade", "virtual_analog_dual", "virtual_analog", "waveshaping", "wavetable", "attractor", "buzz", "c_saw", "digital_modulation", "freshets_formant", "gendy", "harmonics", "lockstep", "loopback", "particle_burst", "phase_flock", "phase_weave", "pulsar", "question_mark", "raw_fm", "reed_pipe", "ring_mod", "rulefield", "saw_comb", "shakers", "sideband", "spectral_spiral", "sub_oscillator", "tapfield", "toy", "virtual_analog_v_c_f", "vosim", "vowel_fof"]);
 export function engineFmCapabilities(id) { return { linear: LINEAR.has(id), fast: FAST.has(id) }; }
+
+// Labels describe support in Single Plaits, never an enabled recipe option.
+export function engineFmBadges(id) {
+  const {linear,fast}=engineFmCapabilities(id);
+  return [
+    ...(linear?[{label:'TZ',kind:'tz',description:'Through-zero linear FM. Included automatically in Single Plaits; no build switch needed.'}]:[]),
+    ...(fast?[{label:'AFM',kind:'afm',description:'Audio-rate exponential FM. Modulation is processed at the audio sample rate, not a fixed 50 kHz.'}]:[]),
+  ];
+}
