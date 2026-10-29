@@ -56,9 +56,12 @@
         "REVERB_BLOCK": "1",
         "REVERB_EARLY_SDRAM": "1",
         "REVERB_EARLY_DTCM": "0",
-        "REVERB_EARLY_D2": "1",
+        "REVERB_EARLY_D2": "0",
         "LOOPER_PLAIN_BLOCK": "1",
-        "SINGLE_PLAITS_EXPERIMENT": "0"
+        "SINGLE_PLAITS_EXPERIMENT": "0",
+        "PANEL_AXI": "1",
+        "PANEL_SDRAM": "0",
+        "PLAIN_ITCM": "0"
       }
     },
     {
@@ -90,9 +93,13 @@
         "REVERB_BLOCK": "1",
         "REVERB_EARLY_SDRAM": "1",
         "REVERB_EARLY_DTCM": "0",
-        "REVERB_EARLY_D2": "1",
+        "REVERB_EARLY_D2": "0",
         "LOOPER_PLAIN_BLOCK": "1",
-        "SINGLE_PLAITS_EXPERIMENT": "1"
+        "SINGLE_PLAITS_EXPERIMENT": "1",
+        "PLAITS_FM": "1",
+        "PANEL_AXI": "1",
+        "PANEL_SDRAM": "0",
+        "PLAIN_ITCM": "0"
       },
       "engineBanks": 4
     }

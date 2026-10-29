@@ -1,5 +1,5 @@
 import { indexDescriptor, readField, writeField } from '../model/blob.js';
-import { decodePanelFeedback } from './performance_feedback.js';
+import { decodePanelFeedback } from './performance_feedback.js?v=2';
 import { panelPages } from './manual_vm.js';
 
 const clamp01 = (value) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
@@ -130,7 +130,7 @@ export class PanelLive {
     try {
       const bytes = await session.client.getLive(session.info);
       if (this.#canRun(session)) this.onValues(decodePerf(session.descriptor, bytes));
-      if (this.#canRun(session) && session.descriptor.panelFeedback?.version === 1) {
+      if (this.#canRun(session) && [1,2].includes(session.descriptor.panelFeedback?.version)) {
         try {
           const { body } = await session.client.request(0x7c);
           if (this.#canRun(session)) this.onFeedback(decodePanelFeedback(body));

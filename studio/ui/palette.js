@@ -1,3 +1,4 @@
+import { engineFmCapabilities } from '../model/fm_capabilities.js';
 import { singlePlaitsMemory } from '../model/palette_memory.js';
 import { FIRMWARE_PROFILES, firmwareProfile, recipeForProfile } from '../model/firmware_profiles.js';
 import { setDifferences, adoptModuleSet } from '../model/module_set.js';
@@ -575,6 +576,10 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   function engineDetails(item) {
     const details = el('div', 'eg-more-info');
     details.append(el('p', 'eg-facts', `${item.category} · ${item.sizeLabel} · Stereo: ${item.stereo ? 'yes' : item.monoInPractice ? 'no (nearly mono)' : 'no'} · Sync In: ${item.sync ? 'yes' : 'no'}`));
+    if (state.profile === 'single-plaits') {
+      const fm = engineFmCapabilities(item.id);
+      details.append(el('p', 'eg-facts', `FM/LFO: ${fm.linear ? 'TZFM automatic' : 'pitch LFO'} · ${fm.fast ? 'audio-rate exponential FM' : 'control-rate exponential FM'}`));
+    }
     const info = help[item.id];
     if (info) {
       if (info.description) details.append(el('p', 'engine-summary', info.description));
@@ -620,6 +625,16 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
       control('stereo', 'Stereo', SVG_STEREO, slot.stereo, slot.stereoEnabled, slot.stereo ? 'The engine renders left and right differently. Chosen at build; on the module each voice then switches Stereo itself.' : slot.monoInPractice ? 'Left and right stay nearly identical on this engine.' : 'This engine is mono: both channels are the same.'),
       control('sync', 'Sync In', SVG_SYNC, slot.sync, slot.syncEnabled, slot.sync ? 'Lets the oscillator be hard-synced to the module’s bar reset, so the timbre restarts on the beat. Costs code once for the whole kit.' : 'This engine has no sync input.'),
     );
+    if (state.profile === 'single-plaits') {
+      const fm = engineFmCapabilities(slot.id);
+      const box = el('div', 'eg-ctl');
+      box.append(el('b', '', fm.linear ? 'TZFM · automatic' : 'Pitch LFO'),
+        el('small', '', fm.linear
+          ? 'Linear through-zero FM is included automatically in Single Plaits builds. No per-engine switch is needed.'
+          : 'This engine has no through-zero FM path. The FM layer uses ordinary pitch modulation instead.'),
+        el('small', '', `Hold B2 on Plaits: Rate · Wave · Depth · Law · Tracking · Source. Raise Depth to hear modulation. ${fm.fast ? 'Audio-rate exponential FM supported.' : 'Exponential pitch modulation runs at control rate; use low rates for LFO.'}`));
+      panel.append(box);
+    }
     const usage = usedIn(slotKey(model.slotsOf(voice)[index]));
     const facts = el('dl', 'eg-dl');
     for (const [name, value] of [['Code', slot.sizeLabel], ['In voices', usage.map((yes, v) => (yes ? String(v + 1) : '–')).join(' ')], ['Class', slot.id]]) facts.append(el('dt', '', name), el('dd', '', value));

@@ -152,10 +152,14 @@ export class RoutingController {
   }
 
   /** key: cc | ch | dest (zone index) or depth (percent, -100..100). */
-  updateMidiRoute(index, key, value) {
-    const id = `midicc.${Number(index)}.${key}`;
-    this.session.editSettings((table) => {
-      table.set(id, key === 'depth' ? (Math.max(-100, Math.min(100, Number(value))) / 100 + 1) / 2 : Number(value));
+  updateMidiRoute(index, key, value) { this.updateMidiRouteFields(index,{[key]:value}); }
+
+  updateMidiRouteFields(index,values) {
+    const entries=Object.entries(values);
+    if(!Number.isInteger(Number(index)) || entries.some(([key,value])=>!['cc','ch','dest','depth'].includes(key) || !Number.isFinite(Number(value))))throw new TypeError('Invalid MIDI route');
+    if(entries.some(([key])=>!this.session.settings?.has(`midicc.${Number(index)}.${key}`)))throw new TypeError('Unknown MIDI route');
+    this.session.editSettings(table=>{
+      for(const [key,value] of entries)table.set(`midicc.${Number(index)}.${key}`,key==='depth'?(Math.max(-100,Math.min(100,Number(value)))/100+1)/2:Number(value));
     });
     this.#schedule();
   }

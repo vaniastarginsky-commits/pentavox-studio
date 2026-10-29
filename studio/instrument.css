@@ -424,3 +424,36 @@ button { font-weight: 500; }
 .routing-panel-knob[data-pot="1"], .routing-panel-knob[data-pot="4"] { --guide-hue: #f4ad42; }
 .routing-panel-knob[data-pot="2"], .routing-panel-knob[data-pot="5"] { --guide-hue: #a876ef; }
 .routing-panel-cap { border-color: var(--guide-hue, var(--accent)); }
+
+/* The recorder belongs to the instrument, independent of the open workspace. */
+.loop-recorder { margin-top: auto; padding: 14px 8px 2px; border-top: 1px solid var(--line); flex-shrink: 0; }
+.loop-recorder[hidden] { display: none; }
+.loop-recorder-heading, .loop-recorder-target { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.loop-recorder-heading { margin-bottom: 9px; }
+.loop-recorder-open { padding: 0; border: 0; background: transparent; color: var(--text); font: 600 12px var(--serif); cursor: pointer; }
+.loop-recorder-open:hover { text-decoration: underline; }
+.loop-recorder-state { font-size: 10px; color: var(--muted); text-align: right; }
+.loop-recorder-target > span { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.loop-recorder-target [role="group"] { display: flex; gap: 4px; }
+.loop-recorder-target button { min-width: 39px; min-height: 32px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; }
+.loop-recorder-target button[data-record-slot="0"][aria-pressed="true"] { border-color: #6488de; background: color-mix(in srgb,#6488de 16%,var(--surface)); color: var(--text); }
+.loop-recorder-target button[data-record-slot="1"][aria-pressed="true"] { border-color: #c49a49; background: color-mix(in srgb,#c49a49 16%,var(--surface)); color: var(--text); }
+.loop-recorder-target button:disabled { cursor: default; }
+.loop-recorder-target button:focus-visible,.loop-recorder-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.loop-recorder-details { margin: 7px 0 0; color: var(--muted); font-size: 11px; }
+.loop-recorder-error { margin: 8px 0 0; color: var(--danger,#c85168); font-size: 11px; line-height: 1.4; }
+.loop-recorder[data-state="recording"] .loop-recorder-state { color: var(--danger,#c85168); }
+.loop-recorder[data-state="waiting"] .loop-recorder-state { color: var(--amber); }
+
+/* Six physical positions stay two columns wide, including on phones. */
+.routing-panel-knobs { grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr); align-items:center; }
+.routing-panel-button { grid-column:2; justify-self:center; display:grid; place-items:center; width:24px; height:24px; border:1px solid var(--line); border-radius:50%; color:var(--muted); font-size:9px; }
+.routing-panel-button.active { color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+.routing-panel-pair { margin:0; font-size:12px; color:var(--muted); }
+.routing-panel-usages { display:flex; flex-wrap:wrap; gap:5px; align-items:center; font-size:11px; color:var(--muted); }
+.routing-panel-usages:empty { display:none; }
+.routing-panel-route { padding:3px 6px; border:1px solid var(--line); border-radius:4px; }
+.routing-panel-learn { justify-self:start; font-size:12px; padding:6px 9px; }
+.routing-panel-field input[aria-invalid="true"] { border-color:var(--danger,#c85168); }
+.performance-destinations { display:flex; flex-wrap:wrap; gap:6px; color:var(--text); }
+.performance-destinations span::before { content:''; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--destination-colour); margin-right:5px; }

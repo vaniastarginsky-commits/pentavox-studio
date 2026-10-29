@@ -1,4 +1,5 @@
 [
+  {"date":"2026-10-28","area":"firmware","text":"Delay/Reverb: tap B2 cycles Main, Character, Modulation and stays there. No B1+B2 hold needed. Sidechain detector now rejects frequencies above 150 Hz at 24 dB/octave."},
   {"date": "2026-10-28", "area": "firmware", "text": "Slicer: B1 top left is Evolve (the seed steps on its own every 8, 4, 2 or 1 loops); first-beat protection stays on, set in Studio. One Plaits: sidechain rings are no longer blanked."},
   {"date":"2026-10-27","area":"studio","text":"Removed global slot/save controls. Setup presets hold alternate configurations. Settings help opens inline; independent columns avoid gaps. Optional panel guides assign CV and MIDI destinations."},
   {"date":"2026-10-27","area":"studio","text":"Instrument styling follows the design concept: dark knob caps, continuous control arcs, teal/amber/violet accents and unified surfaces. Full panel and Colours retain the module LED palette."},

@@ -1,3 +1,4 @@
+import { mountLoopRecorder } from './ui/loop_recorder.js?v=3';
 import { mountRoutingPanel } from './ui/routing_panel.js';
 import { HostLinkClient } from './hostlink/client.js';
 import { SimTransport } from './hostlink/transport_sim.js';
@@ -156,6 +157,7 @@ function markDisconnected() {
   syncFooter();
   pageDockMount.refreshConnection(); if (activeTab === 'panel') pageDockMount.show();
   samplerMount.refreshConnection();
+  loopRecorderMount.refreshConnection();
   sdcardMount.refreshConnection();
   panelSkin.refreshConnection();
   locksMount.refreshConnection();
@@ -201,6 +203,8 @@ locksMount = mountKnobLocks(document.querySelector('#locks-root'), {
   onSuccess: showSuccess,
   onUndo: showUndo,
 });
+
+const loopRecorderMount=mountLoopRecorder(document.getElementById('loop-recorder'),{getSession:()=>connectionStatus.dataset.state==='on'?session:null,onOpenLooper:()=>navigation?.navigate('sampler')});
 
 const sdDialog = document.querySelector('#sdcard-dialog');
 document.getElementById('sdcard-nav').addEventListener('click', () => { closeNavigation(); openSdDialog(); });
@@ -404,8 +408,8 @@ async function connect({ demo = false, auto = false } = {}) {
     unmountPotMap = mountPotMap(potMapRoot, controller);
     settingsRoot.classList.remove('disconnected'); unmountSettings = mountSettings(settingsRoot, controller);
     presetsRoot.classList.remove('disconnected'); unmountPresets = mountPresets(presetsRoot, controller, { onError: showError, onSuccess: showSuccess });
-    unmountCvPanel = mountRoutingPanel(document.getElementById('cv-panel-helper'), controller, 'cv', { onError: showError, onSuccess: showSuccess, isConnected: () => connectionStatus.dataset.state === 'on' });
-    unmountMidiPanel = mountRoutingPanel(document.getElementById('midi-panel-helper'), controller, 'midi', { onError: showError, onSuccess: showSuccess, isConnected: () => connectionStatus.dataset.state === 'on' });
+    unmountCvPanel = mountRoutingPanel(document.getElementById('cv-panel-helper'), controller, 'cv', { onError: showError, onSuccess: showSuccess, onUndo: showUndo, isConnected: () => connectionStatus.dataset.state === 'on' });
+    unmountMidiPanel = mountRoutingPanel(document.getElementById('midi-panel-helper'), controller, 'midi', { onError: showError, onSuccess: showSuccess, onUndo: showUndo, isConnected: () => connectionStatus.dataset.state === 'on' });
     midiRoot.classList.remove('disconnected'); unmountMidi = mountMidiRouting(midiRoot, controller, { onError: showError, onUndo: showUndo });
     unmountVoices = [];
     unsubscribePaletteLive = controller.subscribe(() => paletteMount?.refreshLive());
@@ -415,6 +419,7 @@ async function connect({ demo = false, auto = false } = {}) {
     connectButton.textContent = 'Reconnect'; connectButton.disabled = false; connectionStatus.dataset.state = 'on'; disconnectBanner.hidden = true; syncFooter(); dx7Editor.refresh();
     persistDraft();
     samplerMount.refreshConnection();
+  loopRecorderMount.refreshConnection();
     sdcardMount.refreshConnection();
     panelSkin.refreshConnection();
     locksMount.refreshConnection();
@@ -430,7 +435,8 @@ async function connect({ demo = false, auto = false } = {}) {
     connectButton.disabled = false;
     if (!auto) showError(error);   // an automatic try fails quietly: the next one follows
     connectButton.textContent = 'Reconnect';
-    samplerMount.refreshConnection(); dx7Editor.refresh(); syncFooter();
+    samplerMount.refreshConnection();
+  loopRecorderMount.refreshConnection(); dx7Editor.refresh(); syncFooter();
     return false;
   }
 }

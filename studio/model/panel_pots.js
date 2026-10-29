@@ -13,7 +13,7 @@ export function isLooperDescriptor(descriptor) {
 
 /** What a panel pot controls on every page, by destination name: [{ page, name }]. */
 export function panelPotBuiltIn(potIndex, destinations, pages = PANEL_POT_PAGES) {
-  const bySymbol = new Map(destinations.entries.map((entry) => [entry.symbol, entry]));
+  const bySymbol = new Map(destinations.entries.map((entry) => [entry.symbol, destinations.byId?.(entry.id) ?? entry]));
   const out = [];
   for (const { page, pots } of pages) {
     const symbol = pots[potIndex];
@@ -65,11 +65,11 @@ export function shiftBuiltIn(page, potIndex, masterPage = false, capabilities = 
   if(capabilities?.multitap) {
     const single=capabilities.plaitsVoices===1;
     const maps={
-      'Plaits 1':[single?'Engine':capabilities.crossFm?'Cross FM':'','Twist',capabilities.sidechain?'Sidechain EQ':'','Reverb send','Attack','Delay send'],
+      'Plaits 1':[single?'Engine':capabilities.crossFm?'Cross FM':'',single?'Octave':'Twist',single?'Sidechain':capabilities.sidechain?'Sidechain EQ':'','Reverb send','Attack','Delay send'],
       'Plaits 2':[capabilities.crossFm?'Cross FM':'','Twist',capabilities.sidechain?'Sidechain EQ':'','Reverb send','Attack','Delay send'],
-      'Looper':['File A','File B',single?'Direction A':'Direction',single?'Direction B':capabilities.sidechain?'Sidechain EQ':'','Reverb send','Delay send'],
+      'Looper':['File A','File B',single?'Direction A':'Direction',single?'Direction B':capabilities.sidechain?'Sidechain EQ':'',single?'Pan A':'Reverb send',single?'Pan B':'Delay send'],
       'FX live':['Taps','Reverb motion','Damp','Reverb tone','Delay → Reverb','Algorithm'],
-      'Master':['Plaits resonance',capabilities.phaser?'Phaser rate':'',single?'':'Plaits 2 resonance','Input → Delay','Looper resonance','Input → Reverb'],
+      'Master':[single?'Plaits pan':'Plaits resonance',capabilities.phaser?'Phaser rate':single?'Input sidechain':'',single?'Input pan':'Plaits 2 resonance','Input → Delay',single?'Looper pan':'Looper resonance','Input → Reverb'],
     };
     if(maps[page])return maps[page][potIndex]??'';
   }

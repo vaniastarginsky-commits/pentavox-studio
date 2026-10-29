@@ -61,7 +61,19 @@ export function parseLoopStatus(body) {
   if (!(body instanceof Uint8Array) || body.length < 18) throw new HostLinkError('LOOP_STATUS: the reply is too short', { code: 'BAD_STATUS' });
   const view = new DataView(body.buffer, body.byteOffset, body.byteLength);
   const io = body[0];
+  let recorder=null;
+  if(body.length>=23) {
+    const [target,mode,source,bars]=body.slice(19,23);
+    if(target>1 || body[1]>1 || mode>4 || source>2 || ![4,8,16].includes(bars))
+      throw new HostLinkError('LOOP_STATUS: invalid recorder state',{code:'BAD_STATUS'});
+    recorder={target,mode,source,bars};
+    if(body.length>=25) {
+      if(body[24]>5)throw new HostLinkError('LOOP_STATUS: invalid refusal reason',{code:'BAD_STATUS'});
+      recorder.refusalCount=body[23];recorder.refusalReason=body[24];
+    }
+  }
   return {
+    ...(recorder?{recorder}:{}),
     io, state: STATE[io] ?? 'idle', activeSlot: body[1], files: view.getUint16(2, true), lastNumber: view.getUint16(4, true),
     ms: view.getUint32(6, true), frames: view.getUint32(10, true), stallMs: view.getUint32(14, true),
     reason: body.length >= 19 ? body[18] : 0,

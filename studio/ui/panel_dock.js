@@ -1,7 +1,7 @@
 // The panel dock: the module's front panel, drawn to scale, beside the tabs where its knobs and jacks are configured.
 // It reads the same pager as the Manual tab (the connected module's descriptor, or the compact firmware's snapshot while nothing is connected),
 // shows what each knob does on each page, and points from a control to the tab that sets it.
-import { paintPerformanceFeedback, paintRuntimePots, performanceView } from './performance_feedback.js';
+import { paintPerformanceFeedback, paintRuntimePots, performanceView } from './performance_feedback.js?v=2';
 import { baseCvFunction } from '../model/panel_pots.js';
 import { POT_POSITIONS, buttonCards, gestureLabel, isCompactBuild, jackLabel, jackList, panelPages } from './manual_vm.js';
 import { drawPanel, paintLivePots, paintPots } from './panel_drawing.js';
@@ -187,7 +187,7 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     if (!value || !pickup) return;
     const mode = performanceMode();
     if (mode === 'slicer' || (mode === 'fm' && feedback?.fmLayer)) {
-      const view = performanceView(mode, feedback, state.shift);
+      const view = performanceView(mode, feedback, state.shift, Number(descriptor?.slice?.version) >= 20);
       const c = view.controls[id];
       value.textContent = c.text;
       const status = refs.readout.querySelector('.dock-runtime-status');
@@ -217,8 +217,8 @@ export function mountPanelDock(root, { getDescriptor, loadSnapshot, getSettings 
     updateInspectorValue();
     refs.body.classList.toggle('has-performance', Boolean(mode));
     if (mode) {
-      paintPerformanceFeedback(refs.feedback, mode, feedback, state.shift);
-      if (feedback && (mode === 'slicer' || feedback.fmLayer)) paintRuntimePots(refs.potNodes, mode, feedback, state.shift);
+      paintPerformanceFeedback(refs.feedback, mode, feedback, state.shift, Number(descriptor?.slice?.version) >= 20);
+      if (feedback && (mode === 'slicer' || feedback.fmLayer)) paintRuntimePots(refs.potNodes, mode, feedback, state.shift, Number(descriptor?.slice?.version) >= 20);
     }
   }
 

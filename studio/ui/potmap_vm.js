@@ -33,6 +33,18 @@ export function potMapPages(table) {
       : { ...entry, pots: Object.freeze(entry.pots.map((symbol, pot) => (pot === 3 ? 'builtin:Loop mode' : symbol))) };
     return entry;
   });
+  const single=plaitsVoices===1 && table.capabilities?.multitap;
+  if(single) for(let i=0;i<labels.length;++i) {
+    const entry=labels[i],pots=[...entry.pots];
+    if(entry.page==='Plaits 1')pots[0]='Voice1Twist';
+    if(entry.page==='Looper'){pots[4]='Sampler1Decay';pots[5]='Sampler1Level';}
+    if(entry.page==='Master'){
+      pots[0]='Voice1Filter';pots[2]='Voice2Filter';pots[3]='GlobalInputLevel';pots[5]='GlobalOutputLevel';
+      if(!table.capabilities.phaser)pots[1]=Number(table.capabilities.panelVersion)>=4?'builtin:Record A/B':'builtin:Not used';
+    }
+    if(entry.page==='FX live')pots[1]='FxReverbSpecial';
+    labels[i]={...entry,pots};
+  }
   const sampler1 = table.capabilities?.logicalPlaits ?? plaitsVoices;
   const physical = new Map([
     ['Plaits 1', 0], ['Plaits 2', 1], ['Plaits 3', 2],
@@ -71,7 +83,7 @@ export function potMapView(table, destinations) {
       cells: Array.from({ length: 6 }, (_, pot) => {
         const destId = table.get(layer, index, pot);
         let normal = builtIns[pot].get(page) ?? '';
-        if(page==='Master' && ((!table.capabilities?.phaser&&table.capabilities?.firmwareProfile&&pot===1)||(table.capabilities?.plaitsVoices===1&&pot===2))) normal='';
+        if(page==='Master' && !table.capabilities?.phaser && table.capabilities?.firmwareProfile && pot===1 && Number(table.capabilities.panelVersion)<4) normal='';
         const shifted = layer === 1 ? shiftBuiltIn(page, pot, Boolean(table.capabilities?.masterPage),table.capabilities) : '';
         // What the pot does on this page/layer when nothing is assigned.
         const builtIn = layer === 0 ? normal : (shifted || (!table.capabilities?.masterPage && normal ? `${normal} (as normal)` : ''));
@@ -83,6 +95,7 @@ export function potMapView(table, destinations) {
           page: index,
           pot,
           potLabel: `Pot ${pot + 1}`,
+          normalTitle: normal, alternateTitle: shifted,
           builtIn: builtIn || '\u2014',
           destId,
           off,
