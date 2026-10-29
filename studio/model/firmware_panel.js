@@ -12,7 +12,8 @@ export function firmwarePanelPages(pages, descriptor) {
     let page={...source,perfIndex:source.perfIndex??source.index,pots:source.pots.map(p=>({...p}))};
     if(/^(Voice|Plaits) 1$/.test(page.name)) {
       const shifts=[single?'Engine':'', single && descriptor?.panelFeedback?'Octave':'Twist',single?'Sidechain':fw.sidechain?'Sidechain EQ':'','Reverb send','Attack','Delay send'];
-      page.pots=page.pots.map((p,i)=>({...p,...(single && descriptor?.panelFeedback && i===0?{name:'Twist'}:{}),shift:shifts[i],b2:single?'Tap: Slicer; hold: next bank':p.b2}));
+      page.pots=page.pots.map((p,i)=>({...p,...(single && descriptor?.panelFeedback && i===0?{name:'Twist'}:{}),shift:shifts[i],b2:single?'Tap: Slicer; hold + turn: FM; hold without editing: next bank':p.b2}));
+      if(single && fw.legatoGlide)page.note='Hold B2 and turn to edit FM. Add B1: top-left becomes Glide (Off–3 s), other pots are inactive. Glide applies only to legato; a gap over 5 ms starts at the new pitch. Catch the stored value before editing. FM/Glide editing cancels bank switching; Attack remains on B1 + bottom-left.';
     }
     if(page.name==='Looper' && fw.looper) {
       const shifts=['File A','File B',single?'Direction A':'Direction',single?'Direction B':fw.sidechain?'Sidechain EQ':'',single?'Pan A':'Reverb send',single?'Pan B':'Delay send'];

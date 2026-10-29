@@ -16,19 +16,21 @@ export function decodePanelFeedback(bytes) {
     return x / 100;
   });
   if (bytes[16] > 5 || bytes[17] > 2 || bytes[41] > 5 || bytes[42] > 2 || bytes[43] > 1 || bytes[44] > 1 || bytes[49] > 12 || (bytes[0]===2 && bytes[50]>8)) throw new Error('Invalid panel feedback state');
-  return { ...(bytes[0]===2?{reverbModel:bytes[50]}:{}), page: bytes[1], fmLayer: Boolean(bytes[2] & 1), shift: Boolean(bytes[2] & 2), fmAvailable: Boolean(bytes[2] & 4), slicePage: Boolean(bytes[2] & 8), inputPresent: Boolean(bytes[2] & 16), caught: bytes[3], physical: values(4), logical: values(10), style: bytes[16], fill: bytes[17], applied: view.getUint32(18, true), slice: values(22), alternate: values(28), fm: values(34), capabilities: bytes[40], wave: bytes[41], source: bytes[42], exponential: Boolean(bytes[43]), tracked: Boolean(bytes[44]), seed: view.getUint32(45, true), rateZone: bytes[49] };
+  return { ...(bytes[0]===2?{reverbModel:bytes[50]}:{}), page: bytes[1], fmLayer: Boolean(bytes[2] & 1), glideLayer:Boolean(bytes[2]&32), shift: Boolean(bytes[2] & 2), fmAvailable: Boolean(bytes[2] & 4), slicePage: Boolean(bytes[2] & 8), inputPresent: Boolean(bytes[2] & 16), caught: bytes[3], physical: values(4), logical: values(10), style: bytes[16], fill: bytes[17], applied: view.getUint32(18, true), slice: values(22), alternate: values(28), fm: values(34), capabilities: bytes[40], wave: bytes[41], source: bytes[42], exponential: Boolean(bytes[43]), tracked: Boolean(bytes[44]), seed: view.getUint32(45, true), rateZone: bytes[49] };
 }
 
 export function performanceView(mode, data, alternate = false, lite = false, latched = false, bothTarget = false, jumpMode = false) {
   const fm = mode === 'fm';
-  const labels = fm ? ['Rate', 'Wave', 'Depth', 'Law', 'Tracking', 'Source'] : alternate ? (lite ? ['Retrigger', 'Shuffle', jumpMode ? 'Jump' : 'Ghost', 'Throw destination', 'Seed', 'Finale'] : ['Evolve (seed)', 'Shuffle', 'Ghost', 'Finale', 'Throw level', 'Throw destination']) : (lite ? ['Loop', 'Activity', jumpMode ? 'Kick doubles' : 'Detail', 'Throw', 'Seed chance', 'Mix'] : ['Loop', 'Density', 'Edit', 'Throw chance', 'Seed', 'Wet']);
+  const glide=fm && Boolean(data?.glideLayer);
+  const labels = glide?['Glide','—','—','—','—','—']:fm ? ['Rate', 'Wave', 'Depth', 'Law', 'Tracking', 'Source'] : alternate ? (lite ? ['Retrigger', 'Shuffle', jumpMode ? 'Jump' : 'Ghost', 'Throw destination', 'Seed', 'Finale'] : ['Evolve (seed)', 'Shuffle', 'Ghost', 'Finale', 'Throw level', 'Throw destination']) : (lite ? ['Loop', 'Activity', jumpMode ? 'Kick doubles' : 'Detail', 'Throw', 'Seed chance', 'Mix'] : ['Loop', 'Density', 'Edit', 'Throw chance', 'Seed', 'Wet']);
   const values = data ? fm ? data.fm : alternate ? data.alternate : data.slice : null;
   const following = Boolean(data && (fm ? data.fmLayer : data.slicePage && data.shift === alternate));
   let status = fm ? 'Hold B2 on Plaits. First catch Depth at zero, then turn it up.' : lite ? 'B1 + tap B2: recall Jungle demo. B2: variation. Hold B2: Fill.' : 'B1 + tap B2: next style. B2: variation. Hold B2: Fill.';
   if(!fm && latched) status='B2: Main / Rhythm pages. Hold B2: Fill. B1 + tap B2: recall demo. Seed is on Rhythm.';
   const events = [];
   if (data && fm) {
-    if (!data.fmAvailable) status = 'FM is not included in this firmware.';
+    if(glide)status='Legato glide · Off–3 s. Gaps longer than 5 ms start without glide. Other knobs are inactive.';
+    else if (!data.fmAvailable) status = 'FM is not included in this firmware.';
     else if (values[2] <= .005) status = 'FM off — catch Depth at zero, then turn it up.';
     else if ((data.capabilities & 4) && !(data.capabilities & (data.exponential ? 2 : 1))) status = 'This engine does not support the selected audio-rate FM law.';
     else if (data.source === 1 && !data.inputPresent) status = 'External source selected — no input signal detected.';
@@ -44,7 +46,7 @@ export function performanceView(mode, data, alternate = false, lite = false, lat
     if (data.fill) events.push(data.fill === 1 ? 'Fill queued' : 'Fill playing');
     for (const [bit, label] of [[18, 'Shuffle'], [16, jumpMode ? 'Kick double' : 'Ghost / double'], [17, 'Finale'], [19, 'Throw']]) if (w & (1 << bit)) events.push(label);
   }
-  return { title: fm ? 'Plaits · FM' : `Slicer${data?.style ? ` · ${STYLES[data.style - 1]}` : ''}`, status, events, following, controls: labels.map((label, i) => {
+  return { title: glide?'Plaits · Glide':fm ? 'Plaits · FM' : `Slicer${data?.style ? ` · ${STYLES[data.style - 1]}` : ''}`, status, events, following, controls: labels.map((label, i) => {
     let shownValue = values?.[i] ?? 0;
     const chance = x => x <= .005 ? 0 : .5 * x * (1 + x);
     if (values && !fm) {
@@ -55,7 +57,8 @@ export function performanceView(mode, data, alternate = false, lite = false, lat
       if (alternate && !jumpMode && (lite ? (latched ? [2] : [1,2,5]) : [1,2,3]).includes(i)) { const edit = data.slice[2]; const gain = edit <= .5 ? edit * 2 : 1 + (edit - .5); shownValue = Math.min(1, chance(values[i]) * gain); }
     }
     let text = values ? percent(shownValue) : '—';
-    if (values && fm) {
+    if(values && glide) text=i===0?(values[0]<=.005?'Off':`${(3*((values[0]-.005)/.995)**2).toFixed(2)} s`):'—';
+    else if (values && fm) {
       if (i === 0) text = data.tracked ? `${[.25,.5,1,1.5,2,3,4,5,6,7,8,12,16][data.rateZone]}× note` : `${(.05 * 2 ** (values[0] * 15.29)).toFixed(values[0] < .5 ? 2 : 0)} Hz`;
       if (i === 1) text = WAVES[data.wave];
       if (i === 3) text = data.exponential ? 'Exponential' : 'Linear TZFM';
@@ -69,9 +72,9 @@ export function performanceView(mode, data, alternate = false, lite = false, lat
       if (lite && i === 4) text = String(data.seed);
       if (i === (lite ? 3 : 5)) text = values[i] === 0 ? 'Delay' : values[i] === 1 ? 'Reverb' : 'Delay + reverb';
     }
-    const inactive = Boolean(data && fm && data.source === 1 && [0, 1, 4].includes(i));
+    const inactive = glide?i!==0:Boolean(data && fm && data.source === 1 && [0, 1, 4].includes(i));
     const caught = !following || Boolean(data.caught & (1 << i));
-    let colour = !fm && jumpMode && alternate && i===2 ? '#ff6e96' : fm && data && i === 3 ? (data.exponential ? '#ff50a0' : '#00b4be') : fm && data && i === 4 ? (data.tracked ? '#46d264' : '#288c6e') : fm && data && i === 5 ? ['#ffbe28','#0096ff','#b450dc'][data.source] : !fm && lite && alternate && i === 0 ? '#ff6e00' : (fm ? FM_COLOURS : SLICE_COLOURS)[i];
+    let colour = glide?(i===0?'#00b4be':'#000000'):!fm && jumpMode && alternate && i===2 ? '#ff6e96' : fm && data && i === 3 ? (data.exponential ? '#ff50a0' : '#00b4be') : fm && data && i === 4 ? (data.tracked ? '#46d264' : '#288c6e') : fm && data && i === 5 ? ['#ffbe28','#0096ff','#b450dc'][data.source] : !fm && lite && alternate && i === 0 ? '#ff6e00' : (fm ? FM_COLOURS : SLICE_COLOURS)[i];
     const destinationMix = !fm && alternate && i === (lite ? 3 : 5) ? values?.[i] ?? .5 : null;
     const destinationColours=[THROW_DESTINATION_COLOURS[0],REVERB_MODEL_COLOURS[data?.reverbModel]??REVERB_MODEL_COLOURS[1]];
     if(destinationMix!==null)colour=blendColour(...destinationColours,destinationMix);
