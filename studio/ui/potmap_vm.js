@@ -37,10 +37,10 @@ export function potMapPages(table) {
   if(single) for(let i=0;i<labels.length;++i) {
     const entry=labels[i],pots=[...entry.pots];
     if(entry.page==='Plaits 1')pots[0]='Voice1Twist';
-    if(entry.page==='Looper'){pots[4]='Sampler1Decay';pots[5]='Sampler1Level';}
+    if(entry.page==='Looper'){if(!table.capabilities.phaser && Number(table.capabilities.panelVersion)>=6)pots[2]='builtin:Record A/B';pots[4]='Sampler1Decay';pots[5]='Sampler1Level';}
     if(entry.page==='Master'){
       pots[0]='Voice1Filter';pots[2]='Voice2Filter';pots[3]='GlobalInputLevel';pots[5]='GlobalOutputLevel';
-      if(!table.capabilities.phaser)pots[1]=Number(table.capabilities.panelVersion)>=4?'builtin:Record A/B':'builtin:Not used';
+      if(!table.capabilities.phaser)pots[1]=Number(table.capabilities.panelVersion)>=6?'builtin:Crossfader':Number(table.capabilities.panelVersion)>=4?'builtin:Record A/B':'builtin:Not used';
     }
     if(entry.page==='FX live')pots[1]='FxReverbSpecial';
     labels[i]={...entry,pots};

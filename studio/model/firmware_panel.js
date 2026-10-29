@@ -5,6 +5,7 @@ export function firmwarePanelPages(pages, descriptor) {
   const fw=describedFirmware(descriptor);
   if(!fw || (!fw.multitap && Number(fw.activePlaits)!==1))return pages;
   const single=Number(fw.activePlaits)===1;
+  const swappedLoops=single && !fw.phaser && Number(fw.panelVersion)>=6;
   const globalLoop=single && Number(fw.panelVersion)>=3;
   const result=[];
   for(const source of pages) {
@@ -18,8 +19,10 @@ export function firmwarePanelPages(pages, descriptor) {
     if(page.name==='Looper' && fw.looper) {
       const shifts=['File A','File B',single?'Direction A':'Direction',single?'Direction B':fw.sidechain?'Sidechain EQ':'',single?'Pan A':'Reverb send',single?'Pan B':'Delay send'];
       page.pots=page.pots.map((p,i)=>({...p,shift:shifts[i],b2:globalLoop?'Tap: Slicer; hold/release: Undo/Redo; B2+B3: record / hold save':single?'Tap: Slicer; hold/release: record; 5 s: clear':p.b2}));
+      if(swappedLoops)page.pots[2]={...page.pots[2],name:'Record A/B',live:false};
       page.note=globalLoop?'B2+B3 on every page: tap record/stop; hold save to SD. Looper B2 hold/release: Undo/Redo; 3 s warning, 5 s clear. B1: files, directions and pans A/B. B1+B2 tap: file page; hold: sends and sidechains. Release B1 to load files. Settings: hold all three buttons.':single?'B1 is always Shift. Hold/release B2 to record. Short B2+B3: Undo/Redo. B1+B2 hold: save; B1+B2 tap: file page. Release B1 to load selected files. Blue/yellow identify A/B; directions are independent.':'Both slots play. Crossfader selects the recording slot; B1 chooses files and direction.';
     }
+    if(swappedLoops && page.name==='Looper')page.note+=' Middle-left selects recording A/B; Master top-right crossfades playback. The recording target is locked during a queued/running take.';
     if(page.name==='Slice' && single && Number(descriptor?.slice?.version)>=19) {
       const names=Number(descriptor?.slice?.version)>=20?['Loop','Activity',Number(descriptor?.slice?.version)>=23?'Kick doubles':'Detail','Throw','Seed chance','Mix']:['Loop','Density','Edit','Throw chance','Seed','Wet'];
       const lite=Number(descriptor?.slice?.version)>=20;
@@ -49,7 +52,7 @@ export function firmwarePanelPages(pages, descriptor) {
     }
     if(page.name==='Master') {
       page.perfIndex=-1;
-      page.pots=page.pots.map((p,i)=>({...p,live:false,...(!fw.phaser&&i===1?{name:single&&Number(fw.panelVersion)>=4?'Record A/B':'Not used',shift:single?'Input sidechain':'',colour:single&&Number(fw.panelVersion)>=4?'#2846ff':'#000000'}:single&&i===2?{name:'Input filter',shift:'Input pan'}:{})}));
+      page.pots=page.pots.map((p,i)=>({...p,live:false,...(!fw.phaser&&i===1?{name:swappedLoops?'Crossfader':single&&Number(fw.panelVersion)>=4?'Record A/B':'Not used',shift:single?'Input sidechain':'',colour:single&&Number(fw.panelVersion)>=4?'#2846ff':'#000000'}:single&&i===2?{name:'Input filter',shift:'Input pan'}:{})}));
       page.pots[3].shift='Input → Delay';page.pots[5].shift='Input → Reverb';
       page.note='B3 alternates Master and FX. White filter centres bypass; unused controls are dark.'+(descriptor?.masterSidechain?' Sidechain moves these same filters toward HP, then returns to your setting. Moving dots show the actual filter: cyan, or amber for loop B; A/B alternate when both are active. Depth knobs are 15% stronger at maximum.':'');
     }
