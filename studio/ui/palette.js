@@ -135,7 +135,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   const entries = libraryEntries(catalog);
   // view: 0..2 shows one voice (large rows), 'both' stacks every voice in the dense table. voice = the voice that receives clicks and library picks.
   let initialProfile='sampler';try { const saved=localStorage.getItem('pentavox.palette.variant');if(FIRMWARE_PROFILES.some(p=>p.id===saved)) initialProfile=saved; } catch {}
-  const state = { profile:initialProfile, selected: [0, 0, 0], search: '', category: '', stereo: false, sync: false, absent: false, expanded: null, polling: null, voice: 0, busy: false, suggest: false, view: 'both', tab: 'browse', diff: false, hl: null, hover: null, drag: null };
+  const state = { profile:initialProfile, engineBanks:model.slotsOf(0).length===32?4:3, selected: [0, 0, 0], search: '', category: '', stereo: false, sync: false, absent: false, expanded: null, polling: null, voice: 0, busy: false, suggest: false, view: 'both', tab: 'browse', diff: false, hl: null, hover: null, drag: null };
 
   root.innerHTML = `
     <div class="eg">
@@ -246,7 +246,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   exportButton.addEventListener('click', () => { more.open = false; downloadRecipe(model.recipe()); });
   const importLabel = el('label', 'eg-file', 'Import recipe.json');
   const file = document.createElement('input'); file.type = 'file'; file.accept = '.json'; file.hidden = true;
-  file.addEventListener('change', async () => { more.open = false; if (!file.files[0]) return; try { model.importRecipe(JSON.parse(await file.files[0].text())); changed(); } catch (error) { onError(error); } finally { file.value = ''; } });
+  file.addEventListener('change', async () => { more.open = false; if (!file.files[0]) return; try { model.importRecipe(JSON.parse(await file.files[0].text())); state.engineBanks=model.slotsOf(0).length/8; changed(); } catch (error) { onError(error); } finally { file.value = ''; } });
   importLabel.append(file);
   const dx7Button = button('DX7 banks'); dx7Button.title = 'Compose the six Six-op FM banks and write them to the SD card';
   dx7Button.addEventListener('click', () => { more.open = false; onEditBanks('A'); });
@@ -722,14 +722,21 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   for (const {id:value,label} of FIRMWARE_PROFILES) { const option = document.createElement('option'); option.value = value; option.textContent = label; variant.append(option); }
   try { if (FIRMWARE_PROFILES.some(p=>p.id===localStorage.getItem('pentavox.palette.variant'))) variant.value = localStorage.getItem('pentavox.palette.variant'); } catch { /* optional */ }
   variant.value=state.profile;
+  const bankCount=document.createElement('select'); bankCount.setAttribute('aria-label','Engine banks');
+  bankCount.title='Three banks omit the blue bank from the firmware. Its engines are kept in this browser for restoring later.';
+  bankCount.append(new Option('3 banks · 24 engines','3'),new Option('4 banks · 32 engines','4'));
+  bankCount.addEventListener('change',()=>{
+    state.engineBanks=Number(bankCount.value);state.selected[0]=Math.min(state.selected[0],state.engineBanks*8-1);
+    cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;changed();
+  });
   const wantLooper = () => firmwareProfile(variant.value).looper;
   const diagnostic = document.createElement('input'); diagnostic.type='checkbox';
   const diagnosticLabel=el('label','firmware-diagnostic');diagnosticLabel.append(diagnostic,document.createTextNode(' CPU diagnostic'));
   diagnostic.setAttribute('aria-label','Build CPU diagnostic firmware');
-  const syncVariant = () => { const busy=['building','cancelling','flashing'].includes(state.phase);variant.disabled=diagnostic.disabled=busy; };
-  variant.addEventListener('change', () => { state.profile=variant.value;globalThis.dispatchEvent?.(new CustomEvent('pentavox-profile',{detail:firmwareProfile(variant.value)}));state.view='both';state.voice=0;cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;try { localStorage.setItem('pentavox.palette.variant', variant.value); } catch {} changed(); });
+  const syncVariant = () => { const busy=['building','cancelling','flashing'].includes(state.phase);variant.disabled=diagnostic.disabled=bankCount.disabled=busy;bankCount.hidden=state.profile!=='single-plaits';bankCount.value=String(state.engineBanks); };
+  variant.addEventListener('change', () => { state.profile=variant.value;state.view='both';state.voice=0;cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;try { localStorage.setItem('pentavox.palette.variant', variant.value); } catch {} changed(); });
   diagnostic.addEventListener('change',()=>{cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;renderSummary();});
-  actions.append(variant, diagnosticLabel, build, el('span', 'eg-arrow', '→'), flash, dfu, copyLog, suggestButton);
+  actions.append(variant, bankCount, diagnosticLabel, build, el('span', 'eg-arrow', '→'), flash, dfu, copyLog, suggestButton);
   $('.eg-meter').append(progress);
   // Demo mode (a simulated module): nothing may be built or flashed, so the three buttons stay off with an explanation.
   const DEMO_HINT = 'Not available in demo mode: there is no real module';
@@ -887,7 +894,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     });
   }
 
-  function changed() { for(let v=0;v<3;++v) model.setSlotCount(v,v===0&&state.profile==='single-plaits'?32:24); persist(); renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); renderSetControls(); }
+  function changed() { for(let v=0;v<3;++v) model.setSlotCount(v,v===0&&state.profile==='single-plaits'?state.engineBanks*8:24); persist(); globalThis.dispatchEvent?.(new CustomEvent('pentavox-profile',{detail:{...firmwareProfile(state.profile),engineBanks:state.profile==='single-plaits'?state.engineBanks:3}})); renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); renderSetControls(); }
   if (!hadSavedRecipe) applyDefaults();   // a first visit, or a cleared browser: every voice starts from the set chosen as its default
   changed();
   return { waves: waveEditor, refreshLive() { renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); }, dispose() { if(recoveryTimer)clearTimeout(recoveryTimer); waveEditor.destroy(); if (state.polling) clearInterval(state.polling); root.replaceChildren(); } };

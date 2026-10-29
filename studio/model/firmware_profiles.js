@@ -12,7 +12,9 @@ export function firmwareProfile(id = 'sampler') {
 export function recipeForProfile(recipe, profile) {
   const target=firmwareProfile(profile);
   const result=structuredClone(recipe);
-  const count=target.engineBanks===4?32:24;
+  // Single-Plaits accepts either size; never silently restore a removed bank.
+  const sourceSlots=result.voices?.[0]?.slots ?? result.slots;
+  const count=target.engineBanks===4 && sourceSlots?.length===32?32:24;
   const resize=slots=>{
     const next=slots.slice(0,count);
     const fallback=slots.filter(s=>s.engine_id!=='six_op');

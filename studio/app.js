@@ -56,7 +56,8 @@ let activeTab = parseRoute(location.hash).tab;
 let activePanelSection = 'live';
 let navigation;
 let buildVoiceCount=2;try { if(localStorage.getItem('pentavox.palette.variant')==='single-plaits')buildVoiceCount=1; } catch {}
-globalThis.addEventListener?.('pentavox-profile',event=>{buildVoiceCount=event.detail.plaitsVoices;if(activeTab==='palette')document.querySelector('#page-crumb').textContent=`${buildVoiceCount===1?'One voice':'Two voices'}, ${buildVoiceCount===1?'four':'three'} banks of eight`;});
+let buildEngineBanks=3;
+globalThis.addEventListener?.('pentavox-profile',event=>{buildVoiceCount=event.detail.plaitsVoices;buildEngineBanks=event.detail.engineBanks??3;if(activeTab==='palette')document.querySelector('#page-crumb').textContent=`${buildVoiceCount===1?'One voice':'Two voices'}, ${buildEngineBanks===4?'four':'three'} banks of eight`;});
 
 let samplerMount;
 let locksMount;
@@ -556,7 +557,7 @@ function refreshWorkspace() {
   const loops = Boolean(session?.loopIo);
   const slots = session?.sampleSlotCount ?? 4;
   const titles = {
-    palette: ['Engines', `${buildVoiceCount === 1 ? 'One voice' : 'Two voices'}, ${buildVoiceCount === 1 ? 'four' : 'three'} banks of eight`],
+    palette: ['Engines', `${buildVoiceCount === 1 ? 'One voice' : 'Two voices'}, ${buildEngineBanks === 4 ? 'four' : 'three'} banks of eight`],
     dx7: ['DX7 banks', 'Six-op patches on the SD card'], wavetable: ['Wave tables', 'Resources for the next firmware build'],
     terrain: ['Wave terrain', 'Resources for the next firmware build'], sampler: [loops ? 'Loops' : 'Sampler', loops ? 'Prepare audio and manage the loop library' : `Prepare audio and manage ${slots} sample slots`],
     presets: ['Setup presets', 'Stored module configurations'], routing: ['CV routing', 'Notes, modulation and knob mapping'], midi: ['MIDI routing', 'Controllers to sound parameters'],
