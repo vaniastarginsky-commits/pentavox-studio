@@ -103,6 +103,14 @@ export class RoutingController {
     this.#schedule();
   }
 
+  /** Restore exact route slots for Undo without rounding untouched signed depths. */
+  restoreRouteSlots(key, slots) {
+    const source = this.session.table.sources().find(item => sourceKey(item) === key);
+    if (!source || !Array.isArray(slots) || slots.length !== 4 || slots.some(r => !Number.isInteger(r.dest) || r.dest < 0 || r.dest >= this.session.table.destCount || !Number.isFinite(r.depth) || Math.abs(r.depth) > 1)) throw new TypeError('Invalid route snapshot');
+    this.session.edit(table => slots.forEach((route, k) => table.set(source, k, route)));
+    this.#schedule();
+  }
+
   rowsFor(source) { return rowsView(this.session.table, source, this.destinations); }
 
   usages(destId) { return usedBy(this.session.table, Number(destId)); }

@@ -1,17 +1,14 @@
 import { mountLoopRecorder } from './ui/loop_recorder.js?v=3';
-import { mountRoutingPanel } from './ui/routing_panel.js';
+import { mountPatchDesk } from './ui/patch_desk.js';
 import { HostLinkClient } from './hostlink/client.js';
 import { SimTransport } from './hostlink/transport_sim.js';
 import { openWebSerial } from './hostlink/transport_webserial.js';
 import { load } from './model/destinations.js';
 import { StudioSession } from './model/session.js';
 import { mountPalette } from './ui/palette.js';
-import { mountPotMap } from './ui/potmap.js';
-import { mountRouting } from './ui/routing.js';
 import { mountSettings } from './ui/settings.js';
 import { mountPresets } from './ui/presets.js';
 import { mountDx7Editor } from './ui/dx7_editor.js';
-import { mountMidiRouting } from './ui/midi_routing.js';
 import { RoutingController } from './ui/routing_controller.js';
 import { mountVoice } from './ui/voices.js';
 import { mountSampler } from './ui/sampler.js';
@@ -32,8 +29,6 @@ const demoBanner = document.getElementById('demo-banner');
 let demoMode = new URLSearchParams(location.search).get('sim') === '1';
 const connectionStatus = document.querySelector('#connection-status');
 const routingRoot = document.querySelector('#routing-root');
-// The pot map lives inside the CV routing tab (between Base CV and Panel pots), so it is a detached host the routing view adopts.
-const potMapRoot = Object.assign(document.createElement('div'), { id: 'potmap-root' });
 const settingsRoot = document.querySelector('#settings-root');
 const presetsRoot = document.querySelector('#presets-root');
 const midiRoot = document.querySelector('#midi-root');
@@ -43,11 +38,8 @@ let session;
 let controller;
 let paletteMount;
 let unmountRouting;
-let unmountPotMap;
 let unmountSettings;
 let unmountPresets;
-let unmountMidi;
-let unmountCvPanel, unmountMidiPanel;
 let unmountVoices = [];
 let unsubscribePaletteLive;
 let unsubscribeDraft;
@@ -403,15 +395,10 @@ async function connect({ demo = false, auto = false } = {}) {
     client.onDisconnect(markDisconnected);
     session.onBusy = (busy) => document.body.classList.toggle('studio-busy', busy);
     controller?.dispose(); controller = new RoutingController(session, session.destinations, { onError: showError });
-    unmountCvPanel?.(); unmountMidiPanel?.();
-    unmountRouting?.(); unmountPotMap?.(); unmountSettings?.(); unmountPresets?.(); unmountMidi?.(); unmountVoices.forEach((dispose) => dispose()); unsubscribePaletteLive?.(); unsubscribeDraft?.();
-    routingRoot.classList.remove('disconnected'); unmountRouting = mountRouting(routingRoot, controller, { potMapHost: potMapRoot });
-    unmountPotMap = mountPotMap(potMapRoot, controller);
+    unmountRouting?.(); unmountSettings?.(); unmountPresets?.(); unmountVoices.forEach((dispose) => dispose()); unsubscribePaletteLive?.(); unsubscribeDraft?.();
+    routingRoot.classList.remove('disconnected'); unmountRouting = mountPatchDesk(routingRoot, controller, { onError: showError, onUndo: showUndo });
     settingsRoot.classList.remove('disconnected'); unmountSettings = mountSettings(settingsRoot, controller);
     presetsRoot.classList.remove('disconnected'); unmountPresets = mountPresets(presetsRoot, controller, { onError: showError, onSuccess: showSuccess });
-    unmountCvPanel = mountRoutingPanel(document.getElementById('cv-panel-helper'), controller, 'cv', { onError: showError, onSuccess: showSuccess, onUndo: showUndo, isConnected: () => connectionStatus.dataset.state === 'on' });
-    unmountMidiPanel = mountRoutingPanel(document.getElementById('midi-panel-helper'), controller, 'midi', { onError: showError, onSuccess: showSuccess, onUndo: showUndo, isConnected: () => connectionStatus.dataset.state === 'on' });
-    midiRoot.classList.remove('disconnected'); unmountMidi = mountMidiRouting(midiRoot, controller, { onError: showError, onUndo: showUndo });
     unmountVoices = [];
     unsubscribePaletteLive = controller.subscribe(() => paletteMount?.refreshLive());
     unsubscribeDraft = controller.subscribe(() => { persistDraft(); refreshWorkspace(); });
@@ -553,14 +540,13 @@ asPage(dx7Editor.dialog, () => document.getElementById('dx7-tab'));
 // Context says where this editor's changes go, using only observed state.
 function refreshWorkspace() {
   const connected = connectionStatus.dataset.state === 'on';
-  for (const id of ['cv-panel-helper', 'midi-panel-helper']) document.getElementById(id).hidden = !connected;
   const loops = Boolean(session?.loopIo);
   const slots = session?.sampleSlotCount ?? 4;
   const titles = {
     palette: ['Engines', `${buildVoiceCount === 1 ? 'One voice' : 'Two voices'}, ${buildEngineBanks === 4 ? 'four' : 'three'} banks of eight`],
     dx7: ['DX7 banks', 'Six-op patches on the SD card'], wavetable: ['Wave tables', 'Resources for the next firmware build'],
     terrain: ['Wave terrain', 'Resources for the next firmware build'], sampler: [loops ? 'Loops' : 'Sampler', loops ? 'Prepare audio and manage the loop library' : `Prepare audio and manage ${slots} sample slots`],
-    presets: ['Setup presets', 'Stored module configurations'], routing: ['CV routing', 'Notes, modulation and knob mapping'], midi: ['MIDI routing', 'Controllers to sound parameters'],
+    presets: ['Setup presets', 'Stored module configurations'], routing: ['Routing', 'CV, MIDI, notes and knob mapping'], midi: ['MIDI routing', 'Controllers to sound parameters'],
     locks: ['Knob record', 'Recorded and drawn movements'], panel: ['Live panel', 'Controls and colours on the module'], settings: ['Settings', 'Clock, levels and module preferences'], manual: ['Manual', 'Controls, gestures and Studio help'],
   };
   const [title, crumb] = titles[activeTab] ?? [activeTab, ''];

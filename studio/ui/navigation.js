@@ -3,6 +3,7 @@ const TABS = new Set(['palette', 'dx7', 'wavetable', 'terrain', 'sampler', 'pres
 export function parseRoute(hash = '') {
   const [name, ...parts] = String(hash).replace(/^#/, '').split('/');
   const tab = name === 'engines' ? 'palette' : name;
+  if (tab === 'midi') return { tab: 'routing', section: 'midi' };
   if (tab === 'panel' && parts[0] === 'settings') return { tab: 'settings', section: '' };
   return { tab: TABS.has(tab) ? tab : 'palette', section: TABS.has(tab) ? parts.join('/') : '' };
 }
