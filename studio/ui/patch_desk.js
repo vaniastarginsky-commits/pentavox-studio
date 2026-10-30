@@ -104,7 +104,7 @@ export function mountPatchDesk(root, controller, { onError = () => {}, onUndo = 
       }
       if (ui.section === 'midi') {
         const draft = ui.draft, row = draft ? midiView()?.routes.find(r => r.index === draft.index) : selectedMidi();
-        if (!row) { beginRoute(); return; }
+        if (!row) { beginRoute(); if (ui.draft) chooseDestination(id); return; }
         if (!row.dest && !draft) return;
         rememberMidi(row, 'MIDI assignment changed', draft ? undefined : ['dest']); ui.draft = null; ui.midi = row.index; ui.cc = draft?.cc ?? row.cc;
         if (ui.target !== 'All' && ui.target !== controller.destinations.byId(id)?.group) ui.target = 'All';
@@ -112,7 +112,7 @@ export function mountPatchDesk(root, controller, { onError = () => {}, onUndo = 
         controller.updateMidiRouteFields(row.index, { ...(draft ? { cc: draft.cc, ch: draft.channel, depth: draft.depth } : {}), dest: id });
       } else {
         const draft = ui.draft, row = selectedCv(), key = draft?.key ?? row?.key;
-        if (!key) { beginRoute(); return; }
+        if (!key) { beginRoute(); if (ui.draft) chooseDestination(id); return; }
         rememberCv(key, 'CV assignment changed'); ui.draft = null;
         if (draft) { const slot = controller.addRoute(id, 50, key); if (slot >= 0) ui.route = `${key}/${slot}`; }
         else controller.updateRoute(row.k, { destId: id }, key);
