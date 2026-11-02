@@ -36,6 +36,7 @@ export class StudioSession {
     this.granularEnabled = true;
     this.tapeEnabled = true;
     this.samplerVoices = 2;
+    this.plaitsVoices = 3;
     this.sampleSlotCount = 4;
     this.loopIo = false;
     this.editedKeys = new Set();
@@ -52,6 +53,7 @@ export class StudioSession {
     let voices;
     let readOnly = false;
     let reason;
+    let staleRoutesPruned = false;
     try {
       table = RouteTable.fromBlob(live, index);
       voices = VoiceTable.fromBlob(live, index, this.engineCatalogs);
@@ -87,15 +89,37 @@ export class StudioSession {
     this.granularEnabled = potMap?.capabilities?.granularEnabled ?? true;
     this.tapeEnabled = potMap?.capabilities?.tapeEnabled ?? true;
     this.samplerVoices = potMap?.capabilities?.samplerVoices ?? 2;
+    this.plaitsVoices = Number(descriptor?.pentavox?.activePlaits) || Number(index.firmware?.activePlaits) || Number(settings?.plaitsVoices) || voices?.voiceCount || 3;
     const describedSampleSlots = [...index.values()].filter((field) =>
       field?.comp === 'settings' && /^Sample Library \d+$/.test(field?.name ?? '')).length;
     this.sampleSlotCount = describedSampleSlots || 4;
     this.loopIo = loopIoVersion(descriptor) >= 1;   // the looper image: loops live in /LOOPS and the module has the loop commands
-    if (this.destinations) { this.destinations.looper = this.loopIo; this.destinations.firmware=index.firmware??null; }   // its sampler destinations are the looper's
+    if (this.destinations) {
+      this.destinations.looper = this.loopIo;
+      this.destinations.firmware = index.firmware ?? null;
+      if (!readOnly && table && voices) {
+        staleRoutesPruned = table.prune((destId) => this.destinations.isAvailable(destId, {
+          plaitsVoices: this.plaitsVoices,
+          destCount: table.destCount,
+        }));
+        if (settings) {
+          for (let route = 0; settings.has(`midicc.${route}.dest`); ++route) {
+            const id = `midicc.${route}.dest`;
+            if (settings.get(id) !== 0 && !this.destinations.isAvailable(settings.get(id), {
+              plaitsVoices: this.plaitsVoices,
+              destCount: table.destCount,
+            })) {
+              settings.set(id, 0);
+              staleRoutesPruned = true;
+            }
+          }
+        }
+      }
+    }
     this.readOnly = readOnly;
     this.reason = reason;
-    this.dirty = false;
-    this.pending = false;
+    this.dirty = staleRoutesPruned;
+    this.pending = staleRoutesPruned;
     this.editedKeys.clear();
     return { info, readOnly, ...(reason ? { reason } : {}) };
   }
@@ -218,7 +242,7 @@ export class StudioSession {
       destCount: this.table?.destCount ?? this.destinations.count,
       masterPage: compact,
       stutter: !compact,
-      plaitsVoices: this.voices?.voiceCount,
+      plaitsVoices: this.plaitsVoices,
       granularEnabled: this.granularEnabled,
       tapeEnabled: this.tapeEnabled,
       samplerVoices: this.samplerVoices,

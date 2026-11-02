@@ -14,12 +14,13 @@ function labelFor(source, includeBank = false) {
   return `${source.name}${includeBank ? ` (${source.bank})` : ''}`;
 }
 
-export function rowsView(table, source, destinations) {
+export function rowsView(table, source, destinations, options = {}) {
   const rows = [];
+  const available = (id) => !destinations.isAvailable || destinations.isAvailable(id, options);
   const counts = new Map();
   for (let k = 0; k < 4; ++k) {
     const route = table.get(source, k);
-    if (route.dest === 0) continue;
+    if (route.dest === 0 || !available(route.dest)) continue;
     counts.set(route.dest, (counts.get(route.dest) ?? 0) + 1);
     rows.push({
       k,
@@ -32,12 +33,12 @@ export function rowsView(table, source, destinations) {
   return rows.map((row) => ({ ...row, duplicate: counts.get(row.destId) > 1 }));
 }
 
-export function sourceGroups(table, destinations, bank = 'A', settings) {
+export function sourceGroups(table, destinations, bank = 'A', settings, options = {}) {
   const noteInputs = settings ? cvNotesView(settings).inputs : [];
   return GROUPS.map(([key, title]) => ({
     title,
     sources: table.sources().filter((source) => source.key === key && source.bank === bank).map((source) => {
-      const rows = rowsView(table, source, destinations);
+      const rows = rowsView(table, source, destinations, options);
       const names = rows.slice(0, 2).map((row) => row.destLabel).join(', ');
       return {
         key: sourceKey(source),
@@ -82,8 +83,8 @@ export function canAdd(table, source) {
   return table.rows(source).length < 4;
 }
 
-export function usedBy(table, destId) {
-  return table.sources().flatMap((source) => rowsView(table, source, { label: String })
+export function usedBy(table, destId, destinations, options = {}) {
+  return table.sources().flatMap((source) => rowsView(table, source, destinations ?? { label: String }, options)
     .filter((row) => row.destId === destId)
     .map((row) => ({
       sourceLabel: labelFor(source),

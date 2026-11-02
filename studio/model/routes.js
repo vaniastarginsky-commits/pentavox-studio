@@ -116,6 +116,23 @@ export class RouteTable {
     return result;
   }
 
+  prune(predicate) {
+    if (typeof predicate !== 'function') throw new TypeError('route predicate must be a function');
+    let changed = false;
+    for (const source of this.sourceList) {
+      const kept = this.rows(source).filter((route) => predicate(route.dest));
+      for (let k = 0; k < 4; ++k) {
+        const current = this.get(source, k);
+        const next = kept[k] ?? { dest: 0, depth: 0 };
+        if (current.dest !== next.dest || current.depth !== next.depth) {
+          this.set(source, k, next);
+          changed = true;
+        }
+      }
+    }
+    return changed;
+  }
+
   addRoute(source, dest, depth) {
     for (let k = 0; k < 4; ++k) {
       if (this.get(source, k).dest === 0) {

@@ -42,6 +42,14 @@ class DestinationCatalog {
   /** Set while the connected firmware is a looper image (see StudioSession.loopIo): the sampler destinations are the looper's. */
   looper = false;
 
+  isAvailable(id, { plaitsVoices = 3, destCount = this.count } = {}) {
+    const item = this.entries[id];
+    if (!item || id >= destCount) return false;
+    const numbered = /^Voice([123])/.exec(item.symbol ?? '');
+    if (numbered && this.firmware?.multitap && this.firmware.activePlaits === 1 && item.symbol === 'Voice2Filter') return true;
+    return !numbered || Number(numbered[1]) <= plaitsVoices;
+  }
+
   byId(id) {
     const item = this.entries[id];
     if(this.firmware?.multitap && item) {

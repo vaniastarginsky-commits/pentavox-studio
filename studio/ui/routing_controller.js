@@ -30,12 +30,13 @@ export class RoutingController {
 
   view() {
     const source = this.source;
+    const routeOptions = { plaitsVoices: this.session.plaitsVoices ?? this.session.voices?.voiceCount ?? 3, destCount: this.session.table.destCount };
     return {
       bank: this.bank,
       source,
-      groups: sourceGroups(this.session.table, this.destinations, this.bank, this.session.settings),
+      groups: sourceGroups(this.session.table, this.destinations, this.bank, this.session.settings, routeOptions),
       notes: this.session.settings ? cvNotesView(this.session.settings) : null,
-      rows: source ? rowsView(this.session.table, source, this.destinations) : [],
+      rows: source ? rowsView(this.session.table, source, this.destinations, routeOptions) : [],
       canAdd: Boolean(source) && canAdd(this.session.table, source),
       dirty: this.session.dirty,
       readOnly: this.session.readOnly,
@@ -111,9 +112,9 @@ export class RoutingController {
     this.#schedule();
   }
 
-  rowsFor(source) { return rowsView(this.session.table, source, this.destinations); }
+  rowsFor(source) { return rowsView(this.session.table, source, this.destinations, { plaitsVoices: this.session.plaitsVoices ?? this.session.voices?.voiceCount ?? 3, destCount: this.session.table.destCount }); }
 
-  usages(destId) { return usedBy(this.session.table, Number(destId)); }
+  usages(destId) { return usedBy(this.session.table, Number(destId), this.destinations, { plaitsVoices: this.session.plaitsVoices ?? this.session.voices?.voiceCount ?? 3, destCount: this.session.table.destCount }); }
 
   voicesView() { return voicesView(this.session.voices); }
 
@@ -150,6 +151,11 @@ export class RoutingController {
     let count = 0;
     while (table.has(`midicc.${count}.dest`)) {
       const dest = table.get(`midicc.${count}.dest`);
+      const available = dest === 0 || this.destinations.isAvailable(dest, {
+        plaitsVoices: this.session.plaitsVoices ?? this.session.voices?.voiceCount ?? 3,
+        destCount: this.session.table?.destCount ?? this.destinations.count,
+      });
+      if (!available) { count += 1; continue; }
       routes.push({
         index: count, cc: table.get(`midicc.${count}.cc`), channel: table.get(`midicc.${count}.ch`), dest,
         depth: Math.round((table.get(`midicc.${count}.depth`) * 2 - 1) * 100),
