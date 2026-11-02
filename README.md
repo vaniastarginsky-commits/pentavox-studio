@@ -1,6 +1,6 @@
 # Pentavox Studio
 
-Configuration app for the Pentavox module (Alchemy Lab, STM32H750): engines, CV and MIDI routing, knob record, settings, presets, sampler, DX7 banks.
+Configuration app for the Pentavox module (Alchemy Lab, STM32H750): engines, CV and MIDI routing, knob record, settings, presets, sampler and DX7 banks. It also includes the standalone Slice Lab audio-pattern editor (Sound → Slice Lab).
 
 Open it: **https://vaniastarginsky-commits.github.io/pentavox-studio/**
 
