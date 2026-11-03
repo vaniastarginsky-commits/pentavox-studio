@@ -4775,7 +4775,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
   var App = class extends React.Component {
     constructor() {
       super(...arguments);
-      this.state = { project: newProject(), view: "pattern", sliceIndex: 0, playhead: 0, playing: false, loop: true, pan: false, zoom: 1, snap: 0.25, fxType: "roll", status: "Add an audio source and create your first pattern.", sidebar: false, railCollapsed: false, inspector: false, advanced: false, audioDrop: false, comparisonPreview: false };
+      this.state = { project: newProject(), view: "pattern", sliceIndex: 0, playhead: 0, playing: false, loop: true, pan: false, zoom: 1, snap: 0.25, fxType: "roll", status: "Add an audio source and create your first pattern.", sidebar: false, railCollapsed: false, inspector: false, advanced: false, audioDrop: false, comparisonPreview: false, seedValue: 1, probValue: 0.5 };
       this.undo = [];
       this.redo = [];
       this.saveTimer = null;
