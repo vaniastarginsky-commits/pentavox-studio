@@ -1,6 +1,6 @@
 import { potMapPages } from './potmap_vm.js';
 import { performanceView } from './performance_feedback.js';
-import { sourceKey as routeSourceKey } from './routing_vm.js';
+import { isExpanderPot, sourceKey as routeSourceKey } from './routing_vm.js';
 import { learnNextMessage } from '../model/midi_learn.js';
 
 // Exact destination symbols mirror panel_destination_map.h. Runtime/discrete
@@ -73,7 +73,7 @@ export function mountRoutingPanel(root,controller,mode,{onError=()=>{},onSuccess
     const targets=panelTargets(controller,layer,pageIndex),knobs=el('div','routing-panel-knobs');
     const inspector=el('section','routing-panel-inspector');const name=el('h3'),paired=el('p','routing-panel-pair'),explanation=el('p','routing-panel-explanation'),existingList=el('div','routing-panel-usages');
     const source=el('select');source.setAttribute('aria-label',mode==='midi'?'MIDI route to assign':'CV source to assign');
-    const sources=controller.view().groups.flatMap(g=>g.sources).filter(s=>s.source.key!=='panelpot');
+    const sources=controller.view().groups.flatMap(g=>g.sources).filter(s=>s.source.key!=='panelpot'&&!isExpanderPot(s.source));
     if(mode==='midi'){
       const routes=controller.midiRoutesView()?.routes??[];
       for(const r of routes)source.append(new Option(`Route ${r.index+1} · ${r.cc===128?'Velocity':`CC ${r.cc}`}${r.channel?` · Ch ${r.channel}`:''}${r.dest?' · assigned':''}`,String(r.index)));

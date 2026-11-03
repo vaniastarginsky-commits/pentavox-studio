@@ -28,6 +28,7 @@ export function pcm16FromWav(wav) {
     at = end + (size & 1);
   }
   if (!data || (channels !== 1 && channels !== 2) || bits !== 16 || !sampleRate || data.length % (channels * 2)) throw new RangeError('Converted WAV is not mono or stereo PCM16');
+  const marks=readWavMarkers(wav);if(marks?.slices.length>32)throw new RangeError('RAM upload transport supports at most 32 slices. Use a compatible SD workflow; no slice metadata was removed.');
   return { bytes: data, channels, sampleRate, frames: data.length / (channels * 2), rootNote, slices: sliceBlockFromWav(wav), breakBytes, beats };
 }
 
@@ -49,9 +50,10 @@ export function sliceBlockFromWav(wav) {
 export class SampleUploadClient {
   constructor(client, info, { retries = 3, busyDelayMs = 4 } = {}) { this.client = client; this.info = info; this.retries = retries; this.busyDelayMs = busyDelayMs; }
 
-  async upload({ voice, bytes, frames, channels, sampleRate, rootNote = 60, slices = null, breakBytes = null, beats = 0, onProgress = () => {}, signal }) {
+  async upload({ voice, bytes, frames, channels, sampleRate, rootNote = 60, slices = null, breakBytes = null, beats = 0, strictMetadata = false, onProgress = () => {}, signal }) {
     if (voice !== 0 && voice !== 1) throw new RangeError('Voice must be 1 or 2');
     if (!(bytes instanceof Uint8Array) || bytes.length !== frames * channels * 2) throw new RangeError('PCM byte count does not match the sample');
+    if(strictMetadata&&beats>0&&(!Number.isSafeInteger(beats)||beats>0xFFFF))throw new RangeError('RAM upload cannot represent this beat count; no audio was sent.');
     const totalCrc = crc32(bytes);
     const plainBegin = concat(Uint8Array.of(voice), u32(frames), Uint8Array.of(channels), u32(sampleRate), Uint8Array.of(rootNote), u32(totalCrc));
     let begin = slices ? concat(plainBegin, slices) : plainBegin;
@@ -63,7 +65,7 @@ export class SampleUploadClient {
         try { await this.client.request(SAMPLE_UPLOAD_COMMAND.BEGIN, begin); break; }
         catch (error) {
           // Firmware from before slice markers answers "bad arguments" to the longer frame: send the plain sample instead.
-          if (slicesSent && error instanceof HostLinkError && error.status === 2) { begin = plainBegin; slicesSent = false; continue; }
+          if (slicesSent && error instanceof HostLinkError && error.status === 2) { if(strictMetadata)throw new Error('Target rejected the slice metadata. Upload aborted rather than sending an unsliced sample.',{cause:error});begin = plainBegin; slicesSent = false; continue; }
           if (!(error instanceof HostLinkError) || error.status !== 9 || Date.now() >= beginDeadline) throw error;
           await delay(this.busyDelayMs);
         }
@@ -71,10 +73,11 @@ export class SampleUploadClient {
       // Break patterns ride along when the file has them and the slice table was accepted (they point at slices).
       let patternsSent = false;
       if (breakBytes && slicesSent) patternsSent = await this.#sendPatterns(breakBytes, signal);
+      if(strictMetadata&&breakBytes&&!patternsSent)throw new Error('Target cannot accept the native Break bank. Upload aborted without committing audio.');
       // The file's length in beats: Break then needs no Loop bars. An older firmware answers Unsupported / bad arguments and goes on without.
       if (beats > 0 && beats <= 0xFFFF) {
         try { await this.client.request(SAMPLE_UPLOAD_COMMAND.BEATS, Uint8Array.of(beats & 255, beats >> 8)); }
-        catch (error) { if (!(error instanceof HostLinkError && (error.status === 1 || error.status === 2))) throw error; }
+        catch (error) { if (strictMetadata || !(error instanceof HostLinkError && (error.status === 1 || error.status === 2))) throw error; }
       }
       const maximum = this.info.maxBody - 8;
       if (maximum <= 0) throw new Error('The module reports a HostLink frame size too small for sample upload');

@@ -1,4 +1,4 @@
-const TABS = new Set(['palette', 'dx7', 'wavetable', 'terrain', 'sampler', 'presets', 'routing', 'midi', 'locks', 'panel', 'settings', 'manual']);
+const TABS = new Set(['palette', 'dx7', 'wavetable', 'terrain', 'sampler', 'slice-lab', 'panel-designer', 'interface', 'presets', 'routing', 'midi', 'locks', 'panel', 'settings', 'manual']);
 
 export function parseRoute(hash = '') {
   const [name, ...parts] = String(hash).replace(/^#/, '').split('/');
@@ -33,8 +33,10 @@ export function mountNavigation({ links, panels, onChange, window = globalThis.w
   }
   const handlers = [...links].map(link => {
     const handler = event => {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button > 0) return;
-      event.preventDefault(); navigate(link.dataset.tab);
+      if (link.target === '_blank' || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button > 0) return;
+      event.preventDefault();
+      if (link.dataset.tab === 'interface') { window.dispatchEvent(new Event('pentavox-open-interface-settings')); return; }
+      navigate(link.dataset.tab);
     };
     link.addEventListener('click', handler);
     return [link, handler];

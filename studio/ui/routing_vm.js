@@ -6,6 +6,10 @@ const GROUPS = Object.freeze([
   ['route', 'Expander'],
 ]);
 
+export function isExpanderPot(source) {
+  return source?.key === 'route' && source.ch >= 6;
+}
+
 export function sourceKey(source) {
   return `${source.bank}:${source.key}:${source.ch}`;
 }

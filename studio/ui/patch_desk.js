@@ -1,13 +1,13 @@
 import { baseCvBuiltIn, baseCvFunction } from '../model/panel_pots.js';
 import { POTMAP_OFF } from '../model/potmap.js';
-import { sourceKey } from './routing_vm.js';
+import { isExpanderPot, sourceKey } from './routing_vm.js';
 import { panelGuidePages, panelTargets } from './routing_panel.js';
 import { ccLabel } from './midi_routing.js';
 import { learnNextMessage } from '../model/midi_learn.js';
 
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
 const label = source => source.key === 'basecv' ? `CV ${source.ch + 1}` : source.name;
-const tag = source => source.key === 'basecv' ? `J${source.ch + 3}` : source.key === 'panelpot' ? 'Panel' : 'Expander';
+const tag = source => source.key === 'basecv' ? `J${source.ch + 3}` : source.key === 'panelpot' ? 'Panel' : isExpanderPot(source) ? 'Expander pot' : 'Expander CV';
 const percent = n => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n)}%`;
 const groupLabel = name => name === 'Global' ? 'Master' : name;
 const groupColour = name => /^Plaits 1/.test(name) ? 'var(--rd-teal)' : /^Plaits [23]/.test(name) ? 'var(--rd-amber)' : name === 'FX' ? 'var(--rd-amber)' : 'var(--rd-blue)';
@@ -19,7 +19,7 @@ export function mountPatchDesk(root, controller, { onError = () => {}, onUndo = 
   const ui = { section: sectionFromHash(), source: null, route: undefined, midi: undefined, cc: 1, all: true, target: 'All', expanded: false, page: 0, layer: 0, mappingPage: 0, mappingPot: 0, additive: false, draft: null, picker: false, query: '', learning: null, learned: '', undo: null };
   let disposed = false;
   root.classList.add('patch-desk');
-  const sources = () => controller.view().groups.flatMap(g => g.sources).filter(e => ui.section === 'knobs' ? e.source.key === 'panelpot' : e.source.key !== 'panelpot');
+  const sources = () => controller.view().groups.flatMap(g => g.sources).filter(e => ui.section === 'knobs' ? e.source.key === 'panelpot' || isExpanderPot(e.source) : e.source.key !== 'panelpot' && !isExpanderPot(e.source));
   const cvRows = () => sources().flatMap(e => controller.rowsFor(e.source).map(r => ({ ...r, key: e.key, source: e.source, id: `${e.key}/${r.k}` })));
   const midiView = () => controller.midiRoutesView();
   const midiRows = () => (midiView()?.routes ?? []).filter(r => r.dest !== 0);
@@ -121,7 +121,7 @@ export function mountPatchDesk(root, controller, { onError = () => {}, onUndo = 
     });
   }
   function renderSources(host) {
-    const head = el('div', 'rd-section-head'); head.append(el('b', '', 'Sources'), el('small', '', ui.section === 'midi' ? 'MIDI' : ui.section === 'knobs' ? 'Panel' : 'CV')); host.append(head);
+    const head = el('div', 'rd-section-head'); head.append(el('b', '', 'Sources'), el('small', '', ui.section === 'midi' ? 'MIDI' : ui.section === 'knobs' ? 'Panel + expander pots' : 'CV')); host.append(head);
     const list = el('div', 'rd-source-list'); host.append(list);
     if (ui.section === 'midi') {
       const rows = midiRows(), controllers = rows.length ? [...new Set(rows.map(r => r.cc))] : [1, 74, 11, 128];
@@ -135,13 +135,13 @@ export function mountPatchDesk(root, controller, { onError = () => {}, onUndo = 
     } else {
       const entries = sources(), base = entries.filter(e => e.source.key !== 'route'), expander = entries.filter(e => e.source.key === 'route');
       const add = (entry, parent) => {
-        const b = button('', () => { ui.source = entry.key; ui.draft = null; const row = cvRows().find(r => r.key === entry.key); ui.route = row?.id ?? null; if (row) followDestination(row.destId); if (ui.section === 'knobs') ui.mappingPot = entry.source.ch; render(); }, 'rd-source'); b.classList.toggle('selected', ui.source === entry.key);
+        const b = button('', () => { ui.source = entry.key; ui.draft = null; const row = cvRows().find(r => r.key === entry.key); ui.route = row?.id ?? null; if (row) followDestination(row.destId); if (ui.section === 'knobs') { if (entry.source.key === 'panelpot') { ui.mappingPot = entry.source.ch; ui.additive = false; } else ui.additive = true; } render(); }, 'rd-source'); b.classList.toggle('selected', ui.source === entry.key);
         const copy = el('span', 'rd-source-name'); copy.append(el('b', '', label(entry.source)), el('small', '', entry.source.key === 'basecv' ? baseCvBuiltIn(entry.source.ch, controller.session.settings) || tag(entry.source) : tag(entry.source)));
         const ticks = el('span', 'rd-slots'); ticks.setAttribute('aria-label', `${entry.count} of 4 routes`); for (let i = 0; i < 4; i++) ticks.append(el('i', i < entry.count ? 'filled' : ''));
         b.append(el('i', 'rd-jack'), copy, ticks); parent.append(b);
       };
       base.forEach(e => add(e, list));
-      if (expander.length) { host.append(button(`Expander ${ui.expanded ? '−' : '+'} ${expander.length}`, () => { ui.expanded = !ui.expanded; render(); }, 'rd-expander')); if (ui.expanded) { const extra = el('div', 'rd-source-list'); expander.forEach(e => add(e, extra)); host.append(extra); } }
+      if (expander.length) { const label = expander.every(e => isExpanderPot(e.source)) ? 'Expander pots' : 'Expander CV'; host.append(button(`${label} ${ui.expanded ? '−' : '+'} ${expander.length}`, () => { ui.expanded = !ui.expanded; render(); }, 'rd-expander')); if (ui.expanded) { const extra = el('div', 'rd-source-list'); expander.forEach(e => add(e, extra)); host.append(extra); } }
       host.append(el('p', 'rd-source-context', ui.section === 'knobs' ? 'Mapping replaces a knob function. Additional routes add modulation.' : 'Up to four destinations per input. Built-in jack functions remain separate.'));
     }
   }

@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Pentavox Studio manual</title>
+<title>Cubreak Studio manual</title>
 <!-- The pages of Studio itself. The panel, buttons, jacks and the module's own help are built from the firmware
      descriptor by ui/manual.js; the sections below are slotted around them by id. -->
 
@@ -20,7 +20,7 @@
     <dt>Sampler</dt>
     <dd>Drop in audio (wav, mp3, flac, ogg, aiff), trim and normalize it, pick slot 1–4 and download <code>pentavox_samples.zip</code>. Copy its <code>SLOT0…SLOT3</code> folders to the SD card (FAT32), merging with what is there. You can cut a sample into up to 32 slices and build break patterns on them; the slice map and patterns are saved inside the WAV.</dd>
     <dt>Slice Lab</dt>
-    <dd>Open the independent pattern editor from Sound. It preserves source-frame boundaries and beat-based events; it is an authoring/reference tool, not a direct firmware uploader. Use <strong>Compare WAV</strong> to make a separate variation with another audio file while keeping the original source and pattern.</dd>
+    <dd>Open the integrated pattern editor from Sound → Slice Lab. It preserves source-frame boundaries and beat-based events; it is an authoring/reference tool, not a direct firmware uploader. Use <strong>Compare WAV</strong> to make a separate variation with another audio file while keeping the original source and pattern.</dd>
     <dt>Engines</dt>
     <dd>Each voice has 24 engines: three banks of eight, picked from a library of 94 on the right. Drag an engine from the library into a slot to put it there (slots can be dragged to swap places); the play button previews an engine in the browser. With a module connected, clicking a slot makes the selected voice play that engine. Stereo, Sync In and the DX7 bank are slot properties applied at build time. The meter at the bottom estimates how much code memory the set needs: when it runs red, <strong>Build</strong> is disabled and <strong>Suggest replacements</strong> lists lighter engines from the same category. A new set only takes effect after Build and Flash (see below).</dd>
     <dt>CV routing</dt>

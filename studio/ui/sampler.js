@@ -20,7 +20,7 @@ function button(text, className = '') { const node = el('button', className, tex
 function seconds(value) { return `${value.toFixed(value < 10 ? 2 : 1)} s`; }
 function download(bytes, name, type) { const url = URL.createObjectURL(new Blob([bytes], { type })); const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 
-export function mountSampler(root, { onError = (error) => console.error(error), onSuccess = () => {}, getClient = () => null, getInfo = () => null, getSampleSlotCount = () => 4, getLoopIo = () => false, onOpenSdTab = () => {} } = {}) {
+export function mountSampler(root, { onError = (error) => console.error(error), onSuccess = () => {}, getClient = () => null, getInfo = () => null, getSampleSlotCount = () => 4, getLoopIo = () => false, onOpenSdTab = () => {}, onReturnSamples = () => { location.hash='#slice-lab'; } } = {}) {
   const state = { items: [], starts: [null, null, null, null], importing: false, exporting: false, selected: null, upload: null, card: null, cardInfo: null, cardFiles: [[], [], [], []], cardLoading: false, cardProblem: '', confirming: null, generation: 0 };
   // The looper image keeps its loops in /LOOPS (two loop slots, files numbered by the module) instead of the sampler's SLOT folders.
   const looper = () => Boolean(getLoopIo());
@@ -79,6 +79,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   }
 
   async function wavFor(item, extra = {}) {
+    if(item.frozenWav)return item.frozenWav.slice(); // Never re-encode a Samples delivery snapshot.
     const audio = await prepareAudio(item.audio, item);
     const cut = item.slices ? exportSlices(item.slices.markers, item.slices.labels, item.trimStart, item.trimEnd, TARGET_SAMPLE_RATE) : { frames: [], labels: [] };
     return encodePcm16Wav(audio, { bpm: Number(item.bpm), beats: Number(item.beats), slices: cut.frames, labels: cut.labels, oneShot: item.slices?.oneShot ?? false, playMode: item.slices?.playMode ?? 0, step: item.slices?.step ?? 0, playFilter: item.slices?.playFilter ?? 0, breakBank: hasBreakPatterns(item.breakBank) ? item.breakBank : null, ...extra });
@@ -90,8 +91,10 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const controller = new AbortController(); state.upload = { item, voice, progress: 0, controller }; hooks.status();
     const endJob = beginLinkJob(`Sending ${item.name}`);
     try {
-      const pcm = pcm16FromWav(await wavFor(item));
-      const result = await new SampleUploadClient(client, info).upload({ voice, ...pcm, signal: controller.signal, onProgress: (progress) => { if (state.upload?.controller === controller) { state.upload.progress = progress; hooks.status(); } } });
+      const wav=await wavFor(item),metadata=readWavMarkers(wav);
+      if(item.frozenWav&&(metadata?.slices.length>1||metadata?.metadata.pvxp||metadata?.beats>0||metadata?.oneShot||metadata?.playMode>0||metadata?.playFilter>0||metadata?.timeNumerator!==4||metadata?.timeDenominator!==4))throw new Error('RAM delivery blocked: the available Compact firmware accepts but ignores sampler slice metadata. Its acknowledgement does not prove that cues, Break patterns or tempo survived. Use the exact SD snapshot only after target verification.');
+      const pcm = pcm16FromWav(wav);
+      const result = await new SampleUploadClient(client, info).upload({ voice, ...pcm, strictMetadata: true, signal: controller.signal, onProgress: (progress) => { if (state.upload?.controller === controller) { state.upload.progress = progress; hooks.status(); } } });
       const sliced = pcm.slices ? (result?.slicesSent ? ` with ${pcm.slices[5]} slices` : ' (this firmware cannot take slice markers: sent without them)') : '';
       const patterns = pcm.breakBytes && result?.slicesSent ? (result?.patternsSent ? ' and its break patterns' : ' (this firmware cannot take break patterns: sent without them)') : '';
       onSuccess(`Voice ${voice + 1} now plays ${item.name}${sliced}${patterns} (in memory, lost at power-off)`);
@@ -111,6 +114,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const current = plan(); const checked = validation();
     if (!checked.valid) return onError(new Error(checked.errors[0]));
     const chosen = current.filter((_, index) => items.includes(state.items[index]));
+    if(items.some(item=>item.frozenWav)&&!confirm('Write frozen Samples snapshot(s) to SD at the numbered paths shown below? Files already written before Cancel cannot be rolled back; the target firmware has not been verified for this WAV.'))return;
     const files = new SdFilesClient(client, info); const controller = new AbortController();
     state.card = { label: '', progress: 0, controller }; renderCardBar(); updateHeading();
     let written = 0; let lastRate = ''; const skipped = [];
@@ -127,7 +131,8 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
       if (skipped.length) onError(new Error(`${skipped.length} file${skipped.length === 1 ? ' was' : 's were'} not written because the name already exists on the card (${skipped.slice(0, 3).join(', ')}). Press “Use free numbers from card” and write again.`));
       if (written) { onSuccess(`${written} file${written === 1 ? '' : 's'} written to the card; the module re-reads its libraries now`); showResult(`Written ${written} file${written === 1 ? '' : 's'}. Last file: ${lastRate}`); }
     } catch (error) {
-      if (error?.name !== 'AbortError') onError(new Error(describeFsError(error), { cause: error }));
+      if (error?.name !== 'AbortError') onError(new Error(`${describeFsError(error)}. ${written} file(s) may already be written; inspect/rescan card before retrying.`, { cause: error }));
+      else if(written)onError(new Error(`Transfer cancelled after ${written} completed file(s). Inspect the card before retrying; no rollback was promised.`));
     } finally { endJob(); state.card = null; renderCardBar(); updateHeading(); if (written) await loadCard(); }
   }
 
@@ -352,6 +357,12 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const card = el('article', 'sample-card sx-card'); const head = el('header', 'sample-head sx-chead'); const title = el('div', 'sample-title');
     title.append(el('strong', '', item.name), el('span', '', `${seconds(item.duration)} · ${item.audio.channels.length} ch · ${item.audio.sampleRate.toLocaleString('en-US')} Hz`)); head.append(title); card.append(head);
     const body = el('div', 'se-body'); card.append(body);
+    if(item.frozenWav){
+      body.append(el('p','sx-hint','Frozen Samples delivery snapshot. Audio, cues, labels and native Break bank cannot be edited here. Return to Samples to change the source and stage a new snapshot. Staging does not send to hardware. RAM is blocked when the snapshot carries cues, tempo, native Break or unsupported settings: this Compact firmware acknowledges but ignores slice metadata. Plain PCM-only snapshots may use RAM with explicit confirmation. SD compatibility must be checked on the target. /LOOPS receives these exact bytes, without adding an origin/pvxo tag.'));
+      const back=button('Return to Samples');back.addEventListener('click',onReturnSamples);const save=button('Download exact snapshot');save.addEventListener('click',()=>download(item.frozenWav,item.name+'.wav','audio/wav'));body.append(back,save);
+      const slot=document.createElement('select');slot.setAttribute('aria-label','Snapshot SD folder');for(let i=0;i<slotCount();i++){const option=el('option','',`Slot ${i+1}`);option.value=i;option.selected=item.slot===i;slot.append(option);}slot.addEventListener('change',()=>{item.slot=Number(slot.value);refreshSide();});if(!looper())body.append(field('SD folder',slot));
+      const actions=el('div','bk-row');body.append(actions);hooks.status=()=>{actions.replaceChildren();const active=Boolean(state.upload||state.card);for(let voice=0;voice<(getInfo()?.samplerVoices??1);voice++){if(voice>1)break;const send=button(`Send snapshot to RAM ${voice+1}`);send.disabled=active||!getClient()||item.slices.markers.length+1>32||Boolean(item.slices.markers.length||item.breakBank||Number(item.beats)>0||item.slices.oneShot||item.slices.playMode||item.slices.playFilter);send.addEventListener('click',()=>{if(confirm('Send this plain PCM snapshot to RAM? It is volatile and no device compatibility has been checked on real hardware.'))sendToVoice(item,voice);});actions.append(send);}if(!looper()){const put=button('Write selected snapshot to SD');put.disabled=active||!getClient();put.addEventListener('click',()=>writeToCard([item]));actions.append(put);}if(looper()){const put=button('Write snapshot to /LOOPS');put.disabled=active||!getClient();put.addEventListener('click',()=>putInLoops(item));actions.append(put);}if(active){const cancel=button('Cancel transfer');cancel.addEventListener('click',()=>{state.upload?.controller.abort();state.card?.controller.abort();});actions.append(cancel,el('span','',`${Math.round((state.upload?.progress??state.card?.progress??0)*100)}%`));}};hooks.status();editorHost.append(card);return;
+    }
     const selection = () => ({ start: item.trimStart, end: item.trimEnd });
     editor = createWaveEditor(item, { getContext: context, onError, onChange: () => { hooks.fields(); refreshSide(); } }); body.append(editor.el);
     sliceBar = createSliceBar(item, { editor, onChange: () => { hooks.fields(); renderList(); breakPanel?.refresh(); } });
@@ -629,6 +640,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   const themeWatch = new MutationObserver(() => refreshSide()); themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
   updateHeading(); renderList(); renderEditor(); renderPlan();
   const dispose = () => { ++state.generation; state.upload?.controller.abort(); state.card?.controller.abort(); breakPanel?.destroy(); sliceBar?.destroy(); editor?.destroy(); themeWatch.disconnect(); root.replaceChildren(); };
+  dispose.stageArtifact = async file => {if(state.upload||state.card||state.importing)throw new Error('Finish the current sampler operation before staging a snapshot.');const bytes=new Uint8Array(await file.arrayBuffer()),marks=readWavMarkers(bytes);if(!marks||marks.sampleRate!==48000||marks.frames<=0||marks.frames>1440000||marks.slices.length>64)throw new Error('Invalid prepared Samples WAV.');const item=await decodedFile(file);item.normalize=false;item.frozenWav=bytes;item.name=file.name.replace(/\.wav$/i,'');state.items.push(item);state.selected=item;renderEditor();refreshSide();};
   dispose.show = () => loadCard();
   dispose.refreshConnection = () => { ++state.generation; state.cardInfo = null; state.cardFiles = Array.from({ length: slotCount() }, () => []); state.starts = Array.from({ length: slotCount() }, () => null); for (const item of state.items) if (item.slot >= slotCount()) item.slot = 0; state.cardProblem = ''; hooks.status(); loadCard(); };
   return dispose;

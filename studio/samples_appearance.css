@@ -1,0 +1,50 @@
+/* Studio's global appearance bridge for the embedded Samples application.
+   Keep audio/data colors (waveforms, slice accents, FX categories) semantic; theme UI chrome. */
+:root[data-studio-appearance="custom"] { background: var(--bg); color: var(--text); font-family: var(--studio-font,system-ui,sans-serif); }
+:root[data-studio-appearance="custom"] .app {
+  --focus: var(--accent);
+  --border: var(--line);
+  --top: var(--surface);
+  --panel: var(--surface);
+  --panel-hi: var(--surface-2);
+  --teal: var(--accent);
+  color: var(--text);
+  background: var(--bg);
+}
+:root[data-studio-appearance="custom"] :is(.top,.samples-views,.sidebar,.source-panel,.toolbar,.inspector,footer,.pattern-toolbar,.slice-bank,.delivery-choices article,.delivery-boundary,.pattern-editor,.pattern-body,.pattern-scroll,.clip-scroll,.piano-scroll,.clip-lane,.piano-grid,.pattern-fx,.fx-controls,.source-tabs,.track-heads,.arr-body,.inspector-body,.side-section,.source-preparation,.derived-tools,.slice-labels,.preparation-status,.meta,.clip-label-header,.clip-label,.clip-ruler,.piano-corner,.piano-head,.slice-lane,.piano-cell,.pattern-bar-label,.pattern-footer,.fx-label,.track-label,.track-rule,.pattern-step) {
+  color: var(--text);
+  border-color: var(--line);
+}
+:root[data-studio-appearance="custom"] :is(.top,.samples-views,.sidebar,.source-panel,.toolbar,.inspector,footer,.pattern-toolbar,.slice-bank,.pattern-editor,.pattern-body,.pattern-scroll,.clip-scroll,.piano-scroll,.pattern-fx,.fx-controls,.track-heads,.arr-body,.side-section,.source-preparation,.derived-tools,.slice-labels,.preparation-status,.meta,.clip-label-header,.clip-label,.clip-ruler,.piano-corner,.piano-head,.slice-lane,.piano-cell,.pattern-bar-label,.pattern-footer,.fx-label,.track-label,.track-rule,.pattern-step) { background-color: var(--surface); }
+:root[data-studio-appearance="custom"] :is(.clip-lane,.piano-grid) { background-color: var(--surface-2); }
+:root[data-studio-appearance="custom"] .entry.selected { background: var(--accent-soft); border-color: var(--accent); color: var(--text); box-shadow: inset 3px 0 var(--accent); }
+:root[data-studio-appearance="custom"] .entry.selected :is(.entry-main,strong) { color: var(--text); }
+:root[data-studio-appearance="custom"] .entry.selected small { color: var(--muted); }
+:root[data-studio-appearance="custom"] :is(.samples-views,.toolbar,.pattern-toolbar,.clip-label-header,.clip-ruler,.piano-corner,.piano-head,.pattern-bar-label,.track-rule,.fx-label) { background-color: var(--surface-2); }
+:root[data-studio-appearance="custom"] :is(.clip-scroll,.piano-scroll,.pattern-scroll,.arr-body) { background-color: var(--bg); }
+:root[data-studio-appearance="custom"] :is(button,input,select) { background-color: var(--surface-2); color: var(--text); border-color: var(--line); border-radius: var(--studio-radius,6px); font-family: var(--studio-font,system-ui,sans-serif); }
+:root[data-studio-appearance="custom"] :is(input:not([type="checkbox"]):not([type="range"]),select) { background-color: var(--bg); }
+:root[data-studio-appearance="custom"] :is(.preparation-fields label,.sampler-settings>label,.preparation-actions label,.preparation-actions .muted,.preparation-body .hint,.slice-labels,.slice-labels>div label,.derived-tools label,.derived-tools>.hint,.inspector .field,.meta,.track-rule,.fx-label .hint,.pattern-step-number,.clip-label small,.clip-ruler span,.piano-corner,.piano-head,.pattern-bar-label,.pattern-footer,.fx-label) { color: var(--muted); }
+:root[data-studio-appearance="custom"] .preparation-status { color: var(--text); }
+:root[data-studio-appearance="custom"] .samples-views button[aria-current="page"],
+:root[data-studio-appearance="custom"] .samples-views button[aria-pressed="true"],
+:root[data-studio-appearance="custom"] .source-entry.selected { background: var(--accent-soft); border-color: var(--accent); color: var(--text); box-shadow: inset 0 -2px var(--accent); }
+:root[data-studio-appearance="custom"] .samples-views button small { color: var(--muted); }
+:root[data-studio-appearance="custom"] button.primary,
+:root[data-studio-appearance="custom"] .app .primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+:root[data-studio-appearance="custom"] .source-preparation summary { color: var(--text); }
+:root[data-studio-appearance="custom"] .derived-tools input { background: var(--bg); color: var(--text); }
+:root[data-studio-appearance="custom"] .fx-row .clip-label { color: var(--muted) !important; }
+:root[data-studio-appearance="custom"] .clip-lane,
+:root[data-studio-appearance="custom"] .piano-grid { background-image: linear-gradient(90deg,color-mix(in srgb,var(--line) 65%,transparent) 1px,transparent 1px); }
+:root[data-studio-appearance="custom"] .clip-label.selected,
+:root[data-studio-appearance="custom"] .slice-lane.selected,
+:root[data-studio-appearance="custom"] .piano-cell:hover { background-color: var(--accent-soft); }
+:root[data-studio-appearance="custom"] .pattern-step { background: var(--surface-2); color: var(--text); }
+:root[data-studio-appearance="custom"] .pattern-step.empty { background: var(--bg); color: var(--muted); }
+:root[data-studio-appearance="custom"] .pattern-step strong { color: var(--text); }
+:root[data-studio-appearance="custom"] .pattern-step.selected { outline-color: var(--accent); }
+:root[data-studio-appearance="custom"] .pattern-fx summary,
+:root[data-studio-appearance="custom"] .fx-controls { background-color: var(--surface-2); color: var(--text); }
+:root[data-studio-appearance="custom"] .source-drop-hint { color: var(--text); border-color: var(--accent); }
+:root[data-studio-appearance="custom"] :is(.source-wave-wrap,.timeline-canvas,.pattern-steps,.clip-lane,.piano-grid,.lock-shape) { color-scheme: dark; }

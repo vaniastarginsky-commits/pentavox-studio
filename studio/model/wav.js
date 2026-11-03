@@ -97,7 +97,7 @@ export function acidFlags({ hasCue, oneShot, playMode = 0, step = 0, filter = 0 
   if (hasCue && modeOk && (mode >= 1 || only >= 1)) flags |= SLICE_PLAY_VALID | (mode << 8) | (code << 11) | (only << 15);
   return flags;
 }
-export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, slices = [], oneShot = false, playMode = 0, step = 0, playFilter = 0, labels = [], breakBank = null, origin = 0 } = {}) {
+export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, timeNumerator = 4, timeDenominator = 4, slices = [], oneShot = false, playMode = 0, step = 0, playFilter = 0, labels = [], breakBank = null, origin = 0 } = {}) {
   const channels = audio.channels.length;
   if (channels !== 1 && channels !== 2) throw new RangeError('A WAV file must have one or two channels');
   const frames = audio.channels[0]?.length ?? 0;
@@ -118,7 +118,7 @@ export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, slices = [], 
   const typesSize = hasTypes ? 8 + ((2 + types.length + 1) & ~1) : 0;
   const bankBytes = hasCue && breakBank ? encodeBank(breakBank) : null;   // `pvxp`: Break patterns, only with slices to point at
   const bankSize = bankBytes ? 8 + ((bankBytes.length + 1) & ~1) : 0;
-  const hasAcid = hasTempo || hasCue;
+  const hasAcid = hasTempo || hasCue || rootNote !== 60 || timeNumerator !== 4 || timeDenominator !== 4;
   const cueSize = hasCue ? 12 + 24 * cue.length : 0;
   const originSize = origin === 1 || origin === 2 ? 10 : 0;   // `pvxo`: where the file came from (2 = Studio, 1 = recorded on the module), for the module's loop picker
   const headerSize = 12 + 24 + (hasAcid ? 32 : 0) + originSize + cueSize + typesSize + bankSize + 8;
@@ -134,7 +134,7 @@ export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, slices = [], 
     writeTag(bytes, offset, 'acid'); view.setUint32(offset + 4, 24, true);
     view.setUint32(offset + 8, acidFlags({ hasCue, oneShot, playMode, step, filter: playFilter }), true); view.setUint16(offset + 12, rootNote, true); view.setUint16(offset + 14, 0, true);
     view.setUint32(offset + 16, 0, true); view.setUint32(offset + 20, hasTempo ? Number(beats) : 0, true);
-    view.setUint16(offset + 24, 4, true); view.setUint16(offset + 26, 4, true); view.setFloat32(offset + 28, hasTempo ? Number(bpm) : 0, true);
+    view.setUint16(offset + 24, timeNumerator, true); view.setUint16(offset + 26, timeDenominator, true); view.setFloat32(offset + 28, hasTempo ? Number(bpm) : 0, true);
     offset += 32;
   }
   if (originSize) {
@@ -175,15 +175,23 @@ export function readWavMarkers(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const tag = (o) => String.fromCharCode(bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3]);
   if (tag(0) !== 'RIFF' || tag(8) !== 'WAVE') return null;
-  const info = { sampleRate: 0, channels: 0, frames: 0, slices: [], oneShot: false, playMode: 0, step: 0, playFilter: 0, labels: [], bpm: 0, beats: 0, breakBank: null };
+  const info = { sampleRate: 0, channels: 0, blockAlign: 0, formatTag: 0, factFrames: 0, frames: 0, slices: [], oneShot: false, playMode: 0, step: 0, playFilter: 0, rootNote: 60, timeNumerator: 4, timeDenominator: 4, unsupportedAcidFlags: 0, labels: [], bpm: 0, beats: 0, breakBank: null, metadata: { acid: false, cue: false, pvxt: false, pvxp: false, pvxo: false, unknownChunks: [] }, warnings: [] };
   let typeBytes = null;
   let pos = 12;
   while (pos + 8 <= bytes.length) {
     const id = tag(pos); const size = view.getUint32(pos + 4, true); const body = pos + 8; const avail = Math.min(size, bytes.length - body);
-    if (id === 'fmt ' && avail >= 16) { info.channels = view.getUint16(body + 2, true); info.sampleRate = view.getUint32(body + 4, true); }
+    const metadataKey = id.trim(); if (metadataKey in info.metadata) info.metadata[metadataKey] = true;
+    if (!['fmt ','fact','data','acid','cue ','pvxt','pvxp','pvxo'].includes(id) && !info.metadata.unknownChunks.includes(id)) info.metadata.unknownChunks.push(id);
+    if (avail < size) info.warnings.push(`Truncated ${id} chunk.`);
+    if (id === 'fmt ' && avail >= 16) { info.formatTag = view.getUint16(body, true); info.channels = view.getUint16(body + 2, true); info.sampleRate = view.getUint32(body + 4, true); info.blockAlign = view.getUint16(body + 12, true); }
+    else if (id === 'fact' && avail >= 4) info.factFrames = view.getUint32(body, true);
     else if (id === 'acid' && avail >= 4) {
       const flags = view.getUint32(body, true); info.oneShot = (flags & 1) === 1;
-      if ((flags & SLICE_PLAY_VALID) !== 0) { const mode = (flags >> 8) & 7; const step = (flags >> 11) & 7; if (mode <= 5 && step <= 4) { info.playMode = mode; info.step = step; info.playFilter = (flags >> 15) & 3; } }
+      const knownFlags = 1 | SLICE_PLAY_VALID | (7 << 8) | (7 << 11) | (3 << 15); info.unsupportedAcidFlags = (flags & ~knownFlags) >>> 0;
+      if (info.unsupportedAcidFlags) info.warnings.push(`Unsupported ACID flag bits 0x${info.unsupportedAcidFlags.toString(16)}; original bytes remain available.`);
+      if (avail >= 6) info.rootNote = view.getUint16(body + 4, true);
+      if (avail >= 20) { info.timeNumerator = view.getUint16(body + 16, true); info.timeDenominator = view.getUint16(body + 18, true); }
+      if ((flags & SLICE_PLAY_VALID) !== 0) { const mode = (flags >> 8) & 7; const step = (flags >> 11) & 7; const filter = (flags >> 15) & 3; if (mode <= 5 && step <= 4 && filter <= 3) { info.playMode = mode; info.step = step; info.playFilter = filter; } else info.warnings.push('Unsupported ACID slice-play flags; original bytes remain available.'); }
       if (avail >= 24) { info.beats = view.getUint32(body + 12, true); const bpm = view.getFloat32(body + 20, true); info.bpm = Number.isFinite(bpm) && bpm > 0 ? bpm : 0; }
     } else if (id === 'cue ' && avail >= 4) {
       const count = Math.min(view.getUint32(body, true), Math.floor((avail - 4) / 24));
@@ -192,12 +200,22 @@ export function readWavMarkers(bytes) {
       const n = Math.min(bytes[body + 1], avail - 2); typeBytes = Array.from(bytes.subarray(body + 2, body + 2 + n));
     } else if (id === 'pvxp' && avail >= 3) {
       info.breakBank = decodeBank(bytes.subarray(body, body + avail));
-    } else if (id === 'data' && info.channels > 0) info.frames = Math.floor(avail / (info.channels * 2));
+      if (!info.breakBank) info.warnings.push('Unsupported or malformed pvxp Break bank; original bytes remain available.');
+    } else if (id === 'data' && info.channels > 0 && info.blockAlign > 0) {
+      if (info.formatTag === 1 || info.formatTag === 3) info.frames = Math.floor(avail / info.blockAlign);
+      else if (info.factFrames > 0) info.frames = info.factFrames;
+    }
     pos = body + size + (size & 1);
   }
   const raw = info.slices.length; info.slices = [...new Set(info.slices)].sort((a, b) => a - b);
-  // The labels belong to the cue points as Studio wrote them (sorted, unique): any other count means a foreign edit, so ignore them.
+  const inRange = info.frames>0?info.slices.filter((frame) => frame < info.frames):info.slices;
+  if (info.frames>0&&inRange.length !== info.slices.length) info.warnings.push('Cue points outside decoded audio were ignored; original bytes remain available.');
+  if (!info.frames&&info.slices.length) info.warnings.push('WAV frame count could not be verified from its sample format; cue points will be checked against the decoded audio.');
+  info.slices = inRange;
+  // Labels are positional and only trusted when cues were unique and complete.
   if (typeBytes && raw === info.slices.length && typeBytes.length === info.slices.length) info.labels = typeBytes.map(maskLabel);
+  if (info.metadata.pvxt && !info.labels.length) info.warnings.push('pvxt labels could not be matched to all cue points; original bytes remain available.');
+  if (info.metadata.unknownChunks.length) info.warnings.push(`Unrecognized WAV chunks (${info.metadata.unknownChunks.join(', ')}); preserved in the original file only.`);
   return info;
 }
 

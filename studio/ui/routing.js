@@ -1,5 +1,6 @@
 import { placePopover } from './popover_place.js';
 import { baseCvBuiltIn, baseCvFunction, builtInSummary, panelPotBuiltIn } from '../model/panel_pots.js';
+import { isExpanderPot } from './routing_vm.js';
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -23,15 +24,21 @@ function sourceTitle(source) {
 
 // Group heading: a short title plus a one-line hint, as the console shows it.
 const GROUP_HINTS = Object.freeze({
-  basecv: 'Jacks J3\u2013J8', panelpot: 'Pot 1\u20136 add to the knob you move', route: 'Exp CV 1\u20136 and Exp Pot 1\u20133',
+  basecv: 'Jacks J3\u2013J8', panelpot: 'Pot 1\u20136 add to the knob you move', route: 'Exp CV 1\u20136',
 });
 const groupTitle = (title) => title.replace(/\s*\(.*\)\s*$/, '');
 
 export function routingSections(groups) {
-  return {
-    cv: groups.map((group) => ({ ...group, sources: group.sources.filter((entry) => entry.source.key !== 'panelpot') })).filter((group) => group.sources.length),
-    knobs: groups.map((group) => ({ ...group, sources: group.sources.filter((entry) => entry.source.key === 'panelpot') })).filter((group) => group.sources.length),
-  };
+  const cv = groups.map((group) => ({ ...group, sources: group.sources.filter((entry) => entry.source.key !== 'panelpot' && !isExpanderPot(entry.source)) })).filter((group) => group.sources.length);
+  const knobs = groups.flatMap((group) => {
+    const panel = group.sources.filter((entry) => entry.source.key === 'panelpot');
+    const expanderPots = group.sources.filter((entry) => isExpanderPot(entry.source));
+    return [
+      ...(panel.length ? [{ ...group, sources: panel }] : []),
+      ...(expanderPots.length ? [{ ...group, title: 'Expander pots', sources: expanderPots }] : []),
+    ];
+  });
+  return { cv, knobs };
 }
 
 export function routeSummary(source, rows, destinations) {
@@ -261,7 +268,9 @@ export function mountRouting(root, controller, { potMapHost = null } = {}) {
       for (const group of sections[key]) {
         const list = element('div', 'cc-slist');
         for (const entry of group.sources) list.append(sourceCard(entry, view));
-        section.append(card(key === 'knobs' ? 'Additional knob routes' : groupTitle(group.title), GROUP_HINTS[group.sources[0]?.source.key] ?? '', list));
+        const firstSource = group.sources[0]?.source;
+        const hint = isExpanderPot(firstSource) ? 'Exp Pot 1\u20133' : GROUP_HINTS[firstSource?.key] ?? '';
+        section.append(card(key === 'knobs' ? `${group.title === 'Expander pots' ? 'Expander pots' : 'Additional knob routes'}` : groupTitle(group.title), hint, list));
       }
       root.append(section);
     }
