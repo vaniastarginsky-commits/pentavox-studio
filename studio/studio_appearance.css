@@ -1,5 +1,6 @@
 .panel-designer-frame { display: block; width: calc(100% + 48px); height: calc(100vh - 110px); min-height: 640px; margin: -24px; }
-.studio-appearance-launch { max-width: 900px; display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 18px 2px; }
+.studio-appearance-launch { max-width: 900px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 22px; padding: 18px 2px; }
+.appearance-sharing-note { flex: 1 0 100%; margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.5; }
 .appearance-current { min-width: 0; display: flex; align-items: center; gap: 12px; }
 .appearance-current-swatch { width: 46px; height: 38px; flex: none; position: relative; background: var(--current-bg, var(--surface-2)); border: 1px solid var(--line); }
 .appearance-current-swatch::after { content: ""; position: absolute; right: 4px; bottom: 5px; left: 4px; height: 4px; background: var(--current-accent, var(--accent)); }

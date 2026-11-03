@@ -82,7 +82,7 @@ export function mountStudioAppearance(host, frame) {
     const state = read(); const current = state ? engine.PRESETS[state.preset] : null;
     const title = current?.label ?? 'Studio default';
     const colors = current ? `--current-bg:${current.swatchBg};--current-accent:${current.swatchAccent}` : '';
-    host.innerHTML = `<section class="studio-appearance-launch"><div class="appearance-current"><span class="appearance-current-swatch" style="${colors}" aria-hidden="true"></span><div><strong>${title}</strong><small>${state ? 'Global appearance preset' : 'Use the Studio and system defaults'}</small></div></div><div class="appearance-launch-actions"><button type="button" class="primary" data-action="open">Customize appearance</button>${state ? '<button type="button" data-action="reset">Studio default</button>' : ''}</div></section>`;
+    host.innerHTML = `<section class="studio-appearance-launch"><div class="appearance-current"><span class="appearance-current-swatch" style="${colors}" aria-hidden="true"></span><div><strong>${title}</strong><small>${state ? 'Global appearance preset' : 'Use the Studio and system defaults'}</small></div></div><div class="appearance-launch-actions"><button type="button" class="primary" data-action="open">Customize appearance</button>${state ? '<button type="button" data-action="reset">Studio default</button>' : ''}</div><p class="appearance-sharing-note">Changes apply to Studio, Samples, and Panel Designer, and are saved in this browser.</p></section>`;
   }
   function reset() {
     try { localStorage.removeItem(KEY); } catch {}

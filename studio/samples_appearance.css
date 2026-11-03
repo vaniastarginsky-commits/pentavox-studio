@@ -17,6 +17,10 @@
 }
 :root[data-studio-appearance="custom"] :is(.top,.samples-views,.sidebar,.source-panel,.toolbar,.inspector,footer,.pattern-toolbar,.slice-bank,.pattern-editor,.pattern-body,.pattern-scroll,.clip-scroll,.piano-scroll,.pattern-fx,.fx-controls,.track-heads,.arr-body,.side-section,.source-preparation,.derived-tools,.slice-labels,.preparation-status,.meta,.clip-label-header,.clip-label,.clip-ruler,.piano-corner,.piano-head,.slice-lane,.piano-cell,.pattern-bar-label,.pattern-footer,.fx-label,.track-label,.track-rule,.pattern-step) { background-color: var(--surface); }
 :root[data-studio-appearance="custom"] :is(.clip-lane,.piano-grid) { background-color: var(--surface-2); }
+:root[data-studio-appearance="custom"] .app :is(.delivery-choices article,.delivery-boundary) { background: var(--surface) !important; color: var(--text); border-color: var(--line); }
+:root[data-studio-appearance="custom"] .app .native-break-editor .bk-step:not(.ev),
+:root[data-studio-appearance="custom"] .app .native-break-editor .bk-key { background: var(--panel-hi) !important; color: var(--text) !important; border-color: var(--line) !important; }
+:root[data-studio-appearance="custom"] .app .native-break-editor .bk-key.black { background: color-mix(in srgb,var(--panel-hi) 75%,var(--text)) !important; }
 :root[data-studio-appearance="custom"] .entry.selected { background: var(--accent-soft); border-color: var(--accent); color: var(--text); box-shadow: inset 3px 0 var(--accent); }
 :root[data-studio-appearance="custom"] .entry.selected :is(.entry-main,strong) { color: var(--text); }
 :root[data-studio-appearance="custom"] .entry.selected small { color: var(--muted); }
