@@ -152,6 +152,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .seed-sequence-table td:nth-child(3){min-width:145px}
 .seed-kind{display:inline-block;min-width:62px;margin-right:7px;padding:3px 5px;border-radius:4px;background:#273849;color:#bbd2dc;font-size:8px;text-align:center;text-transform:uppercase;letter-spacing:.04em}
 .seed-base{background:#24504b;color:#a4e3d4}.seed-variation{background:#3c3558;color:#d5c4ff}.seed-fill{background:#5a3d31;color:#ffd0ad}
+.seed-fill-candidate,.seed-fill-draw{display:block;margin-top:4px;color:#ffd0ad;font-size:9px;line-height:1.4}
 .seed-sequence-message,.seed-sequence-warning{padding:10px;border-left:3px solid #eaba80;background:#30291f;color:#f0d6ad;font-size:11px;line-height:1.5}
 .seed-sequence-footnote{margin:9px 0 0;color:var(--muted);font-size:10px;line-height:1.55}
 .delivery-choices article,.delivery-boundary{padding:18px;border:1px solid var(--border);border-radius:10px;background:#14212c}
@@ -4812,16 +4813,57 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     }
     return draws;
   }
-  function applyProbability(sequence, probability, patternTypes, draws = Array(sequence.length).fill(0.5), fillOpportunities = Array(sequence.length).fill(true)) {
+  function buildSeedSequence(seed, patternNames, patternTypes, probability, length = 16, patternSteps = Array(patternNames.length).fill(32), intervalBars = 16) {
+    const nonFillIndices = patternTypes.map((type, index) => type === "fill" ? -1 : index).filter((index) => index >= 0);
+    const baseIndex = patternTypes.findIndex((type) => type === "base");
+    const fallbackIndex = baseIndex >= 0 ? baseIndex : nonFillIndices[0] ?? 0;
+    const primaryPool = nonFillIndices.length ? nonFillIndices : [fallbackIndex];
+    const candidateIndices = generateSeedSequence(seed, primaryPool.length, length).map((poolIndex) => primaryPool[poolIndex] ?? fallbackIndex);
+    const probabilityDraws = generateProbabilityDraws(seed, length);
+    const fillProbabilityDraws = generateProbabilityDraws(seed ^ 2246822507, length);
     const clamped = Number.isFinite(probability) ? Math.max(0, Math.min(1, probability)) : 0;
-    const baseIndex = Math.max(0, patternTypes.findIndex((type) => type === "base"));
-    return sequence.map((index, slot) => {
-      const type = patternTypes[index] ?? "base";
-      if (type === "base") return index;
-      const chance = type === "variation" ? Math.max(0, Math.min(1, (clamped - 0.1) / 0.9)) : Math.max(0, Math.min(1, (clamped - 0.2) / 0.8));
-      if (type === "fill" && !fillOpportunities[slot]) return baseIndex;
-      return (draws[slot] ?? 0.5) < chance ? index : baseIndex;
+    const variationChance = Math.max(0, Math.min(1, (clamped - 0.1) / 0.9));
+    const variationActive = Array(length).fill(false);
+    const primaryIndices = candidateIndices.map((candidate, slot) => {
+      const type = patternTypes[candidate] ?? "base";
+      const chance = variationChance;
+      const active = candidate === fallbackIndex || type === "base" || probabilityDraws[slot] < chance;
+      variationActive[slot] = active;
+      return active ? candidate : fallbackIndex;
     });
+    const fillIndices = patternTypes.map((type, index) => type === "fill" ? index : -1).filter((index) => index >= 0);
+    const fillCandidateIndices = Array(length).fill(-1);
+    const fillOpportunities = Array(length).fill(false);
+    let elapsedSteps = 0;
+    const intervalSteps = Math.max(1, Math.round(intervalBars * 16));
+    for (let slot = 0; slot < length; slot++) {
+      const primary = primaryIndices[slot] ?? fallbackIndex;
+      const slotSteps = Number.isInteger(patternSteps[primary]) && patternSteps[primary] > 0 ? patternSteps[primary] : 16;
+      elapsedSteps += slotSteps;
+      if (elapsedSteps % intervalSteps !== 0) continue;
+      fillOpportunities[slot] = true;
+      const matchingFills = fillIndices.filter((index) => patternSteps[index] === slotSteps);
+      if (!matchingFills.length) continue;
+      const fillChoice = generateSeedSequence(seed ^ 3266489909, matchingFills.length, length)[slot];
+      fillCandidateIndices[slot] = matchingFills[fillChoice] ?? matchingFills[0];
+    }
+    const fillChance = Math.max(0, Math.min(1, (clamped - 0.2) / 0.8));
+    const fillActive = fillCandidateIndices.map((candidate, slot) => candidate >= 0 && fillProbabilityDraws[slot] < fillChance);
+    const patternIndices = primaryIndices.map((primary, slot) => fillActive[slot] ? fillCandidateIndices[slot] : primary);
+    return {
+      seed,
+      length,
+      candidateIndices,
+      primaryIndices,
+      fillCandidateIndices,
+      fillOpportunities,
+      probabilityDraws,
+      fillProbabilityDraws,
+      variationActive,
+      fillActive,
+      patternIndices,
+      patternNames: patternIndices.map((index) => patternNames[index] ?? `Pattern ${index + 1}`)
+    };
   }
 
   // src/components/SeedSequenceTester.tsx
@@ -4936,33 +4978,31 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         return "variation";
       });
       const baseIndex = patternTypes.findIndex((type) => type === "base");
-      const fallbackIndex = baseIndex >= 0 ? baseIndex : 0;
-      const candidates2 = generateSeedSequence(this.state.seed, learned.patternNames.length, 16);
-      const draws = generateProbabilityDraws(this.state.seed, 16);
-      const bars = candidates2.map((index) => learned.bank.patterns[index]?.steps / 16 || 1);
-      let elapsedBars = 0;
-      const fillOpportunities = bars.map((duration) => {
-        elapsedBars += duration;
-        return elapsedBars > 0 && Math.abs(elapsedBars % 16) < 1e-9;
-      });
-      const effective = applyProbability(candidates2, this.state.probability / 100, patternTypes, draws, fillOpportunities);
-      const active = candidates2.map((candidate, slot) => candidate === effective[slot]);
+      const firstNonFill = patternTypes.findIndex((type) => type !== "fill");
+      const fallbackIndex = baseIndex >= 0 ? baseIndex : firstNonFill >= 0 ? firstNonFill : 0;
+      const patternSteps = learned.bank.patterns.map((pattern) => pattern.steps);
+      const preview = buildSeedSequence(this.state.seed, learned.patternNames, patternTypes, this.state.probability / 100, 16, patternSteps, 16);
+      const candidates2 = preview.candidateIndices, fillCandidates = preview.fillCandidateIndices;
+      const fillOpportunities = preview.fillOpportunities, draws = preview.probabilityDraws, fillDraws = preview.fillProbabilityDraws;
+      const effective = preview.patternIndices, bars = preview.primaryIndices.map((index) => patternSteps[index] / 16 || 1);
+      const active = preview.variationActive.map((primaryActive, slot) => primaryActive || preview.fillActive[slot]);
       const counts = { base: 0, variation: 0, fill: 0 };
       effective.forEach((index) => counts[patternTypes[index] || "base"]++);
-      const candidateBars = candidates2.map((index, slot) => {
+      const candidateBars = candidates2.map((_, slot) => {
         const start = bars.slice(0, slot).reduce((sum, value) => sum + value, 0);
         return `${start + 1}\u2013${start + bars[slot]}`;
       });
+      const unmatchedFillWindows = fillOpportunities.filter((opportunity, slot) => opportunity && fillCandidates[slot] < 0).length;
       const variationChance = Math.max(0, Math.min(100, (this.state.probability - 10) / 90 * 100));
       const fillChance = Math.max(0, Math.min(100, (this.state.probability - 20) / 80 * 100));
       const baseName = learned.patternNames[fallbackIndex];
-      return /* @__PURE__ */ React.createElement("section", { className: "seed-sequence-tester", "aria-labelledby": "seed-sequence-title" }, /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-head" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "tag" }, "SEQUENCE PREVIEW \xB7 16 SLOTS"), /* @__PURE__ */ React.createElement("h3", { id: "seed-sequence-title" }, "Seed sequence tester")), /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-actions" }, /* @__PURE__ */ React.createElement("span", { className: "seed-sequence-badge" }, "Preview only"), /* @__PURE__ */ React.createElement("button", { type: "button", className: this.state.playing ? "" : "primary", disabled: this.state.preparing || this.props.transportPlaying, onClick: () => this.state.playing ? this.stopPreview(true) : this.playSequence(learned.bank, effective) }, this.state.preparing ? "Rendering\u2026" : this.state.playing ? "\u25A0 Stop sequence" : "\u25B6 Play sequence"))), /* @__PURE__ */ React.createElement("p", { className: "hint" }, "The seed fixes the candidate patterns and per-slot draws. The probability control filters that same sequence; moving it does not reroll the seed. Play auditions the selected source through the firmware-compatible Break reference renderer and loops this 16-slot result. No project data, WAV, or hardware is changed."), /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-controls" }, /* @__PURE__ */ React.createElement("label", null, "Seed ", /* @__PURE__ */ React.createElement("input", { "aria-label": "Sequence seed", type: "number", min: "0", max: "127", step: "1", value: this.state.seed, onChange: (event) => this.setSeed(event.target.value) })), /* @__PURE__ */ React.createElement("label", { className: "seed-probability" }, "Probability ", /* @__PURE__ */ React.createElement("input", { "aria-label": "Sequence probability", type: "range", min: "0", max: "100", step: "1", value: this.state.probability, onChange: (event) => this.setState({ probability: Number(event.target.value) }) }), /* @__PURE__ */ React.createElement("output", null, this.state.probability, "%"))), this.state.playbackMessage && /* @__PURE__ */ React.createElement("p", { className: "seed-sequence-playback", role: "status", "aria-live": "polite" }, this.state.playbackMessage), /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-rules" }, /* @__PURE__ */ React.createElement("span", null, "BASE always"), /* @__PURE__ */ React.createElement("span", null, "Variations \xB7 ", variationChance.toFixed(0), "% gate after 10%"), /* @__PURE__ */ React.createElement("span", null, "FILL \xB7 ", fillChance.toFixed(0), "% gate after 20%, at 16-bar windows")), /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-summary", "aria-live": "polite" }, /* @__PURE__ */ React.createElement("strong", null, counts.base, " BASE"), /* @__PURE__ */ React.createElement("strong", null, counts.variation, " variations"), /* @__PURE__ */ React.createElement("strong", null, counts.fill, " fills"), /* @__PURE__ */ React.createElement("span", null, "active out of 16 slots")), baseIndex < 0 && /* @__PURE__ */ React.createElement("p", { className: "seed-sequence-warning" }, "No pattern is named BASE. \u201C", baseName, "\u201D is shown as the fallback; name the reference pattern BASE for an exact preview."), !patternTypes.includes("fill") && /* @__PURE__ */ React.createElement("p", { className: "hint" }, "No exact FILL pattern or Fill-tagged example is available; fill windows will remain on BASE or the selected variation."), /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-table-wrap" }, /* @__PURE__ */ React.createElement("table", { className: "seed-sequence-table" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", null, "Slot"), /* @__PURE__ */ React.createElement("th", null, "Bar span*"), /* @__PURE__ */ React.createElement("th", null, "Candidate"), /* @__PURE__ */ React.createElement("th", null, "Draw"), /* @__PURE__ */ React.createElement("th", null, "Preview output"), /* @__PURE__ */ React.createElement("th", null, "State"))), /* @__PURE__ */ React.createElement("tbody", null, candidates2.map((candidate, slot) => {
-        const candidateType = patternTypes[candidate] || "base";
-        const output = effective[slot];
-        const gate = candidateType === "base" ? 100 : candidateType === "variation" ? variationChance : fillChance;
-        const windowBlocked = candidateType === "fill" && !fillOpportunities[slot];
-        return /* @__PURE__ */ React.createElement("tr", { key: slot, className: active[slot] ? "is-active" : "is-filtered" }, /* @__PURE__ */ React.createElement("th", { scope: "row" }, String(slot + 1).padStart(2, "0"), fillOpportunities[slot] && /* @__PURE__ */ React.createElement("small", null, "fill window")), /* @__PURE__ */ React.createElement("td", null, candidateBars[slot]), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: `seed-kind seed-${candidateType}` }, candidateType), learned.patternNames[candidate] || `Pattern ${candidate + 1}`), /* @__PURE__ */ React.createElement("td", { className: "mono" }, candidateType === "base" ? "\u2014" : `${(draws[slot] * 100).toFixed(0)}% / ${gate.toFixed(0)}%`), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("strong", null, learned.patternNames[output] || `Pattern ${output + 1}`)), /* @__PURE__ */ React.createElement("td", null, active[slot] ? "active" : windowBlocked ? "outside fill window" : "filtered to BASE"));
-      })))), /* @__PURE__ */ React.createElement("p", { className: "seed-sequence-footnote" }, "* Bar spans follow the candidate patterns\u2019 authored lengths. The preview marks fill opportunities when a candidate ends on a 16-bar boundary; it does not render audio or model early/repeated fills."));
+      return /* @__PURE__ */ React.createElement("section", { className: "seed-sequence-tester", "aria-labelledby": "seed-sequence-title" }, /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-head" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "tag" }, "SEQUENCE PREVIEW \xB7 16 SLOTS"), /* @__PURE__ */ React.createElement("h3", { id: "seed-sequence-title" }, "Seed sequence tester")), /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-actions" }, /* @__PURE__ */ React.createElement("span", { className: "seed-sequence-badge" }, "Preview only"), /* @__PURE__ */ React.createElement("button", { type: "button", className: this.state.playing ? "" : "primary", disabled: this.state.preparing || this.props.transportPlaying, onClick: () => this.state.playing ? this.stopPreview(true) : this.playSequence(learned.bank, effective) }, this.state.preparing ? "Rendering\u2026" : this.state.playing ? "\u25A0 Stop sequence" : "\u25B6 Play sequence"))), /* @__PURE__ */ React.createElement("p", { className: "hint" }, "The seed fixes the candidate patterns and per-slot draws. The probability control filters that same sequence; moving it does not reroll the seed. Play auditions the selected source through the firmware-compatible Break reference renderer and loops this 16-slot result. No project data, WAV, or hardware is changed."), /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-controls" }, /* @__PURE__ */ React.createElement("label", null, "Seed ", /* @__PURE__ */ React.createElement("input", { "aria-label": "Sequence seed", type: "number", min: "0", max: "127", step: "1", value: this.state.seed, onChange: (event) => this.setSeed(event.target.value) })), /* @__PURE__ */ React.createElement("label", { className: "seed-probability" }, "Probability ", /* @__PURE__ */ React.createElement("input", { "aria-label": "Sequence probability", type: "range", min: "0", max: "100", step: "1", value: this.state.probability, onChange: (event) => this.setState({ probability: Number(event.target.value) }) }), /* @__PURE__ */ React.createElement("output", null, this.state.probability, "%"))), this.state.playbackMessage && /* @__PURE__ */ React.createElement("p", { className: "seed-sequence-playback", role: "status", "aria-live": "polite" }, this.state.playbackMessage), /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-rules" }, /* @__PURE__ */ React.createElement("span", null, "BASE always"), /* @__PURE__ */ React.createElement("span", null, "Variations \xB7 ", variationChance.toFixed(0), "% gate after 10%"), /* @__PURE__ */ React.createElement("span", null, "FILL \xB7 ", fillChance.toFixed(0), "% gate after 20%, at 16-bar windows")), /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-summary", "aria-live": "polite" }, /* @__PURE__ */ React.createElement("strong", null, counts.base, " BASE"), /* @__PURE__ */ React.createElement("strong", null, counts.variation, " variations"), /* @__PURE__ */ React.createElement("strong", null, counts.fill, " fills"), /* @__PURE__ */ React.createElement("span", null, "active out of 16 slots")), baseIndex < 0 && /* @__PURE__ */ React.createElement("p", { className: "seed-sequence-warning" }, "No pattern is named BASE. \u201C", baseName, "\u201D is shown as the fallback; name the reference pattern BASE for an exact preview."), !patternTypes.includes("fill") && /* @__PURE__ */ React.createElement("p", { className: "hint" }, "No exact FILL pattern or Fill-tagged example is available; scheduled windows cannot play a fill."), unmatchedFillWindows > 0 && /* @__PURE__ */ React.createElement("p", { className: "seed-sequence-warning" }, unmatchedFillWindows, " fill window(s) have no FILL example matching the selected slot length. Add a FILL with the same number of bars to make each window playable."), /* @__PURE__ */ React.createElement("div", { className: "seed-sequence-table-wrap" }, /* @__PURE__ */ React.createElement("table", { className: "seed-sequence-table" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", null, "Slot"), /* @__PURE__ */ React.createElement("th", null, "Bar span*"), /* @__PURE__ */ React.createElement("th", null, "Seed candidate"), /* @__PURE__ */ React.createElement("th", null, "Draws"), /* @__PURE__ */ React.createElement("th", null, "Preview output"), /* @__PURE__ */ React.createElement("th", null, "State"))), /* @__PURE__ */ React.createElement("tbody", null, candidates2.map((candidate, slot) => {
+        const candidateType = patternTypes[candidate] || "base", output = effective[slot], fillCandidate = fillCandidates[slot];
+        const primaryActive = preview.variationActive[slot], fillActive = preview.fillActive[slot], fillWindow = fillOpportunities[slot];
+        const gate = candidateType === "base" ? 100 : variationChance;
+        const state = fillActive ? "FILL overrides candidate" : fillWindow && fillCandidate >= 0 ? "fill chance missed; candidate kept" : fillWindow && patternTypes.includes("fill") ? "no same-length FILL" : candidate === fallbackIndex ? "BASE/fallback" : primaryActive ? "candidate active" : "filtered to BASE";
+        return /* @__PURE__ */ React.createElement("tr", { key: slot, className: active[slot] ? "is-active" : "is-filtered" }, /* @__PURE__ */ React.createElement("th", { scope: "row" }, String(slot + 1).padStart(2, "0"), fillWindow && /* @__PURE__ */ React.createElement("small", null, "16-bar window")), /* @__PURE__ */ React.createElement("td", null, candidateBars[slot]), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: `seed-kind seed-${candidateType}` }, candidateType), learned.patternNames[candidate] || `Pattern ${candidate + 1}`, fillCandidate >= 0 && /* @__PURE__ */ React.createElement("small", { className: "seed-fill-candidate" }, "FILL window: ", learned.patternNames[fillCandidate])), /* @__PURE__ */ React.createElement("td", { className: "mono" }, candidate === fallbackIndex || candidateType === "base" ? "\u2014" : `${(draws[slot] * 100).toFixed(0)}% / ${gate.toFixed(0)}%`, fillCandidate >= 0 && /* @__PURE__ */ React.createElement("small", { className: "seed-fill-draw" }, "FILL ", (fillDraws[slot] * 100).toFixed(0), "% / ", fillChance.toFixed(0), "%")), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("strong", null, learned.patternNames[output] || `Pattern ${output + 1}`)), /* @__PURE__ */ React.createElement("td", null, state));
+      })))), /* @__PURE__ */ React.createElement("p", { className: "seed-sequence-footnote" }, "* Bar spans follow the selected BASE/variation lengths. At each 16-bar boundary the seed selects a same-length FILL example when one exists; early/repeated fills are not simulated."));
     }
   };
 
