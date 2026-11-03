@@ -1264,42 +1264,65 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
   // src/core/learned-break-bank.ts
   var ALLOWED_PATTERN_STEPS = /* @__PURE__ */ new Set([16, 32, 48, 64, 80, 96, 112, 128]);
   var EPSILON = 1e-6;
-  var closeToInteger = (value, tolerance) => {
+  function sourceProblem(source, label) {
+    if (!Number.isSafeInteger(source.frames) || source.frames <= 0 || !Number.isFinite(source.sampleRate) || source.sampleRate <= 0 || !Number.isFinite(source.bpm) || source.bpm <= 0)
+      return `${label}: frame count, sample rate, and BPM must be valid.`;
+    if (source.markers.length + 1 > 32) return `${label}: firmware Break supports at most 32 source slices.`;
+    const starts = [0, ...source.markers], ends = [...source.markers, source.frames];
+    for (let i = 0; i < starts.length; i++) if (!Number.isSafeInteger(starts[i]) || !Number.isSafeInteger(ends[i]) || starts[i] < 0 || ends[i] <= starts[i] || ends[i] > source.frames)
+      return `${label}: markers must be strictly increasing and inside the original audio.`;
+    return null;
+  }
+  function sourceSlices(source) {
+    return { starts: [0, ...source.markers], ends: [...source.markers, source.frames] };
+  }
+  function stepAt(value, tolerance) {
     const rounded = Math.round(value);
     return Number.isFinite(value) && Math.abs(value - rounded) <= tolerance ? rounded : null;
-  };
-  var roundRobinRemainders = (weights, slots) => {
+  }
+  function allocateRemainders(weights, slots) {
     const counts = weights.map(() => 0), total = weights.reduce((a, b) => a + b, 0);
     if (!total || slots <= 0) return counts;
     const fractions = weights.map((weight, index) => ({ index, fraction: slots * weight / total - Math.floor(slots * weight / total) }));
     for (let i = 0; i < weights.length; i++) counts[i] = Math.floor(slots * weights[i] / total);
-    let remaining = slots - counts.reduce((a, b) => a + b, 0);
+    const remaining = slots - counts.reduce((a, b) => a + b, 0);
     fractions.sort((a, b) => b.fraction - a.fraction || a.index - b.index);
-    for (let i = 0; i < remaining; i++) counts[fractions[i % fractions.length].index]++;
+    for (let i = 0; i < remaining; i++) counts[fractions[i].index]++;
     return counts;
-  };
-  function learnBreakBank(project, sourceId) {
-    const errors = [], warnings = [];
-    const source = project.sources.find((candidate) => candidate.id === sourceId);
-    if (!source) return { ok: false, errors: [`Source ${sourceId} is not in the project.`] };
-    if (!Number.isSafeInteger(source.frames) || source.frames <= 0 || !Number.isFinite(source.sampleRate) || source.sampleRate <= 0 || !Number.isFinite(source.bpm) || source.bpm <= 0)
-      return { ok: false, errors: ["Source frame count, sample rate, and BPM must be valid before learning."] };
-    const starts = [0, ...source.markers], ends = [...source.markers, source.frames];
-    if (source.markers.length + 1 > 32) return { ok: false, errors: ["Firmware Break currently supports at most 32 source slices; reduce the marker count first."] };
-    for (let i = 0; i < starts.length; i++) if (!Number.isSafeInteger(starts[i]) || !Number.isSafeInteger(ends[i]) || starts[i] < 0 || ends[i] <= starts[i] || ends[i] > source.frames)
-      return { ok: false, errors: ["Source markers must be strictly increasing and inside the original audio."] };
-    const patterns = [], names = [], ratings = [], fills = [];
+  }
+  function learnBreakBank(project, targetSourceId) {
+    const target2 = project.sources.find((source) => source.id === targetSourceId);
+    if (!target2) return { ok: false, errors: [`Target source ${targetSourceId} is not in the project.`] };
+    const targetProblem = sourceProblem(target2, `Target ${target2.name}`);
+    if (targetProblem) return { ok: false, errors: [targetProblem] };
+    const errors = [], warnings = [], trainingSourceIds = /* @__PURE__ */ new Set();
     for (const variation of project.variations) {
-      const relevant = variation.clips.filter((clip) => clip.sourceId === sourceId);
-      const foreign = variation.clips.filter((clip) => clip.sourceId !== sourceId);
-      if (!relevant.length) {
-        warnings.push(foreign.length ? `${variation.name}: skipped because its clips use another source.` : `${variation.name}: skipped because it has no clips.`);
+      const ids = new Set(variation.clips.map((clip) => clip.sourceId));
+      if (ids.size > 1) errors.push(`${variation.name}: clips reference multiple sources; split the variation before learning.`);
+      else if (ids.size === 1) trainingSourceIds.add([...ids][0]);
+    }
+    if (errors.length) return { ok: false, errors };
+    if (!trainingSourceIds.size) return { ok: false, errors: ["No non-empty variations are available for training."] };
+    const sourceById = new Map(project.sources.map((source) => [source.id, source]));
+    const layouts = /* @__PURE__ */ new Map();
+    for (const id of trainingSourceIds) {
+      const source = sourceById.get(id);
+      if (!source) return { ok: false, errors: [`Training source ${id} is missing from the project.`] };
+      const problem = sourceProblem(source, `Training source ${source.name}`);
+      if (problem) return { ok: false, errors: [problem] };
+      if (source.markers.length !== target2.markers.length) return { ok: false, errors: [`Training source ${source.name} has ${source.markers.length + 1} slices, but target ${target2.name} has ${target2.markers.length + 1}; v1 transfers by slice index and requires matching slice counts.`] };
+      layouts.set(id, sourceSlices(source));
+    }
+    const trainingNames = [...trainingSourceIds].map((id) => sourceById.get(id).name);
+    if (!trainingSourceIds.has(target2.id)) warnings.push(`No timeline variation directly references target ${target2.name}; the trained source-slice indices from ${trainingNames.join(", ")} are transferred by index. Both sides have ${target2.markers.length + 1} slices.`);
+    const patterns = [], names = [], ratings = [], bases = [], fills = [];
+    for (const variation of project.variations) {
+      const clips = variation.clips;
+      if (!clips.length) {
+        warnings.push(`${variation.name}: skipped because it has no clips.`);
         continue;
       }
-      if (foreign.length) {
-        errors.push(`${variation.name}: clips reference multiple sources; split the variation before learning.`);
-        continue;
-      }
+      const trainingId = clips[0].sourceId, trainingSource = sourceById.get(trainingId), layout = layouts.get(trainingId);
       if (!Number.isFinite(variation.rating) || variation.rating < 0 || variation.rating > 5) {
         errors.push(`${variation.name}: rating must be a finite value from 0 to 5.`);
         continue;
@@ -1316,7 +1339,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       const trackById = new Map(variation.tracks.map((track) => [track.id, track]));
       const activeTracks = /* @__PURE__ */ new Set();
       let trackError = false;
-      for (const clip of relevant) {
+      for (const clip of clips) {
         const track = trackById.get(clip.trackId);
         if (!track) {
           errors.push(`${variation.name}: a clip refers to a missing track.`);
@@ -1334,19 +1357,18 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         if (!trackError) errors.push(`${variation.name}: multiple active tracks cannot be flattened into one firmware Break pattern.`);
         continue;
       }
-      const events = [];
-      const originalLengths = /* @__PURE__ */ new Map();
+      const rows = [];
       let invalid = false;
-      const stepTolerance = 4 * source.bpm / (60 * source.sampleRate) + EPSILON, durationTolerance = 2 * stepTolerance;
-      for (const clip of relevant) {
-        const rawStep = clip.positionBeats * 4, rawLen = clip.durationBeats * 4, step = closeToInteger(rawStep, stepTolerance), roundedLen = Number.isFinite(rawLen) ? Math.round(rawLen) : null;
-        if (step === null || roundedLen === null || step < 0 || roundedLen < 1 || step >= steps) {
+      const stepTolerance = 4 * trainingSource.bpm / (60 * trainingSource.sampleRate) + EPSILON, durationTolerance = 2 * stepTolerance;
+      for (const clip of clips) {
+        const rawStep = clip.positionBeats * 4, rawLen = clip.durationBeats * 4, step = stepAt(rawStep, stepTolerance), len = Number.isFinite(rawLen) ? Math.round(rawLen) : null;
+        if (step === null || len === null || step < 0 || len < 1 || step >= steps) {
           errors.push(`${variation.name}: clip position is outside the firmware sixteenth-note grid or its duration is invalid.`);
           invalid = true;
           continue;
         }
-        if (Math.abs(rawLen - roundedLen) > durationTolerance) warnings.push(`${variation.name}: event at step ${step} has a fractional ${rawLen.toFixed(3)}-step duration; firmware duration will be rounded and may be shortened at the next event.`);
-        const src = starts.findIndex((start, index) => clip.sourceStartFrame === start && clip.sourceEndFrame === ends[index]);
+        if (Math.abs(rawLen - len) > durationTolerance) warnings.push(`${variation.name}: event at step ${step} has a fractional ${rawLen.toFixed(3)}-step duration; firmware duration will be rounded and may be shortened at the next event.`);
+        const src = layout.starts.findIndex((start, index) => clip.sourceStartFrame === start && clip.sourceEndFrame === layout.ends[index]);
         if (src < 0) {
           errors.push(`${variation.name}: a clip must reference exactly one complete source slice; no frame ranges were rounded.`);
           invalid = true;
@@ -1358,61 +1380,68 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
           continue;
         }
         if (clip.fadeInMs > 0 || clip.fadeOutMs > 0) warnings.push("Per-clip fades are not encoded in pvxp; the firmware transition envelope will be used.");
-        events.push({ step, src, len: roundedLen, reps: 1, roll: 0, rev: clip.reverse, gate: true, amp0: clip.gain, amp1: clip.gain, pitch0: 0, pitch1: 0 });
-        originalLengths.set(step, rawLen);
+        rows.push({ event: { step, src, len, reps: 1, roll: 0, rev: clip.reverse, gate: true, amp0: clip.gain, amp1: clip.gain, pitch0: 0, pitch1: 0 }, rawLen });
       }
       if (invalid) continue;
-      events.sort((a, b) => a.step - b.step);
-      for (let i = 0; i < events.length; i++) {
-        const event = events[i], nextStep = events[i + 1]?.step ?? steps, maxLen = nextStep - event.step;
+      rows.sort((a, b) => a.event.step - b.event.step);
+      for (let i = 0; i < rows.length; i++) {
+        const { event, rawLen } = rows[i], nextStep = rows[i + 1]?.event.step ?? steps, maxLen = nextStep - event.step;
         if (maxLen < 1) {
           errors.push(`${variation.name}: two clips map to firmware step ${event.step}; the firmware can store only one event per step.`);
           invalid = true;
           break;
         }
-        if (i + 1 < events.length && event.step + event.len > nextStep) {
-          warnings.push(`${variation.name}: event at step ${event.step} overlaps the next event; its firmware duration is shortened from ${originalLengths.get(event.step)?.toFixed(3) ?? event.len} to ${maxLen} sixteenth steps.`);
+        if (i + 1 < rows.length && event.step + event.len > nextStep) {
+          warnings.push(`${variation.name}: event at step ${event.step} overlaps the next event; its firmware duration is shortened from ${rawLen.toFixed(3)} to ${maxLen} sixteenth steps.`);
           event.len = maxLen;
         }
-        if (i + 1 === events.length && event.step + event.len > steps) {
+        if (i + 1 === rows.length && event.step + event.len > steps) {
           warnings.push(`${variation.name}: final event duration is shortened at the pattern boundary.`);
           event.len = steps - event.step;
         }
       }
       if (invalid) continue;
-      if (invalid) continue;
+      const events = rows.map((row) => row.event);
       if (events.length > 128) {
         errors.push(`${variation.name}: firmware Break patterns are limited to 128 events.`);
+        continue;
+      }
+      const name = variation.name.trim().toUpperCase(), taggedFill = variation.tags.some((tag) => tag.kind === "fill"), isBase = name === "BASE", isFill = name === "FILL" || taggedFill;
+      if (isBase && taggedFill) {
+        errors.push(`${variation.name}: BASE name conflicts with its Fill tag.`);
         continue;
       }
       patterns.push({ steps, events });
       names.push(variation.name);
       ratings.push(variation.rating);
-      fills.push(variation.tags.some((tag) => tag.kind === "fill"));
+      bases.push(isBase);
+      fills.push(isFill);
+      if (isBase) warnings.push("Exact variation name BASE recognized as the reference pattern and placed first in the chain.");
+      if (name === "FILL" && !taggedFill) warnings.push("Exact variation name FILL recognized as a fill; add a Fill tag if you want that role stored explicitly in the project.");
     }
     if (errors.length) return { ok: false, errors };
-    if (!patterns.length) return { ok: false, errors: ["No compatible, non-empty variations reference this source."] };
+    if (!patterns.length) return { ok: false, errors: ["No compatible, non-empty variations are available for this target."] };
     if (patterns.length > 8) return { ok: false, errors: [`The firmware supports at most 8 patterns; this project has ${patterns.length} compatible variations.`] };
-    const ordinary = patterns.map((_, index) => index).filter((index) => !fills[index]);
+    const base = patterns.map((_, index) => index).filter((index) => bases[index] && !fills[index]);
+    const ordinary = patterns.map((_, index) => index).filter((index) => !bases[index] && !fills[index]);
     const fill = patterns.map((_, index) => index).filter((index) => fills[index]);
-    const order = [...ordinary, ...fill];
+    const order = [...base, ...ordinary, ...fill];
     let chain = [...order];
     if (chain.length < 16 && ratings.some((rating) => rating > 0)) {
-      const weights = ratings.map((rating) => rating > 0 ? rating : 0), extra = roundRobinRemainders(weights, 16 - chain.length);
-      const ordinaryExtra = [], fillExtra = [];
+      const extra = allocateRemainders(ratings.map((rating) => rating > 0 ? rating : 0), 16 - chain.length);
+      const baseExtra = [], ordinaryExtra = [], fillExtra = [];
       extra.forEach((count, index) => {
-        for (let i = 0; i < count; i++) (fills[index] ? fillExtra : ordinaryExtra).push(index);
+        for (let i = 0; i < count; i++) (fills[index] ? fillExtra : bases[index] ? baseExtra : ordinaryExtra).push(index);
       });
-      chain = [...ordinary, ...ordinaryExtra, ...fill, ...fillExtra];
+      chain = [...base, ...baseExtra, ...ordinary, ...ordinaryExtra, ...fill, ...fillExtra];
     }
-    if (source.markers.length === 0) warnings.push("No source slice markers are present; all events will address the full source as slice 1.");
-    if (!project.variations.some((variation) => variation.tags.some((tag) => tag.kind === "fill")))
-      warnings.push("No variation is tagged Fill; the model will not guess which example is a fill.");
-    if (project.variations.some((variation) => variation.tags.length)) warnings.push("Tag labels and time ranges are not stored in pvxp; Fill tags only place tagged patterns at the end of the chain.");
+    if (!fills.some(Boolean)) warnings.push("No Fill tag or exact name FILL is present; the model will not guess which pattern is a fill.");
+    if (project.variations.some((variation) => variation.tags.length)) warnings.push("Tag labels and time ranges are not stored in pvxp; Fill tags place tagged patterns at the end of the chain.");
     if (ratings.some((rating) => rating > 0)) warnings.push("Ratings are approximated by repeating higher-rated examples in the chain; exact scores are not stored in pvxp.");
-    else warnings.push("No positive ratings are available; examples are chained once in project order.");
+    else warnings.push("No positive ratings are available; examples appear once in BASE/variation/FILL order.");
+    if (target2.markers.length === 0) warnings.push("No target slice markers are present; all events will address the full source as slice 1.");
     warnings.push("Pattern names, parent history, and per-clip fades are not stored in pvxp; keep the original project ZIP as the canonical dataset.");
-    return { ok: true, bank: { patterns, chain }, patternNames: names, warnings: [...new Set(warnings)], sourceId };
+    return { ok: true, bank: { patterns, chain }, patternNames: names, trainingSourceIds: [...trainingSourceIds], warnings: [...new Set(warnings)], sourceId: target2.id };
   }
 
   // src/core/comparison-preview.ts
@@ -5386,14 +5415,14 @@ All clips using these sources will also be deleted.`)) return;
         const sampler = defaultSamplerSettings(source), estimatedBeats = source.frames / source.sampleRate * source.bpm / 60, beats = Number.isFinite(sampler.beats) && Number(sampler.beats) > 0 ? Number(sampler.beats) : Math.round(estimatedBeats);
         if (!Number.isSafeInteger(beats) || beats < 1 || beats > 32) return this.setStatus("Source beat length is outside the firmware WAV range; no export was created.");
         const durationWarning = Math.abs(estimatedBeats - beats) > 0.02 ? `Source duration is about ${estimatedBeats.toFixed(2)} beats at ${source.bpm} BPM, but the WAV metadata will declare ${beats} beats; verify sync on the module.` : null;
-        const warnings = [...learned.warnings, ...sampler.breakBank ? ["The new WAV will contain this learned bank instead of the source\u2019s existing native bank; the project bank remains unchanged."] : [], ...source.preparation ? ["The source preparation recipe (trim / channels / normalize / beats) is not applied; the full original source is used."] : [], `The output will be ${TARGET_SAMPLE_RATE} Hz PCM16; source boundaries are rescaled from ${source.sampleRate} Hz without moving their musical positions.`, ...buffer.numberOfChannels > 2 ? [`The ${buffer.numberOfChannels}-channel source will be downmixed to stereo.`] : [], ...durationWarning ? [durationWarning] : []];
+        const warnings = [...learned.warnings, ...sampler.metadata.unknownChunks.length ? [`Unrecognized WAV chunks (${sampler.metadata.unknownChunks.join(", ")}) are not copied to the new PCM16 WAV; the original source remains unchanged.`] : [], ...sampler.breakBank ? ["The new WAV will contain this learned bank instead of the source\u2019s existing native bank; the project bank remains unchanged."] : [], ...source.preparation ? ["The source preparation recipe (trim / channels / normalize / beats) is not applied; the full original source is used."] : [], `The output will be ${TARGET_SAMPLE_RATE} Hz PCM16; source boundaries are rescaled from ${source.sampleRate} Hz without moving their musical positions.`, ...buffer.numberOfChannels > 2 ? [`The ${buffer.numberOfChannels}-channel source will be downmixed to stereo.`] : [], ...durationWarning ? [durationWarning] : []];
         const chain = learned.bank.chain.map((index) => learned.patternNames[index] ?? `Pattern ${index + 1}`).join(" \u2192 ");
         if (!window.confirm(`Compile ${learned.bank.patterns.length} authored patterns for ${source.name}?
 
 Chain:
 ${chain}
 
-This example-based model preserves the authored jump sequence. Ratings weight chain repetitions; Fill tags are placed last. It does not invent new events or infer untagged roles.
+This example-based model preserves the authored jump sequence. Exact name BASE is placed first; exact name FILL or a Fill tag is placed last. Ratings weight chain repetitions. Cross-source use maps slice indices and requires the same slice count. It does not invent new events.
 
 ${warnings.join("\n")}
 
@@ -5667,7 +5696,7 @@ ${error.message}`);
           const variation = currentVariation(pp);
           if (!variation.clips.length) variation.patternBars = barsForSource(source);
         }, { sourceId: src.id, bpm: +e.target.value });
-      } })), /* @__PURE__ */ React.createElement("span", { className: "tag" }, src?.sampleRate || "\u2013", " Hz")), /* @__PURE__ */ React.createElement("div", { className: "source-wave-wrap " + (!src && (this.state.view === "pattern" || this.state.view === "device") ? "has-empty-action" : "") }, /* @__PURE__ */ React.createElement(SourceWave, { source: src, selectedSlice: this.state.sliceIndex, onSelect: (index) => this.setState({ sliceIndex: index }), onMarkers: this.updateMarkers }), !src && (this.state.view === "pattern" || this.state.view === "device") && /* @__PURE__ */ React.createElement("div", { className: "source-empty-action" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio"), /* @__PURE__ */ React.createElement("small", null, "or use \uFF0B beside Sources"))), /* @__PURE__ */ React.createElement("div", { className: "source-footer" }, /* @__PURE__ */ React.createElement("span", { className: "muted" }, src ? `Slice ${this.state.sliceIndex + 1}/${ranges.length}` : "No source selected", src && range ? ` \xB7 ${(range.startFrame / src.sampleRate).toFixed(3)}\u2013${(range.endFrame / src.sampleRate).toFixed(3)}s` : ""), /* @__PURE__ */ React.createElement("div", { className: "flex" }), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(4), disabled: !src }, "Markers 1/4"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(8), disabled: !src }, "Markers 1/8"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addTransients(), disabled: !src }, "\u26A1 Transients"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.deleteMarker(), disabled: !src }, "\u2212 Marker"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.previewSlice(), disabled: !src }, "\u25B6 Slice"), /* @__PURE__ */ React.createElement("button", { onClick: this.openSourceComparison, disabled: !src, title: "Create a non-destructive variation with another audio source while preserving the slice map" }, "\u21C4 Compare WAV"), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.state.advanced ? this.insertSlice() : this.insertAtPatternStep(), disabled: !src }, this.state.advanced ? "\uFF0B To timeline" : "\uFF0B To step")), !src && this.state.view === "prepare" && /* @__PURE__ */ React.createElement("div", { className: "preparation-empty" }, /* @__PURE__ */ React.createElement("strong", null, "Add a source first"), /* @__PURE__ */ React.createElement("span", null, "It will appear here and in the pattern editor. WAV files are not copied to a separate library."), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio")), src && (this.state.view === "prepare" || this.state.view === "pattern") && /* @__PURE__ */ React.createElement(SourcePreparation, { key: src.id, source: src, expanded: this.state.view === "prepare", selectedSlice: this.state.sliceIndex, readOnly: this.state.comparisonPreview, onSave: this.savePreparation, onOriginal: this.downloadOriginal, onExport: this.downloadSourceWav, onDevice: this.stageDevice, onStretch: this.stretchSource, onRotate: this.rotateSource, onPreview: (start, end) => audioEngine.preview(src, start, end).catch((e) => this.setStatus(e.message)), onSelectSlice: (index) => this.setState({ sliceIndex: index }) }), this.state.view === "break" && /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Firmware Break"), /* @__PURE__ */ React.createElement("p", null, "Native banks A\u2013H and the chain use the same source. This is a separate firmware format, not a conversion of the Slice Lab grid. Apply saves the bank to the project; timeline events remain unchanged."), !src && /* @__PURE__ */ React.createElement("button", { onClick: () => this.audioInput?.click() }, "\uFF0B Add source")), src && this.state.view === "break" && /* @__PURE__ */ React.createElement(NativeBreakEditor, { key: `break-${src.id}`, source: src, readOnly: this.state.comparisonPreview, onSave: this.saveNativeBank }), this.state.view === "device" && /* @__PURE__ */ React.createElement("section", { className: "delivery-preparation" }, /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Prepare and transfer"), /* @__PURE__ */ React.createElement("p", null, "Choose an output from the shared project. Preparation creates a WAV but does not send it to the module. Studio owns the single connection; the source and pattern remain in place when you return.")), /* @__PURE__ */ React.createElement("div", { className: "delivery-choices" }, /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Source sample"), /* @__PURE__ */ React.createElement("p", null, "Trim, channels, normalization, markers, and settings from Source Preparation. Compatible imported native banks are preserved. Grid events and FX are not included."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: this.downloadSourceWav }, "Download source WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: this.stageDevice }, "Stage source for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Slice Lab pattern \u2192 Break WAV"), /* @__PURE__ */ React.createElement("p", null, "Check the current pattern's transitions against the full source. FX, layers, unrepresentable intervals, and unsupported grids block export; they are never silently discarded. The trim recipe is not applied here."), /* @__PURE__ */ React.createElement("button", { disabled: !src, onClick: () => this.prepareForModule() }, "Download Break WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || window.parent === window, onClick: () => this.prepareForModule(true) }, "Stage pattern for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Example-based Break model"), /* @__PURE__ */ React.createElement("p", null, "Compile up to eight authored variations into the firmware bank. Ratings weight the chain and Fill tags go last; exact events are reused, not invented. Unsupported layers, source ranges, grid positions, and FX block export; duration approximations are reported before confirmation."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.prepareLearnedBank() }, "Download learned bank\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: () => this.prepareLearnedBank(true) }, "Stage learned bank\u2026"))), /* @__PURE__ */ React.createElement("div", { className: "delivery-boundary" }, /* @__PURE__ */ React.createElement("strong", null, "Device compatibility is not yet confirmed"), /* @__PURE__ */ React.createElement("p", null, src ? `${src.name} \xB7 ${ranges.length} slices \xB7 ${(src.frames / src.sampleRate).toFixed(2)} s` : "Add a source first to enable these outputs.", " \xB7 editor limit: 64 slices. Transfer may have stricter limits. RAM writes with metadata are blocked; /LOOPS support does not imply Break support."), /* @__PURE__ */ React.createElement("p", null, "Standalone mode supports WAV and ZIP. Transfer is available only inside Studio. SD, RAM, and audio playback require testing on the actual module.")))), /* @__PURE__ */ React.createElement("section", { className: "arrange" }, /* @__PURE__ */ React.createElement(PatternGrid, { sources: p.sources, effects: v.effects, tracks: v.tracks, onSelectSource: (id) => this.setState({ sourceId: id, sliceIndex: 0 }), comparisonPreview: this.state.comparisonPreview, comparisonAvailable, onToggleComparison: this.toggleComparisonPreview, comparisonError: comparison?.error, readOnly: this.state.comparisonPreview, onCreateFX: this.createPatternFX, onChangeFX: this.changePatternFX, onDeleteFX: (id) => this.commit("fx_delete", (p2) => {
+      } })), /* @__PURE__ */ React.createElement("span", { className: "tag" }, src?.sampleRate || "\u2013", " Hz")), /* @__PURE__ */ React.createElement("div", { className: "source-wave-wrap " + (!src && (this.state.view === "pattern" || this.state.view === "device") ? "has-empty-action" : "") }, /* @__PURE__ */ React.createElement(SourceWave, { source: src, selectedSlice: this.state.sliceIndex, onSelect: (index) => this.setState({ sliceIndex: index }), onMarkers: this.updateMarkers }), !src && (this.state.view === "pattern" || this.state.view === "device") && /* @__PURE__ */ React.createElement("div", { className: "source-empty-action" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio"), /* @__PURE__ */ React.createElement("small", null, "or use \uFF0B beside Sources"))), /* @__PURE__ */ React.createElement("div", { className: "source-footer" }, /* @__PURE__ */ React.createElement("span", { className: "muted" }, src ? `Slice ${this.state.sliceIndex + 1}/${ranges.length}` : "No source selected", src && range ? ` \xB7 ${(range.startFrame / src.sampleRate).toFixed(3)}\u2013${(range.endFrame / src.sampleRate).toFixed(3)}s` : ""), /* @__PURE__ */ React.createElement("div", { className: "flex" }), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(4), disabled: !src }, "Markers 1/4"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(8), disabled: !src }, "Markers 1/8"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addTransients(), disabled: !src }, "\u26A1 Transients"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.deleteMarker(), disabled: !src }, "\u2212 Marker"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.previewSlice(), disabled: !src }, "\u25B6 Slice"), /* @__PURE__ */ React.createElement("button", { onClick: this.openSourceComparison, disabled: !src, title: "Create a non-destructive variation with another audio source while preserving the slice map" }, "\u21C4 Compare WAV"), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.state.advanced ? this.insertSlice() : this.insertAtPatternStep(), disabled: !src }, this.state.advanced ? "\uFF0B To timeline" : "\uFF0B To step")), !src && this.state.view === "prepare" && /* @__PURE__ */ React.createElement("div", { className: "preparation-empty" }, /* @__PURE__ */ React.createElement("strong", null, "Add a source first"), /* @__PURE__ */ React.createElement("span", null, "It will appear here and in the pattern editor. WAV files are not copied to a separate library."), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio")), src && (this.state.view === "prepare" || this.state.view === "pattern") && /* @__PURE__ */ React.createElement(SourcePreparation, { key: src.id, source: src, expanded: this.state.view === "prepare", selectedSlice: this.state.sliceIndex, readOnly: this.state.comparisonPreview, onSave: this.savePreparation, onOriginal: this.downloadOriginal, onExport: this.downloadSourceWav, onDevice: this.stageDevice, onStretch: this.stretchSource, onRotate: this.rotateSource, onPreview: (start, end) => audioEngine.preview(src, start, end).catch((e) => this.setStatus(e.message)), onSelectSlice: (index) => this.setState({ sliceIndex: index }) }), this.state.view === "break" && /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Firmware Break"), /* @__PURE__ */ React.createElement("p", null, "Native banks A\u2013H and the chain use the same source. This is a separate firmware format, not a conversion of the Slice Lab grid. Apply saves the bank to the project; timeline events remain unchanged."), !src && /* @__PURE__ */ React.createElement("button", { onClick: () => this.audioInput?.click() }, "\uFF0B Add source")), src && this.state.view === "break" && /* @__PURE__ */ React.createElement(NativeBreakEditor, { key: `break-${src.id}`, source: src, readOnly: this.state.comparisonPreview, onSave: this.saveNativeBank }), this.state.view === "device" && /* @__PURE__ */ React.createElement("section", { className: "delivery-preparation" }, /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Prepare and transfer"), /* @__PURE__ */ React.createElement("p", null, "Choose an output from the shared project. Preparation creates a WAV but does not send it to the module. Studio owns the single connection; the source and pattern remain in place when you return.")), /* @__PURE__ */ React.createElement("div", { className: "delivery-choices" }, /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Source sample"), /* @__PURE__ */ React.createElement("p", null, "Trim, channels, normalization, markers, and settings from Source Preparation. Compatible imported native banks are preserved. Grid events and FX are not included."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: this.downloadSourceWav }, "Download source WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: this.stageDevice }, "Stage source for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Slice Lab pattern \u2192 Break WAV"), /* @__PURE__ */ React.createElement("p", null, "Check the current pattern's transitions against the full source. FX, layers, unrepresentable intervals, and unsupported grids block export; they are never silently discarded. The trim recipe is not applied here."), /* @__PURE__ */ React.createElement("button", { disabled: !src, onClick: () => this.prepareForModule() }, "Download Break WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || window.parent === window, onClick: () => this.prepareForModule(true) }, "Stage pattern for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Example-based Break model"), /* @__PURE__ */ React.createElement("p", null, "Compile up to eight authored variations into the firmware bank. Exact name BASE goes first; exact name FILL or a Fill tag goes last. Ratings weight the chain; cross-source mapping uses matching slice indices. Exact events are reused, not invented. Unsupported layers, source ranges, grid positions, and FX block export; duration approximations are reported before confirmation."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.prepareLearnedBank() }, "Download learned bank\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: () => this.prepareLearnedBank(true) }, "Stage learned bank\u2026"))), /* @__PURE__ */ React.createElement("div", { className: "delivery-boundary" }, /* @__PURE__ */ React.createElement("strong", null, "Device compatibility is not yet confirmed"), /* @__PURE__ */ React.createElement("p", null, src ? `${src.name} \xB7 ${ranges.length} slices \xB7 ${(src.frames / src.sampleRate).toFixed(2)} s` : "Add a source first to enable these outputs.", " \xB7 editor limit: 64 slices. Transfer may have stricter limits. RAM writes with metadata are blocked; /LOOPS support does not imply Break support."), /* @__PURE__ */ React.createElement("p", null, "Standalone mode supports WAV and ZIP. Transfer is available only inside Studio. SD, RAM, and audio playback require testing on the actual module.")))), /* @__PURE__ */ React.createElement("section", { className: "arrange" }, /* @__PURE__ */ React.createElement(PatternGrid, { sources: p.sources, effects: v.effects, tracks: v.tracks, onSelectSource: (id) => this.setState({ sourceId: id, sliceIndex: 0 }), comparisonPreview: this.state.comparisonPreview, comparisonAvailable, onToggleComparison: this.toggleComparisonPreview, comparisonError: comparison?.error, readOnly: this.state.comparisonPreview, onCreateFX: this.createPatternFX, onChangeFX: this.changePatternFX, onDeleteFX: (id) => this.commit("fx_delete", (p2) => {
         const v2 = currentVariation(p2);
         v2.effects = v2.effects.filter((f) => f.id !== id);
       }), source: src, slices: ranges, clips: displayClips, bars: v.patternBars || 1, division: v.patternDivision || 8, playhead: this.state.playhead, playing: this.state.playing, selectedSlice: this.state.sliceIndex, selectedClipId: this.state.clipId, onSetStep: this.setPatternStep, onDrawNotes: this.drawPatternNotes, onSelectClip: (clip) => this.setState({ clipId: clip.id, fxId: void 0, playhead: clip.positionBeats }), onRemoveClip: (id) => this.commit("clip_delete", (p2) => {
