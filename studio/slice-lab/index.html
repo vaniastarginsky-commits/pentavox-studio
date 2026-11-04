@@ -4871,7 +4871,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     const fillChance = Math.max(0, Math.min(1, (clamped - 0.2) / 0.8));
     const earlyFillChance = clamped < 0.9 ? 0 : 0.02 + 0.13 * ((clamped - 0.9) / 0.1);
     const fillActive = fillCandidateIndices.map((candidate, slot) => candidate >= 0 && fillProbabilityDraws[slot] < fillChance);
-    const earlyFillActive = earlyFillCandidateIndices.map((candidate, slot) => candidate >= 0 && earlyFillDraws[slot] < earlyFillChance && !fillActive[slot - 1] && !fillActive[slot] && !fillActive[slot + 1]);
+    const earlyFillActive = earlyFillCandidateIndices.map((candidate, slot) => candidate >= 0 && earlyFillDraws[slot] < earlyFillChance && !fillActive[(slot + length - 1) % length] && !fillActive[slot] && !fillActive[(slot + 1) % length]);
     const patternIndices = primaryIndices.map((primary, slot) => fillActive[slot] ? fillCandidateIndices[slot] : earlyFillActive[slot] ? earlyFillCandidateIndices[slot] : primary);
     return {
       seed,
