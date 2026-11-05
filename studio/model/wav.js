@@ -1,4 +1,5 @@
 import { decodeBank, encodeBank } from './break_pattern.js';
+import { decodeChopperBank, encodeChopperGridBank } from './chopper_bank.js';
 export const TARGET_SAMPLE_RATE = 48000;
 export const MAX_FRAMES = 1440000;
 export const MAX_SLICE_POINTS = 64;
@@ -97,16 +98,28 @@ export function acidFlags({ hasCue, oneShot, playMode = 0, step = 0, filter = 0 
   if (hasCue && modeOk && (mode >= 1 || only >= 1)) flags |= SLICE_PLAY_VALID | (mode << 8) | (code << 11) | (only << 15);
   return flags;
 }
-export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, timeNumerator = 4, timeDenominator = 4, slices = [], oneShot = false, playMode = 0, step = 0, playFilter = 0, labels = [], breakBank = null, origin = 0 } = {}) {
+export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, timeNumerator = 4, timeDenominator = 4, slices = [], oneShot = false, playMode = 0, step = 0, playFilter = 0, labels = [], breakBank = null, chopperGridBank = null, origin = 0 } = {}) {
   const channels = audio.channels.length;
   if (channels !== 1 && channels !== 2) throw new RangeError('A WAV file must have one or two channels');
   const frames = audio.channels[0]?.length ?? 0;
   if (audio.channels.some((channel) => channel.length !== frames)) throw new RangeError('WAV channels have different lengths');
   if (frames > MAX_FRAMES) throw new RangeError('The sample is longer than 30 seconds');
   const hasTempo = Number.isFinite(Number(bpm)) && Number(bpm) > 0 && Number.isInteger(Number(beats)) && Number(beats) > 0;
+  if (chopperGridBank && breakBank) throw new RangeError('Choose either legacy Break v1 or explicit Chopper grid v3, not both');
+  let cueInputs=Array.isArray(slices)?slices:[];
+  if(chopperGridBank){
+    const bars=Number(beats)/4,count=bars*2,expectedFrames=bars*240/Number(bpm)*audio.sampleRate;
+    if(chopperGridBank.cuePolicy!=='half-bar-grid-v1'||!hasTempo||timeNumerator!==4||timeDenominator!==4
+        ||!Number.isInteger(bars)||bars<1||bars>32||Math.abs(frames-expectedFrames)>2||frames<count)
+      throw new RangeError('Chopper v3 WAV needs verified 4/4 timing and a representable 1–32 bar half-bar cue grid');
+    if(oneShot||playMode!==0||playFilter!==0)throw new RangeError('Chopper grid playback is separate from legacy sampler play modes and filters');
+    if(!Array.isArray(chopperGridBank.patterns)||chopperGridBank.patterns.some(p=>!Array.isArray(p.events)||p.events.some(e=>e.src>=count)))
+      throw new RangeError('Chopper bank references a cue outside this source grid');
+    cueInputs=Array.from({length:count},(_,i)=>Math.round(i*frames/count));
+  }
   // Cue points with their drum label riding along, so sorting or dropping a point never misaligns the labels.
   const pairs = []; const seen = new Set();
-  (Array.isArray(slices) ? slices : []).forEach((value, index) => {
+  cueInputs.forEach((value, index) => {
     const f = Math.trunc(value);
     if (Number.isFinite(f) && f >= 0 && f < frames && !seen.has(f)) { seen.add(f); pairs.push([f, labelMask(labels?.[index] ?? 'other')]); }
   });
@@ -116,7 +129,8 @@ export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, timeNumerator
   const hasCue = cue.length >= 2;
   const hasTypes = hasCue && types.some((mask) => mask !== 0);
   const typesSize = hasTypes ? 8 + ((2 + types.length + 1) & ~1) : 0;
-  const bankBytes = hasCue && breakBank ? encodeBank(breakBank) : null;   // `pvxp`: Break patterns, only with slices to point at
+  const bankBytes = hasCue ? (chopperGridBank ? encodeChopperGridBank(chopperGridBank)
+    : breakBank ? encodeBank(breakBank) : null) : null; // v1 Break or explicit v3 Chopper grid
   const bankSize = bankBytes ? 8 + ((bankBytes.length + 1) & ~1) : 0;
   const hasAcid = hasTempo || hasCue || rootNote !== 60 || timeNumerator !== 4 || timeDenominator !== 4;
   const cueSize = hasCue ? 12 + 24 * cue.length : 0;
@@ -175,7 +189,7 @@ export function readWavMarkers(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const tag = (o) => String.fromCharCode(bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3]);
   if (tag(0) !== 'RIFF' || tag(8) !== 'WAVE') return null;
-  const info = { sampleRate: 0, channels: 0, blockAlign: 0, formatTag: 0, factFrames: 0, frames: 0, slices: [], oneShot: false, playMode: 0, step: 0, playFilter: 0, rootNote: 60, timeNumerator: 4, timeDenominator: 4, unsupportedAcidFlags: 0, labels: [], bpm: 0, beats: 0, breakBank: null, metadata: { acid: false, cue: false, pvxt: false, pvxp: false, pvxo: false, unknownChunks: [] }, warnings: [] };
+  const info = { sampleRate: 0, channels: 0, blockAlign: 0, formatTag: 0, factFrames: 0, frames: 0, slices: [], oneShot: false, playMode: 0, step: 0, playFilter: 0, rootNote: 60, timeNumerator: 4, timeDenominator: 4, unsupportedAcidFlags: 0, labels: [], bpm: 0, beats: 0, breakBank: null, chopperBank: null, metadata: { acid: false, cue: false, pvxt: false, pvxp: false, pvxo: false, unknownChunks: [] }, warnings: [] };
   let typeBytes = null;
   let pos = 12;
   while (pos + 8 <= bytes.length) {
@@ -199,8 +213,10 @@ export function readWavMarkers(bytes) {
     } else if (id === 'pvxt' && avail >= 2 && bytes[body] === 1) {
       const n = Math.min(bytes[body + 1], avail - 2); typeBytes = Array.from(bytes.subarray(body + 2, body + 2 + n));
     } else if (id === 'pvxp' && avail >= 3) {
-      info.breakBank = decodeBank(bytes.subarray(body, body + avail));
-      if (!info.breakBank) info.warnings.push('Unsupported or malformed pvxp Break bank; original bytes remain available.');
+      const packet=bytes.subarray(body,body+avail);
+      info.breakBank=decodeBank(packet); // legacy API remains v1-only
+      if(packet[0]===2||packet[0]===3)info.chopperBank=decodeChopperBank(packet);
+      if (!info.breakBank && !info.chopperBank) info.warnings.push('Unsupported or malformed pvxp bank; original bytes remain available.');
     } else if (id === 'data' && info.channels > 0 && info.blockAlign > 0) {
       if (info.formatTag === 1 || info.formatTag === 3) info.frames = Math.floor(avail / info.blockAlign);
       else if (info.factFrames > 0) info.frames = info.factFrames;

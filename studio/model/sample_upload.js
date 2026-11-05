@@ -28,6 +28,7 @@ export function pcm16FromWav(wav) {
     at = end + (size & 1);
   }
   if (!data || (channels !== 1 && channels !== 2) || bits !== 16 || !sampleRate || data.length % (channels * 2)) throw new RangeError('Converted WAV is not mono or stereo PCM16');
+  if(breakBytes&&breakBytes[0]!==1)throw new RangeError('RAM upload supports legacy PVXP v1 only; Chopper v2/v3 requires the Looper SD WAV path. No audio was sent.');
   const marks=readWavMarkers(wav);if(marks?.slices.length>32)throw new RangeError('RAM upload transport supports at most 32 slices. Use a compatible SD workflow; no slice metadata was removed.');
   return { bytes: data, channels, sampleRate, frames: data.length / (channels * 2), rootNote, slices: sliceBlockFromWav(wav), breakBytes, beats };
 }
@@ -51,6 +52,7 @@ export class SampleUploadClient {
   constructor(client, info, { retries = 3, busyDelayMs = 4 } = {}) { this.client = client; this.info = info; this.retries = retries; this.busyDelayMs = busyDelayMs; }
 
   async upload({ voice, bytes, frames, channels, sampleRate, rootNote = 60, slices = null, breakBytes = null, beats = 0, strictMetadata = false, onProgress = () => {}, signal }) {
+    if(breakBytes&&breakBytes[0]!==1)throw new RangeError('RAM upload does not support Chopper PVXP v2/v3; no audio was sent.');
     if (voice !== 0 && voice !== 1) throw new RangeError('Voice must be 1 or 2');
     if (!(bytes instanceof Uint8Array) || bytes.length !== frames * channels * 2) throw new RangeError('PCM byte count does not match the sample');
     if(strictMetadata&&beats>0&&(!Number.isSafeInteger(beats)||beats>0xFFFF))throw new RangeError('RAM upload cannot represent this beat count; no audio was sent.');

@@ -194,6 +194,7 @@ samplerMount = mountSampler(document.querySelector('#sampler-root'), {
   getInfo: () => session?.info,
   getSampleSlotCount: () => session?.sampleSlotCount ?? 4,
   getLoopIo: () => Boolean(session?.loopIo),
+  getDescriptor: () => session?.descriptor ?? null,
   onOpenSdTab: () => openSdDialog(),
 });
 

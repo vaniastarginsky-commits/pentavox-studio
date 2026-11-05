@@ -1,21 +1,22 @@
-// Opt-in Chopper PVXP v2 BODY codec. Legacy encodeBank/decodeBank stay v1-only.
+// Opt-in Chopper PVXP v2/v3 BODY codecs. Legacy encodeBank/decodeBank stay v1-only.
 // Layout: v2,count,chainLength,chain[],roles[count],then v1 pattern/event records.
-// Role bytes: base=0, variation=1, fill=2. No roles inferred from names/chain.
+// Role bytes: base=0, variation=1, fill=2. v3 adds cuePolicy=1 (4/4 half-bar grid). No roles inferred from names/chain.
 import {encodeBank, decodeBank} from './break_pattern.js';
 export const CHOPPER_ROLES = Object.freeze(['base', 'variation', 'fill']);
-export const MAX_CHOPPER_BYTES = 8235;
+export const MAX_CHOPPER_BYTES = 8236;
 const integer = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
 const signed = v => v < 128 ? v : v - 256;
 
 // Intentionally stricter than legacy decoding: no sorting, repair or clamping.
 export function decodeChopperBank(bytes) {
-  if (!(bytes instanceof Uint8Array) || bytes.length < 3 || bytes.length > MAX_CHOPPER_BYTES || bytes[0] !== 2) return null;
-  const count = bytes[1], length = bytes[2];
+  if (!(bytes instanceof Uint8Array) || bytes.length < 3 || bytes.length > MAX_CHOPPER_BYTES || (bytes[0] !== 2 && bytes[0] !== 3)) return null;
+  const version=bytes[0],count = bytes[1], length = bytes[2];
   if (count < 1 || count > 8 || length > 16 || bytes.length < 3 + length + count) return null;
   for (let i = 0; i < length; i++) if (bytes[3+i] >= count) return null;
   const roleBytes = bytes.subarray(3+length,3+length+count);
   if ([...roleBytes].some(v => v > 2) || !roleBytes.includes(0)) return null;
   let at = 3+length+count;
+  if(version===3 && bytes[at++]!==1)return null; // explicit 4/4 half-bar cue policy
   for (let p = 0; p < count; p++) {
     if (at+2 > bytes.length) return null;
     const steps = bytes[at++]*16, n = bytes[at++];
@@ -30,11 +31,12 @@ export function decodeChopperBank(bytes) {
     }
   }
   if (at !== bytes.length) return null;
-  const v1 = new Uint8Array(bytes.length-count);
+  const policyBytes=version===3?1:0;
+  const v1 = new Uint8Array(bytes.length-count-policyBytes);
   v1.set(bytes.subarray(0,3+length)); v1[0] = 1;
-  v1.set(bytes.subarray(3+length+count),3+length);
+  v1.set(bytes.subarray(3+length+count+policyBytes),3+length);
   const bank = decodeBank(v1);
-  return {...bank, roles: [...roleBytes].map(v => CHOPPER_ROLES[v])};
+  return {...bank, roles: [...roleBytes].map(v => CHOPPER_ROLES[v]), ...(version===3?{cuePolicy:'half-bar-grid-v1'}:{})};
 }
 
 export function encodeChopperBank(bank) {
@@ -63,5 +65,15 @@ export function encodeChopperBank(bank) {
   out.set(v1.subarray(0,at)); out[0] = 2;
   out.set(roles.map(role => CHOPPER_ROLES.indexOf(role)),at);
   out.set(v1.subarray(at),at+roles.length);
+  return out;
+}
+
+// Opt-in PVXP v3. v1 and v2 bytes/decoders are unchanged; byte 3+chain+roles
+// declares the one cue interpretation understood by this firmware generation.
+export function encodeChopperGridBank(bank) {
+  const v2=encodeChopperBank(bank), count=bank?.patterns?.length;
+  const out=new Uint8Array(v2.length+1); out.set(v2.subarray(0,3+bank.chain.length+count));
+  out[0]=3; out[3+bank.chain.length+count]=1;
+  out.set(v2.subarray(3+bank.chain.length+count),4+bank.chain.length+count);
   return out;
 }

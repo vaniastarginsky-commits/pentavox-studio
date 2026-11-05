@@ -20,7 +20,7 @@ function button(text, className = '') { const node = el('button', className, tex
 function seconds(value) { return `${value.toFixed(value < 10 ? 2 : 1)} s`; }
 function download(bytes, name, type) { const url = URL.createObjectURL(new Blob([bytes], { type })); const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 
-export function mountSampler(root, { onError = (error) => console.error(error), onSuccess = () => {}, getClient = () => null, getInfo = () => null, getSampleSlotCount = () => 4, getLoopIo = () => false, onOpenSdTab = () => {}, onReturnSamples = () => { location.hash='#slice-lab'; } } = {}) {
+export function mountSampler(root, { onError = (error) => console.error(error), onSuccess = () => {}, getClient = () => null, getInfo = () => null, getSampleSlotCount = () => 4, getLoopIo = () => false, getDescriptor = () => null, onOpenSdTab = () => {}, onReturnSamples = () => { location.hash='#slice-lab'; } } = {}) {
   const state = { items: [], starts: [null, null, null, null], importing: false, exporting: false, selected: null, upload: null, card: null, cardInfo: null, cardFiles: [[], [], [], []], cardLoading: false, cardProblem: '', confirming: null, generation: 0 };
   // The looper image keeps its loops in /LOOPS (two loop slots, files numbered by the module) instead of the sampler's SLOT folders.
   const looper = () => Boolean(getLoopIo());
@@ -56,7 +56,9 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
 
   async function decodedFile(file) {
     const buffer = await file.arrayBuffer();
-    const marks = readWavMarkers(new Uint8Array(buffer.slice(0)));   // before decodeAudioData detaches the buffer
+    const originalBytes=new Uint8Array(buffer.slice(0));
+    const marks = readWavMarkers(originalBytes);   // before decodeAudioData detaches the buffer
+    if(marks?.metadata.pvxp && !marks.breakBank && !marks.chopperBank)throw new Error('Unsupported/malformed PVXP metadata; import was blocked rather than stripping it.');
     const decoded = await context().decodeAudioData(buffer);
     const audio = audioFromBuffer(decoded); const duration = audio.channels[0].length / audio.sampleRate;
     const name = file.name.replace(/\.[^.]+$/, '') || 'sample';
@@ -66,7 +68,8 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     return { name, audio, duration, trimStart: 0, trimEnd: duration, normalize: true, channelMode: audio.channels.length > 1 ? 'stereo' : 'mono', bpm, beats, tempoAuto, slot: 0,
       slices: marks && marks.sampleRate > 0 && marks.slices.length > 1 ? new SliceModel(duration, { markers: marks.slices.filter((frame) => frame > 0).map((frame) => frame / marks.sampleRate), oneShot: marks.oneShot, playMode: marks.playMode, step: marks.step, playFilter: marks.playFilter, labels: marks.labels }) : new SliceModel(duration),
       pyramid: buildPeakPyramid(audio.channels, audio.sampleRate), view: fitView(duration), playhead: 0, scope: 'selection', loop: false,
-      breakBank: marks?.breakBank ?? undefined };
+      breakBank: marks?.breakBank ?? undefined,
+      ...(marks?.chopperBank?{chopperBank:marks.chopperBank,frozenWav:originalBytes}:{} ) };
   }
 
   async function importFiles(files, { slot = null, select = false } = {}) {
@@ -148,6 +151,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     state.card = { label: `Writing ${item.name} to ${path}`, progress: 0, controller }; renderCardBar(); updateHeading(); refreshSide();
     const endJob = beginLinkJob('Writing a loop to the card');
     try {
+      if(item.chopperBank && (item.chopperBank.cuePolicy!=='half-bar-grid-v1'||getDescriptor()?.chopper?.pvxp!==3))throw new Error('This target does not advertise PVXP v3 Looper delivery; Chopper data was not stripped or sent.');
       const bytes = await wavFor(item, { origin: 2 });   // origin 2: the module's loop picker marks it as made by Studio
       state.card.size = bytes.length; state.card.startedAt = performance.now();
       await fsClient.upload(path, bytes, { overwrite: false, signal: controller.signal, onProgress: (progress) => { if (state.card) { state.card.progress = progress; renderCardBar(); } } });
@@ -543,6 +547,18 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     save.title = 'Save the loop that plays now to the next free /LOOPS/NNNN.WAV (the same as B1 + hold B2 on the module)'; save.addEventListener('click', saveLoop);
     const hint = el('small', loop.failed ? 'error' : '', loop.message || (state.cardInfo ? 'Save the loop that plays now, or load a file into one of the two loops.' : state.cardProblem || (state.cardLoading ? 'Reading the card…' : 'Connect the module to see its loops')));
     body.append(el('div', 'sd-live-actions', ''), hint); body.firstChild.append(save);
+    if(getDescriptor()?.chopper?.version===1) {
+      for(const enabled of [true,false]) {
+        const mode=button(enabled?'Enable Chopper':'Use legacy Slicer','quiet-button');
+        mode.disabled=loop.busy||!loopClient();
+        mode.addEventListener('click',async()=>{
+          if(!confirm(enabled?'Enable experimental Chopper on the Slice page? Top-L: A/B/Both; Mid-L: seed; Mid-R: probability; B1: randomizer rates; B2 hold: authored Fill. Load an explicit v3 grid WAV via /LOOPS. Hardware/listening acceptance is pending.':'Return the Slice page to legacy Slicer? Existing legacy controls and presets are unchanged.'))return;
+          try { await loopClient().setChopperMode(enabled,getDescriptor());onSuccess(enabled?'Chopper mode enabled explicitly; source/bank readiness still depends on the loaded loop.':'Legacy Slicer selected.'); }
+          catch(error){onError(error);}
+        });
+        body.firstChild.append(mode);
+      }
+    }
     const erasable = loop.files.filter((file) => !file.locked).length;
     if (erasable) {
       const erase = el('div', 'loop-erase');

@@ -583,6 +583,78 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     }
   });
 
+  // ../../studio/model/chopper_bank.js
+  function decodeChopperBank(bytes) {
+    if (!(bytes instanceof Uint8Array) || bytes.length < 3 || bytes.length > MAX_CHOPPER_BYTES || bytes[0] !== 2 && bytes[0] !== 3) return null;
+    const version = bytes[0], count = bytes[1], length = bytes[2];
+    if (count < 1 || count > 8 || length > 16 || bytes.length < 3 + length + count) return null;
+    for (let i = 0; i < length; i++) if (bytes[3 + i] >= count) return null;
+    const roleBytes = bytes.subarray(3 + length, 3 + length + count);
+    if ([...roleBytes].some((v) => v > 2) || !roleBytes.includes(0)) return null;
+    let at = 3 + length + count;
+    if (version === 3 && bytes[at++] !== 1) return null;
+    for (let p = 0; p < count; p++) {
+      if (at + 2 > bytes.length) return null;
+      const steps = bytes[at++] * 16, n = bytes[at++];
+      if (steps < 16 || steps > 128 || n > 128 || at + n * 8 > bytes.length) return null;
+      let end = 0;
+      for (let e = 0; e < n; e++, at += 8) {
+        const step = bytes[at], src = signed(bytes[at + 1]), len = bytes[at + 2], flags = bytes[at + 3];
+        if (flags & 128 || (flags & 7) > 5 || (flags >> 3 & 3) > 2 || step < end || step >= steps || !len || step + len > steps || src < -2 || src >= 64 || Math.abs(signed(bytes[at + 6])) > 12 || Math.abs(signed(bytes[at + 7])) > 12) return null;
+        end = step + len;
+      }
+    }
+    if (at !== bytes.length) return null;
+    const policyBytes = version === 3 ? 1 : 0;
+    const v1 = new Uint8Array(bytes.length - count - policyBytes);
+    v1.set(bytes.subarray(0, 3 + length));
+    v1[0] = 1;
+    v1.set(bytes.subarray(3 + length + count + policyBytes), 3 + length);
+    const bank = decodeBank(v1);
+    return { ...bank, roles: [...roleBytes].map((v) => CHOPPER_ROLES[v]), ...version === 3 ? { cuePolicy: "half-bar-grid-v1" } : {} };
+  }
+  function encodeChopperBank(bank) {
+    const patterns = bank?.patterns, chain = bank?.chain, roles = bank?.roles;
+    if (!Array.isArray(patterns) || !integer(patterns.length, 1, 8) || !Array.isArray(chain) || chain.length > 16 || [...chain].some((v) => !integer(v, 0, patterns.length - 1)) || !Array.isArray(roles) || roles.length !== patterns.length || [...roles].some((v) => !CHOPPER_ROLES.includes(v)) || !roles.includes("base"))
+      throw new RangeError("Chopper bank requires 1\u20138 patterns, a valid chain and explicit roles including BASE");
+    for (const p of patterns) {
+      if (!integer(p?.steps, 16, 128) || p.steps % 16 || !Array.isArray(p.events) || p.events.length > 128)
+        throw new RangeError("Invalid Chopper pattern");
+      let end = 0;
+      for (const e of p.events) {
+        if (!e || !integer(e.step, end, p.steps - 1) || !integer(e.len, 1, p.steps - e.step) || !integer(e.src, -2, 63) || ![1, 2, 3, 4, 6, 8].includes(e.reps) || !integer(e.roll, 0, 2) || typeof e.rev !== "boolean" || typeof e.gate !== "boolean" || !integer(e.pitch0, -12, 12) || !integer(e.pitch1, -12, 12) || ![e.amp0, e.amp1].every((v) => Number.isFinite(v) && v >= 0 && v <= 1))
+          throw new RangeError("Invalid or overlapping Chopper event");
+        end = e.step + e.len;
+      }
+    }
+    const v1 = encodeBank({ patterns, chain }), at = 3 + chain.length;
+    const out = new Uint8Array(v1.length + roles.length);
+    out.set(v1.subarray(0, at));
+    out[0] = 2;
+    out.set(roles.map((role) => CHOPPER_ROLES.indexOf(role)), at);
+    out.set(v1.subarray(at), at + roles.length);
+    return out;
+  }
+  function encodeChopperGridBank(bank) {
+    const v2 = encodeChopperBank(bank), count = bank?.patterns?.length;
+    const out = new Uint8Array(v2.length + 1);
+    out.set(v2.subarray(0, 3 + bank.chain.length + count));
+    out[0] = 3;
+    out[3 + bank.chain.length + count] = 1;
+    out.set(v2.subarray(3 + bank.chain.length + count), 4 + bank.chain.length + count);
+    return out;
+  }
+  var CHOPPER_ROLES, MAX_CHOPPER_BYTES, integer, signed;
+  var init_chopper_bank = __esm({
+    "../../studio/model/chopper_bank.js"() {
+      init_break_pattern();
+      CHOPPER_ROLES = Object.freeze(["base", "variation", "fill"]);
+      MAX_CHOPPER_BYTES = 8236;
+      integer = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
+      signed = (v) => v < 128 ? v : v - 256;
+    }
+  });
+
   // ../../studio/model/wav.js
   var wav_exports = {};
   __export(wav_exports, {
@@ -696,16 +768,27 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     if (hasCue && modeOk && (mode >= 1 || only >= 1)) flags |= SLICE_PLAY_VALID | mode << 8 | code << 11 | only << 15;
     return flags;
   }
-  function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, timeNumerator = 4, timeDenominator = 4, slices = [], oneShot = false, playMode = 0, step = 0, playFilter = 0, labels = [], breakBank = null, origin = 0 } = {}) {
+  function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, timeNumerator = 4, timeDenominator = 4, slices = [], oneShot = false, playMode = 0, step = 0, playFilter = 0, labels = [], breakBank = null, chopperGridBank = null, origin = 0 } = {}) {
     const channels = audio.channels.length;
     if (channels !== 1 && channels !== 2) throw new RangeError("A WAV file must have one or two channels");
     const frames = audio.channels[0]?.length ?? 0;
     if (audio.channels.some((channel) => channel.length !== frames)) throw new RangeError("WAV channels have different lengths");
     if (frames > MAX_FRAMES) throw new RangeError("The sample is longer than 30 seconds");
     const hasTempo = Number.isFinite(Number(bpm)) && Number(bpm) > 0 && Number.isInteger(Number(beats)) && Number(beats) > 0;
+    if (chopperGridBank && breakBank) throw new RangeError("Choose either legacy Break v1 or explicit Chopper grid v3, not both");
+    let cueInputs = Array.isArray(slices) ? slices : [];
+    if (chopperGridBank) {
+      const bars = Number(beats) / 4, count = bars * 2, expectedFrames = bars * 240 / Number(bpm) * audio.sampleRate;
+      if (chopperGridBank.cuePolicy !== "half-bar-grid-v1" || !hasTempo || timeNumerator !== 4 || timeDenominator !== 4 || !Number.isInteger(bars) || bars < 1 || bars > 32 || Math.abs(frames - expectedFrames) > 2 || frames < count)
+        throw new RangeError("Chopper v3 WAV needs verified 4/4 timing and a representable 1\u201332 bar half-bar cue grid");
+      if (oneShot || playMode !== 0 || playFilter !== 0) throw new RangeError("Chopper grid playback is separate from legacy sampler play modes and filters");
+      if (!Array.isArray(chopperGridBank.patterns) || chopperGridBank.patterns.some((p) => !Array.isArray(p.events) || p.events.some((e) => e.src >= count)))
+        throw new RangeError("Chopper bank references a cue outside this source grid");
+      cueInputs = Array.from({ length: count }, (_, i) => Math.round(i * frames / count));
+    }
     const pairs = [];
     const seen = /* @__PURE__ */ new Set();
-    (Array.isArray(slices) ? slices : []).forEach((value, index) => {
+    cueInputs.forEach((value, index) => {
       const f = Math.trunc(value);
       if (Number.isFinite(f) && f >= 0 && f < frames && !seen.has(f)) {
         seen.add(f);
@@ -718,7 +801,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     const hasCue = cue.length >= 2;
     const hasTypes = hasCue && types.some((mask) => mask !== 0);
     const typesSize = hasTypes ? 8 + (2 + types.length + 1 & ~1) : 0;
-    const bankBytes = hasCue && breakBank ? encodeBank(breakBank) : null;
+    const bankBytes = hasCue ? chopperGridBank ? encodeChopperGridBank(chopperGridBank) : breakBank ? encodeBank(breakBank) : null : null;
     const bankSize = bankBytes ? 8 + (bankBytes.length + 1 & ~1) : 0;
     const hasAcid = hasTempo || hasCue || rootNote !== 60 || timeNumerator !== 4 || timeDenominator !== 4;
     const cueSize = hasCue ? 12 + 24 * cue.length : 0;
@@ -806,7 +889,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     const tag = (o) => String.fromCharCode(bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3]);
     if (tag(0) !== "RIFF" || tag(8) !== "WAVE") return null;
-    const info = { sampleRate: 0, channels: 0, blockAlign: 0, formatTag: 0, factFrames: 0, frames: 0, slices: [], oneShot: false, playMode: 0, step: 0, playFilter: 0, rootNote: 60, timeNumerator: 4, timeDenominator: 4, unsupportedAcidFlags: 0, labels: [], bpm: 0, beats: 0, breakBank: null, metadata: { acid: false, cue: false, pvxt: false, pvxp: false, pvxo: false, unknownChunks: [] }, warnings: [] };
+    const info = { sampleRate: 0, channels: 0, blockAlign: 0, formatTag: 0, factFrames: 0, frames: 0, slices: [], oneShot: false, playMode: 0, step: 0, playFilter: 0, rootNote: 60, timeNumerator: 4, timeDenominator: 4, unsupportedAcidFlags: 0, labels: [], bpm: 0, beats: 0, breakBank: null, chopperBank: null, metadata: { acid: false, cue: false, pvxt: false, pvxp: false, pvxo: false, unknownChunks: [] }, warnings: [] };
     let typeBytes = null;
     let pos = 12;
     while (pos + 8 <= bytes.length) {
@@ -857,8 +940,10 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         const n = Math.min(bytes[body + 1], avail - 2);
         typeBytes = Array.from(bytes.subarray(body + 2, body + 2 + n));
       } else if (id === "pvxp" && avail >= 3) {
-        info.breakBank = decodeBank(bytes.subarray(body, body + avail));
-        if (!info.breakBank) info.warnings.push("Unsupported or malformed pvxp Break bank; original bytes remain available.");
+        const packet = bytes.subarray(body, body + avail);
+        info.breakBank = decodeBank(packet);
+        if (packet[0] === 2 || packet[0] === 3) info.chopperBank = decodeChopperBank(packet);
+        if (!info.breakBank && !info.chopperBank) info.warnings.push("Unsupported or malformed pvxp bank; original bytes remain available.");
       } else if (id === "data" && info.channels > 0 && info.blockAlign > 0) {
         if (info.formatTag === 1 || info.formatTag === 3) info.frames = Math.floor(avail / info.blockAlign);
         else if (info.factFrames > 0) info.frames = info.factFrames;
@@ -883,6 +968,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
   var init_wav = __esm({
     "../../studio/model/wav.js"() {
       init_break_pattern();
+      init_chopper_bank();
       TARGET_SAMPLE_RATE = 48e3;
       MAX_FRAMES = 144e4;
       MAX_SLICE_POINTS = 64;
@@ -960,6 +1046,28 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         }
       }
     }
+    if (s.chopperBank !== void 0) {
+      const b = s.chopperBank;
+      if (!b || !Array.isArray(b.patterns) || b.patterns.length < 1 || b.patterns.length > 8 || !Array.isArray(b.chain) || b.chain.length > 16 || b.chain.some((v) => !Number.isSafeInteger(v) || v < 0 || v >= b.patterns.length) || !Array.isArray(b.roles) || b.roles.length !== b.patterns.length || b.roles.some((v) => !["base", "variation", "fill"].includes(v)) || !b.roles.includes("base") || b.cuePolicy !== void 0 && b.cuePolicy !== "half-bar-grid-v1") errors.push("invalid Chopper bank");
+      else for (const p of b.patterns) {
+        if (!p || ![16, 32, 48, 64, 80, 96, 112, 128].includes(p.steps) || !Array.isArray(p.events) || p.events.length > 128) errors.push("invalid Chopper pattern");
+        else for (const e of p.events) {
+          if (!e || !Number.isSafeInteger(e.step) || e.step < 0 || e.step >= p.steps || !Number.isSafeInteger(e.src) || e.src < -2 || e.src >= 64 || !Number.isSafeInteger(e.len) || e.len < 1 || e.len > p.steps - e.step || ![1, 2, 3, 4, 6, 8].includes(e.reps) || !Number.isSafeInteger(e.roll) || e.roll < 0 || e.roll > 2 || typeof e.rev !== "boolean" || typeof e.gate !== "boolean" || ![e.amp0, e.amp1].every((v) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1) || ![e.pitch0, e.pitch1].every((v) => Number.isSafeInteger(v) && v >= -12 && v <= 12)) errors.push("invalid Chopper event");
+        }
+      }
+    }
+    if (s.breakBank !== void 0 && s.chopperBank !== void 0) errors.push("Choose legacy Break or Chopper, not both");
+    if (Array.isArray(s.chopperBank?.patterns)) {
+      for (const p of s.chopperBank.patterns) if (Array.isArray(p?.events)) {
+        let end = 0;
+        for (const e of p.events) {
+          if (e && Number.isSafeInteger(e.step) && Number.isSafeInteger(e.len)) {
+            if (e.step < end) errors.push("Chopper events must be ordered and non-overlapping");
+            end = e.step + e.len;
+          }
+        }
+      }
+    }
     return errors;
   }
 
@@ -974,8 +1082,8 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     const text = (v, path) => {
       if (typeof v !== "string" || !v.length) fail(path);
     };
-    const number = (v, path, min, integer = false) => {
-      if (typeof v !== "number" || !Number.isFinite(v) || v < min || integer && !Number.isSafeInteger(v)) fail(path);
+    const number = (v, path, min, integer2 = false) => {
+      if (typeof v !== "number" || !Number.isFinite(v) || v < min || integer2 && !Number.isSafeInteger(v)) fail(path);
     };
     const array = (v, path) => {
       if (!Array.isArray(v)) fail(path);
@@ -1297,10 +1405,10 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
   // src/core/learned-break-bank.ts
   var ALLOWED_PATTERN_STEPS = /* @__PURE__ */ new Set([16, 32, 48, 64, 80, 96, 112, 128]);
   var EPSILON = 1e-6;
-  function sourceProblem(source, label) {
+  function sourceProblem(source, label, maxSlices) {
     if (!Number.isSafeInteger(source.frames) || source.frames <= 0 || !Number.isFinite(source.sampleRate) || source.sampleRate <= 0 || !Number.isFinite(source.bpm) || source.bpm <= 0)
       return `${label}: frame count, sample rate, and BPM must be valid.`;
-    if (source.markers.length + 1 > 32) return `${label}: firmware Break supports at most 32 source slices.`;
+    if (source.markers.length + 1 > maxSlices) return `${label}: firmware Break supports at most ${maxSlices} source slices.`;
     const starts = [0, ...source.markers], ends = [...source.markers, source.frames];
     for (let i = 0; i < starts.length; i++) if (!Number.isSafeInteger(starts[i]) || !Number.isSafeInteger(ends[i]) || starts[i] < 0 || ends[i] <= starts[i] || ends[i] > source.frames)
       return `${label}: markers must be strictly increasing and inside the original audio.`;
@@ -1323,10 +1431,10 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     for (let i = 0; i < remaining; i++) counts[fractions[i].index]++;
     return counts;
   }
-  function learnBreakBank(project, targetSourceId) {
+  function learnBreakBank(project, targetSourceId, maxSourceSlices = 32) {
     const target2 = project.sources.find((source) => source.id === targetSourceId);
     if (!target2) return { ok: false, errors: [`Target source ${targetSourceId} is not in the project.`] };
-    const targetProblem = sourceProblem(target2, `Target ${target2.name}`);
+    const targetProblem = sourceProblem(target2, `Target ${target2.name}`, maxSourceSlices);
     if (targetProblem) return { ok: false, errors: [targetProblem] };
     const errors = [], warnings = [], trainingSourceIds = /* @__PURE__ */ new Set();
     for (const variation of project.variations) {
@@ -1341,7 +1449,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     for (const id of trainingSourceIds) {
       const source = sourceById.get(id);
       if (!source) return { ok: false, errors: [`Training source ${id} is missing from the project.`] };
-      const problem = sourceProblem(source, `Training source ${source.name}`);
+      const problem = sourceProblem(source, `Training source ${source.name}`, maxSourceSlices);
       if (problem) return { ok: false, errors: [problem] };
       if (source.markers.length !== target2.markers.length) return { ok: false, errors: [`Training source ${source.name} has ${source.markers.length + 1} slices, but target ${target2.name} has ${target2.markers.length + 1}; v1 transfers by slice index and requires matching slice counts.`] };
       layouts.set(id, sourceSlices(source));
@@ -1477,6 +1585,162 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     return { ok: true, bank: { patterns, chain }, patternNames: names, trainingSourceIds: [...trainingSourceIds], warnings: [...new Set(warnings)], sourceId: target2.id };
   }
 
+  // src/core/seed-sequence.ts
+  function xorshift32(state) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return state >>> 0;
+  }
+  function normalizedSeed(seed) {
+    const value = seed >>> 0;
+    return value === 0 ? 2654435769 : value;
+  }
+  function generateSeedSequence(seed, numPatterns, length = 16) {
+    if (!Number.isInteger(length) || length < 0) return [];
+    if (numPatterns <= 0) return Array(length).fill(0);
+    const indices = [];
+    let state = normalizedSeed(seed);
+    for (let i = 0; i < length; i++) {
+      state = xorshift32(state);
+      indices.push(state % numPatterns);
+    }
+    return indices;
+  }
+  function generateProbabilityDraws(seed, length = 16) {
+    if (!Number.isInteger(length) || length < 0) return [];
+    let state = (normalizedSeed(seed) ^ 2769414579) >>> 0;
+    if (state === 0) state = 1831565813;
+    const draws = [];
+    for (let i = 0; i < length; i++) {
+      state = xorshift32(state);
+      draws.push(state / 4294967296);
+    }
+    return draws;
+  }
+  function buildSeedSequence(seed, patternNames, patternTypes, probability, length = 16, patternSteps = Array(patternNames.length).fill(32), intervalBars = 16) {
+    const nonFillIndices = patternTypes.map((type, index) => type === "fill" ? -1 : index).filter((index) => index >= 0);
+    const baseIndex = patternTypes.findIndex((type) => type === "base");
+    const fallbackIndex = baseIndex >= 0 ? baseIndex : nonFillIndices[0] ?? 0;
+    const primaryPool = nonFillIndices.length ? nonFillIndices : [fallbackIndex];
+    const candidateIndices = generateSeedSequence(seed, primaryPool.length, length).map((poolIndex) => primaryPool[poolIndex] ?? fallbackIndex);
+    const probabilityDraws = generateProbabilityDraws(seed, length);
+    const fillProbabilityDraws = generateProbabilityDraws(seed ^ 2246822507, length);
+    const clamped = Number.isFinite(probability) ? Math.max(0, Math.min(1, probability)) : 0;
+    const variationChance = Math.max(0, Math.min(1, (clamped - 0.1) / 0.9));
+    const variationActive = Array(length).fill(false);
+    const primaryIndices = candidateIndices.map((candidate, slot) => {
+      const type = patternTypes[candidate] ?? "base";
+      const chance = variationChance;
+      const active = candidate === fallbackIndex || type === "base" || probabilityDraws[slot] < chance;
+      variationActive[slot] = active;
+      return active ? candidate : fallbackIndex;
+    });
+    const fillIndices = patternTypes.map((type, index) => type === "fill" ? index : -1).filter((index) => index >= 0);
+    const fillCandidateIndices = Array(length).fill(-1);
+    const fillOpportunities = Array(length).fill(false);
+    const elapsedStepsAtEnd = Array(length).fill(0);
+    let elapsedSteps = 0;
+    const intervalSteps = Math.max(1, Math.round(intervalBars * 16));
+    for (let slot = 0; slot < length; slot++) {
+      const primary = primaryIndices[slot] ?? fallbackIndex;
+      const slotSteps = Number.isInteger(patternSteps[primary]) && patternSteps[primary] > 0 ? patternSteps[primary] : 16;
+      elapsedSteps += slotSteps;
+      elapsedStepsAtEnd[slot] = elapsedSteps;
+      if (elapsedSteps % intervalSteps !== 0) continue;
+      fillOpportunities[slot] = true;
+      const matchingFills = fillIndices.filter((index) => patternSteps[index] === slotSteps);
+      if (!matchingFills.length) continue;
+      const fillChoice = generateSeedSequence(seed ^ 3266489909, matchingFills.length, length)[slot];
+      fillCandidateIndices[slot] = matchingFills[fillChoice] ?? matchingFills[0];
+    }
+    const earlyFillCandidateIndices = Array(length).fill(-1);
+    const earlyFillDraws = generateProbabilityDraws(seed ^ 668265263, length);
+    const firstWindow = fillOpportunities.findIndex(Boolean);
+    const earlySlots = [];
+    for (let slot = 0; slot < length; slot++) {
+      if (firstWindow >= 0 && slot >= firstWindow) continue;
+      if (fillOpportunities[slot] || fillOpportunities[slot - 1] || fillOpportunities[slot + 1]) continue;
+      if (elapsedStepsAtEnd[slot] >= intervalSteps) continue;
+      const slotSteps = Number.isInteger(patternSteps[primaryIndices[slot]]) ? patternSteps[primaryIndices[slot]] : 16;
+      if (fillIndices.some((index) => patternSteps[index] === slotSteps)) earlySlots.push(slot);
+    }
+    if (earlySlots.length) {
+      const earlySlot = earlySlots[generateSeedSequence(seed ^ 374761393, earlySlots.length, 1)[0]];
+      const slotSteps = Number.isInteger(patternSteps[primaryIndices[earlySlot]]) ? patternSteps[primaryIndices[earlySlot]] : 16;
+      const matchingFills = fillIndices.filter((index) => patternSteps[index] === slotSteps);
+      const choice = generateSeedSequence(seed ^ 3550635116, matchingFills.length, length)[earlySlot];
+      earlyFillCandidateIndices[earlySlot] = matchingFills[choice] ?? matchingFills[0];
+    }
+    const fillChance = Math.max(0, Math.min(1, (clamped - 0.2) / 0.8));
+    const earlyFillChance = clamped < 0.9 ? 0 : 0.02 + 0.13 * ((clamped - 0.9) / 0.1);
+    const fillActive = fillCandidateIndices.map((candidate, slot) => candidate >= 0 && fillProbabilityDraws[slot] < fillChance);
+    const earlyFillActive = earlyFillCandidateIndices.map((candidate, slot) => candidate >= 0 && earlyFillDraws[slot] < earlyFillChance && !fillActive[(slot + length - 1) % length] && !fillActive[slot] && !fillActive[(slot + 1) % length]);
+    const patternIndices = primaryIndices.map((primary, slot) => fillActive[slot] ? fillCandidateIndices[slot] : earlyFillActive[slot] ? earlyFillCandidateIndices[slot] : primary);
+    return {
+      seed,
+      length,
+      candidateIndices,
+      primaryIndices,
+      fillCandidateIndices,
+      fillOpportunities,
+      probabilityDraws,
+      fillProbabilityDraws,
+      earlyFillCandidateIndices,
+      earlyFillDraws,
+      earlyFillActive,
+      variationActive,
+      fillActive,
+      patternIndices,
+      patternNames: patternIndices.map((index) => patternNames[index] ?? `Pattern ${index + 1}`)
+    };
+  }
+
+  // src/core/chopper-timeline.ts
+  function chopperGrid(bars) {
+    if (!Number.isInteger(bars) || bars < 1 || bars > 32) throw new RangeError("Chopper needs 1\u201332 known 4/4 bars");
+    return Array.from({ length: bars * 2 }, (_, i) => i * 8);
+  }
+  function chopperFrameGrid(frames, bars) {
+    const count = chopperGrid(bars).length;
+    if (!Number.isSafeInteger(frames) || frames < count) throw new RangeError("Source cannot represent distinct Chopper cues");
+    return Array.from({ length: count }, (_, i) => Math.round(i * frames / count));
+  }
+
+  // src/core/chopper-bank.ts
+  function compileChopperBank(project, targetSourceId, maxSourceSlices = 32) {
+    const learned = learnBreakBank(project, targetSourceId, maxSourceSlices);
+    if (!learned.ok) return learned;
+    const roles = project.variations.filter((v) => v.clips.length > 0).map((v) => {
+      const name = v.name.trim().toUpperCase();
+      return name === "BASE" ? "base" : name === "FILL" || v.tags.some((tag) => tag.kind === "fill") ? "fill" : "variation";
+    });
+    if (!roles.includes("base")) return { ok: false, errors: ["Chopper requires an explicit BASE variation; no pattern or chain entry is guessed as BASE."] };
+    if (roles.length !== learned.bank.patterns.length) return { ok: false, errors: ["Chopper role count does not match compiled patterns."] };
+    return { ok: true, bank: { ...learned.bank, roles }, patternNames: learned.patternNames, warnings: [...learned.warnings, "Chopper v2 stores explicit roles; seed scheduling follows Slice Lab and does not use legacy chain repetitions as rating weights. This packet is not yet a device-loadable WAV export."] };
+  }
+  function compileGridChopperBank(project, targetSourceId, sourceBars) {
+    const used = /* @__PURE__ */ new Set([targetSourceId, ...project.variations.flatMap((v) => v.clips.map((c) => c.sourceId))]);
+    const errors = [];
+    const sources = project.sources.map((source) => {
+      if (!used.has(source.id)) return source;
+      const bars = sourceBars[source.id];
+      try {
+        const starts = chopperFrameGrid(source.frames, bars);
+        if (!Number.isFinite(source.sampleRate) || source.sampleRate <= 0 || !Number.isFinite(source.bpm) || source.bpm <= 0 || Math.abs(source.frames - bars * 240 / source.bpm * source.sampleRate) > 2 || source.sampler && (source.sampler.timeNumerator !== 4 || source.sampler.timeDenominator !== 4))
+          throw new RangeError("Reliable 4/4 BPM/bar timing does not match source duration");
+        return { ...source, markers: starts.slice(1) };
+      } catch (error) {
+        errors.push(`${source.name}: ${String(error)}`);
+        return source;
+      }
+    });
+    if (errors.length) return { ok: false, errors };
+    const compiled = compileChopperBank({ ...project, sources }, targetSourceId, 64);
+    if (!compiled.ok) return compiled;
+    return { ...compiled, bank: { ...compiled.bank, cuePolicy: "half-bar-grid-v1" }, cuePolicy: "half-bar-grid-v1", sourceBars: { ...sourceBars }, warnings: [...compiled.warnings, "PVXP v3 explicitly declares the 4/4 half-bar cue policy. Source bar count still comes from validated WAV timing metadata."] };
+  }
+
   // src/core/comparison-preview.ts
   function boundaries(source) {
     return [0, ...new Set(source.markers.filter((n) => n > 0 && n < source.frames).sort((a, b) => a - b)), source.frames];
@@ -1551,6 +1815,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       ...Number.isSafeInteger(info.beats) && info.beats > 0 ? { beats: info.beats } : {},
       labels,
       ...info.breakBank ? { breakBank: info.breakBank } : {},
+      ...info.chopperBank ? { chopperBank: info.chopperBank } : {},
       metadata: { acid: Boolean(metadata.acid), cue: Boolean(metadata.cue), pvxt: Boolean(metadata.pvxt), pvxp: Boolean(metadata.pvxp), pvxo: Boolean(metadata.pvxo), unknownChunks: [...metadata.unknownChunks || []] },
       warnings: importWarnings
     };
@@ -1585,18 +1850,22 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       if (channels.length < 1 || channels.length > 2) throw new Error("Derived source persistence supports mono/stereo only; channels were not silently discarded.");
       if (sampleRate <= 0 || frames > 144e4 || frames / sampleRate > 30) throw new Error("Derived WAV must fit the 30 second source limit.");
       if (options.markers.length + 1 > 64) throw new Error("Derived WAV would exceed 64 slices; no cue points were truncated.");
+      if (parent.sampler?.chopperBank && !options.sampler.chopperBank) throw new Error("Derived audio would lose its Chopper bank; preserve the original or explicitly remove the bank from the parent first.");
+      if (options.sampler.chopperBank && derivation.operation === "rotate" && derivation.shiftFrames) throw new Error("Chopper grid rotation requires source-cue remapping; rotation is blocked rather than exporting stale grid indices.");
+      if (options.sampler.chopperBank && options.sampler.beats !== parent.sampler?.beats) throw new Error("Chopper stretch must preserve the source beat count.");
       const sampler = structuredClone(options.sampler), settingsErrors = samplerSettingsErrors(sampler, options.markers.length + 1), bankErrors = breakBankCompatibilityErrors(sampler.breakBank, options.markers.length + 1);
       if (settingsErrors.length) throw new Error(settingsErrors.join("; "));
       if (sampler.breakBank && bankErrors.length) throw new Error(`Derived Break bank is incompatible with the slice grid: ${bankErrors.join("; ")}`);
-      if (sampler.playMode >= 4 && !sampler.breakBank) throw new Error("Break playback requires a decoded native bank; derived export is blocked.");
-      if (!options.markers.length && (sampler.oneShot || sampler.playMode !== 0 || sampler.playFilter > 0 || sampler.breakBank || sampler.labels.some((label) => label !== "other"))) throw new Error("The source has no cue boundaries; sampler settings cannot be encoded without silently losing them. Add a slice or reset them first.");
+      if (sampler.chopperBank && sampler.chopperBank.cuePolicy !== "half-bar-grid-v1") throw new Error("Derived Chopper export requires PVXP v3 cue policy; v2 cue interpretation is not inferred.");
+      if (sampler.playMode >= 4 && !sampler.breakBank && !sampler.chopperBank) throw new Error("Break playback requires a decoded native bank; derived export is blocked.");
+      if (!options.markers.length && (sampler.oneShot || sampler.playMode !== 0 || sampler.playFilter > 0 || sampler.breakBank || sampler.chopperBank || sampler.labels.some((label) => label !== "other"))) throw new Error("The source has no cue boundaries; sampler settings cannot be encoded without silently losing them. Add a slice or reset them first.");
       const { encodePcm16Wav: encodePcm16Wav2 } = await Promise.resolve().then(() => (init_wav(), wav_exports));
       const id = uid("src"), slices = [0, ...options.markers];
-      const bytes = encodePcm16Wav2({ sampleRate, channels }, { bpm: sampler.beats ? options.bpm : void 0, beats: sampler.beats, rootNote: sampler.rootNote, timeNumerator: sampler.timeNumerator, timeDenominator: sampler.timeDenominator, slices, labels: sampler.labels, oneShot: sampler.oneShot, playMode: sampler.playMode, step: sampler.step, playFilter: sampler.playFilter, breakBank: sampler.breakBank ?? null });
+      const bytes = encodePcm16Wav2({ sampleRate, channels }, { bpm: sampler.beats ? options.bpm : void 0, beats: sampler.beats, rootNote: sampler.rootNote, timeNumerator: sampler.timeNumerator, timeDenominator: sampler.timeDenominator, slices, labels: sampler.labels, oneShot: sampler.oneShot, playMode: sampler.playMode, step: sampler.step, playFilter: sampler.playFilter, breakBank: sampler.breakBank ?? null, chopperGridBank: sampler.chopperBank ?? null });
       const name = options.name, blob = new Blob([bytes], { type: "audio/wav" }), stored = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), buffer = await this.decode(stored);
       if (buffer.length !== frames || buffer.sampleRate !== sampleRate || buffer.numberOfChannels !== channels.length) throw new Error("PCM16 child WAV did not decode back to the expected shape.");
       sampler.unsupportedAcidFlags = 0;
-      sampler.metadata = { acid: Boolean(sampler.beats) || options.markers.length > 0 || sampler.rootNote !== 60 || sampler.timeNumerator !== 4 || sampler.timeDenominator !== 4, cue: options.markers.length > 0, pvxt: options.markers.length > 0 && sampler.labels.some((label) => label !== "other"), pvxp: Boolean(sampler.breakBank && options.markers.length > 0), pvxo: false, unknownChunks: [] };
+      sampler.metadata = { acid: Boolean(sampler.beats) || options.markers.length > 0 || sampler.rootNote !== 60 || sampler.timeNumerator !== 4 || sampler.timeDenominator !== 4, cue: options.markers.length > 0, pvxt: options.markers.length > 0 && sampler.labels.some((label) => label !== "other"), pvxp: Boolean((sampler.breakBank || sampler.chopperBank) && options.markers.length > 0), pvxo: false, unknownChunks: [] };
       const source = { id, name, assetPath: `assets/${id}_${name.replace(/[^\w.\-]+/g, "_")}`, mime: "audio/wav", sampleRate: buffer.sampleRate, frames: buffer.length, channels: buffer.numberOfChannels, bpm: options.bpm, markers: [...options.markers], sampler, derivedFrom: { ...derivation }, addedAt: now() };
       this.files.set(id, blob);
       this.buffers.set(id, buffer);
@@ -2426,7 +2695,13 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       const frame = i === 0 ? value.startFrame : interior[i - 1], sourceSlice = source.markers.filter((m) => m <= frame).length;
       return sampler.labels[sourceSlice] || "other";
     });
-    const fullRange = value.startFrame === 0 && value.endFrame === source.frames, hasCue = slices.length >= 2, bankErrors = breakBankCompatibilityErrors(sampler.breakBank, slices.length);
+    const fullRange = value.startFrame === 0 && value.endFrame === source.frames, hasCue = slices.length >= 2;
+    if (sampler.chopperBank && (!sampler.chopperBank.cuePolicy || !fullRange || sampler.timeNumerator !== 4 || sampler.timeDenominator !== 4 || value.beats !== sampler.beats)) throw new Error("Chopper bank export requires its explicit v3 4/4 cue policy, full source range and unchanged beat count. Preserve the original WAV; source timing/index remapping is not inferred.");
+    if (sampler.chopperBank) {
+      const beats = Number(value.beats), count = beats / 2;
+      if (!Number.isInteger(beats) || beats < 4 || beats > 128 || beats % 4 || Math.abs(frames - beats * 60 / source.bpm * TARGET_SAMPLE_RATE) > 2 || sampler.oneShot || sampler.playMode !== 0 || sampler.playFilter !== 0 || sampler.chopperBank.patterns.some((p) => p.events.some((e) => e.src >= count))) throw new Error("Chopper source timing/cues must remain a verified 1\u201332 bar 4/4 grid with neutral legacy playback settings.");
+    }
+    const keepChopper = Boolean(sampler.chopperBank && sampler.chopperBank.cuePolicy === "half-bar-grid-v1" && fullRange && value.beats === sampler.beats), bankErrors = breakBankCompatibilityErrors(sampler.breakBank, slices.length);
     const keepBreak = Boolean(sampler.breakBank && fullRange && !bankErrors.length && hasCue);
     if (sampler.playMode >= 4 && !sampler.breakBank) throw new Error("Break mode is selected, but the project has no decoded pvxp bank. Preserve the original or choose another mode; export will not silently change playback.");
     if (sampler.playMode >= 4 && sampler.breakBank && bankErrors.length) throw new Error(`Break / Break Gate bank is incompatible with this slice grid: ${bankErrors.join("; ")}. Export is blocked; edit the source slices or choose a different play mode.`);
@@ -2441,14 +2716,14 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       const expected = value.beats * 60 / source.bpm, actual = frames / TARGET_SAMPLE_RATE;
       if (Math.abs(actual - expected) > Math.max(1 / TARGET_SAMPLE_RATE, expected * 2e-3)) warnings.push(`Trim duration ${actual.toFixed(3)} s does not match ${value.beats} beats at ${source.bpm} BPM (${expected.toFixed(3)} s); verify tempo manually.`);
     }
-    if (sampler.metadata.pvxp && !sampler.breakBank) warnings.push("The source WAV contained unreadable pvxp data. These bytes are available only in the original; Break export is blocked.");
-    if (!sampler.breakBank) warnings.push("The Break/pvxp bank is not in the editable model; Break modes cannot be exported. Download the original to preserve the unknown bank byte-for-byte.");
+    if (sampler.metadata.pvxp && !sampler.breakBank && !sampler.chopperBank) warnings.push("The source WAV contained unreadable pvxp data. These bytes are available only in the original; Break export is blocked.");
+    if (!sampler.breakBank && !sampler.chopperBank) warnings.push("The Break/pvxp bank is not in the editable model; Break modes cannot be exported. Download the original to preserve the unknown bank byte-for-byte.");
     if (sampler.breakBank && !keepBreak) warnings.push(`Break/pvxp bank is preserved in the project but not included: ${bankErrors.length ? bankErrors.join("; ") : !fullRange ? "range is trimmed; remapping source indices is unsafe" : !hasCue ? "at least two cue boundaries are required" : ""}.`);
     if (sampler.playMode === 0 && sampler.playFilter === 0 && sampler.step !== 0) warnings.push("Clock step is not serialized in Normal mode; select a clocked play mode to use it.");
     if (sampler.metadata.pvxo) warnings.push("The source pvxo origin chunk is not copied to the converted WAV.");
     if (sampler.unsupportedAcidFlags) warnings.push(`Unknown ACID flags 0x${sampler.unsupportedAcidFlags.toString(16)} stay in the byte-exact original only.`);
     warnings.push(...sampler.warnings);
-    return { frames, slices, labels, breakBank: keepBreak ? sampler.breakBank : null, warnings };
+    return { frames, slices, labels, breakBank: keepBreak ? sampler.breakBank : null, chopperBank: keepChopper ? sampler.chopperBank : null, warnings };
   }
   async function prepareSourceWav(source, buffer, value, options = {}) {
     const plan = sourceWavPlan(source, value);
@@ -2456,7 +2731,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     const audio = await prepareAudio(audioFromBuffer(buffer), { trimStart: value.startFrame / source.sampleRate, trimEnd: value.endFrame / source.sampleRate, normalize: value.normalize, channelMode: value.channelMode, ...options });
     if (audio.channels[0].length !== plan.frames) throw new Error("Prepared WAV size does not match the plan.");
     const sampler = defaultSamplerSettings(source);
-    return { bytes: encodePcm16Wav(audio, { bpm: value.beats === void 0 ? void 0 : source.bpm, beats: value.beats, rootNote: sampler.rootNote, timeNumerator: sampler.timeNumerator, timeDenominator: sampler.timeDenominator, slices: plan.slices, labels: plan.labels, oneShot: sampler.oneShot, playMode: sampler.playMode, step: sampler.step, playFilter: sampler.playFilter, breakBank: plan.breakBank }), plan };
+    return { bytes: encodePcm16Wav(audio, { bpm: value.beats === void 0 ? void 0 : source.bpm, beats: value.beats, rootNote: sampler.rootNote, timeNumerator: sampler.timeNumerator, timeDenominator: sampler.timeDenominator, slices: plan.slices, labels: plan.labels, oneShot: sampler.oneShot, playMode: sampler.playMode, step: sampler.step, playFilter: sampler.playFilter, breakBank: plan.breakBank, chopperGridBank: plan.chopperBank }), plan };
   }
 
   // ../../studio/model/tempo_hint.js
@@ -4781,117 +5056,6 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     }
   };
 
-  // src/core/seed-sequence.ts
-  function xorshift32(state) {
-    state ^= state << 13;
-    state ^= state >>> 17;
-    state ^= state << 5;
-    return state >>> 0;
-  }
-  function normalizedSeed(seed) {
-    const value = seed >>> 0;
-    return value === 0 ? 2654435769 : value;
-  }
-  function generateSeedSequence(seed, numPatterns, length = 16) {
-    if (!Number.isInteger(length) || length < 0) return [];
-    if (numPatterns <= 0) return Array(length).fill(0);
-    const indices = [];
-    let state = normalizedSeed(seed);
-    for (let i = 0; i < length; i++) {
-      state = xorshift32(state);
-      indices.push(state % numPatterns);
-    }
-    return indices;
-  }
-  function generateProbabilityDraws(seed, length = 16) {
-    if (!Number.isInteger(length) || length < 0) return [];
-    let state = (normalizedSeed(seed) ^ 2769414579) >>> 0;
-    if (state === 0) state = 1831565813;
-    const draws = [];
-    for (let i = 0; i < length; i++) {
-      state = xorshift32(state);
-      draws.push(state / 4294967296);
-    }
-    return draws;
-  }
-  function buildSeedSequence(seed, patternNames, patternTypes, probability, length = 16, patternSteps = Array(patternNames.length).fill(32), intervalBars = 16) {
-    const nonFillIndices = patternTypes.map((type, index) => type === "fill" ? -1 : index).filter((index) => index >= 0);
-    const baseIndex = patternTypes.findIndex((type) => type === "base");
-    const fallbackIndex = baseIndex >= 0 ? baseIndex : nonFillIndices[0] ?? 0;
-    const primaryPool = nonFillIndices.length ? nonFillIndices : [fallbackIndex];
-    const candidateIndices = generateSeedSequence(seed, primaryPool.length, length).map((poolIndex) => primaryPool[poolIndex] ?? fallbackIndex);
-    const probabilityDraws = generateProbabilityDraws(seed, length);
-    const fillProbabilityDraws = generateProbabilityDraws(seed ^ 2246822507, length);
-    const clamped = Number.isFinite(probability) ? Math.max(0, Math.min(1, probability)) : 0;
-    const variationChance = Math.max(0, Math.min(1, (clamped - 0.1) / 0.9));
-    const variationActive = Array(length).fill(false);
-    const primaryIndices = candidateIndices.map((candidate, slot) => {
-      const type = patternTypes[candidate] ?? "base";
-      const chance = variationChance;
-      const active = candidate === fallbackIndex || type === "base" || probabilityDraws[slot] < chance;
-      variationActive[slot] = active;
-      return active ? candidate : fallbackIndex;
-    });
-    const fillIndices = patternTypes.map((type, index) => type === "fill" ? index : -1).filter((index) => index >= 0);
-    const fillCandidateIndices = Array(length).fill(-1);
-    const fillOpportunities = Array(length).fill(false);
-    const elapsedStepsAtEnd = Array(length).fill(0);
-    let elapsedSteps = 0;
-    const intervalSteps = Math.max(1, Math.round(intervalBars * 16));
-    for (let slot = 0; slot < length; slot++) {
-      const primary = primaryIndices[slot] ?? fallbackIndex;
-      const slotSteps = Number.isInteger(patternSteps[primary]) && patternSteps[primary] > 0 ? patternSteps[primary] : 16;
-      elapsedSteps += slotSteps;
-      elapsedStepsAtEnd[slot] = elapsedSteps;
-      if (elapsedSteps % intervalSteps !== 0) continue;
-      fillOpportunities[slot] = true;
-      const matchingFills = fillIndices.filter((index) => patternSteps[index] === slotSteps);
-      if (!matchingFills.length) continue;
-      const fillChoice = generateSeedSequence(seed ^ 3266489909, matchingFills.length, length)[slot];
-      fillCandidateIndices[slot] = matchingFills[fillChoice] ?? matchingFills[0];
-    }
-    const earlyFillCandidateIndices = Array(length).fill(-1);
-    const earlyFillDraws = generateProbabilityDraws(seed ^ 668265263, length);
-    const firstWindow = fillOpportunities.findIndex(Boolean);
-    const earlySlots = [];
-    for (let slot = 0; slot < length; slot++) {
-      if (firstWindow >= 0 && slot >= firstWindow) continue;
-      if (fillOpportunities[slot] || fillOpportunities[slot - 1] || fillOpportunities[slot + 1]) continue;
-      if (elapsedStepsAtEnd[slot] >= intervalSteps) continue;
-      const slotSteps = Number.isInteger(patternSteps[primaryIndices[slot]]) ? patternSteps[primaryIndices[slot]] : 16;
-      if (fillIndices.some((index) => patternSteps[index] === slotSteps)) earlySlots.push(slot);
-    }
-    if (earlySlots.length) {
-      const earlySlot = earlySlots[generateSeedSequence(seed ^ 374761393, earlySlots.length, 1)[0]];
-      const slotSteps = Number.isInteger(patternSteps[primaryIndices[earlySlot]]) ? patternSteps[primaryIndices[earlySlot]] : 16;
-      const matchingFills = fillIndices.filter((index) => patternSteps[index] === slotSteps);
-      const choice = generateSeedSequence(seed ^ 3550635116, matchingFills.length, length)[earlySlot];
-      earlyFillCandidateIndices[earlySlot] = matchingFills[choice] ?? matchingFills[0];
-    }
-    const fillChance = Math.max(0, Math.min(1, (clamped - 0.2) / 0.8));
-    const earlyFillChance = clamped < 0.9 ? 0 : 0.02 + 0.13 * ((clamped - 0.9) / 0.1);
-    const fillActive = fillCandidateIndices.map((candidate, slot) => candidate >= 0 && fillProbabilityDraws[slot] < fillChance);
-    const earlyFillActive = earlyFillCandidateIndices.map((candidate, slot) => candidate >= 0 && earlyFillDraws[slot] < earlyFillChance && !fillActive[(slot + length - 1) % length] && !fillActive[slot] && !fillActive[(slot + 1) % length]);
-    const patternIndices = primaryIndices.map((primary, slot) => fillActive[slot] ? fillCandidateIndices[slot] : earlyFillActive[slot] ? earlyFillCandidateIndices[slot] : primary);
-    return {
-      seed,
-      length,
-      candidateIndices,
-      primaryIndices,
-      fillCandidateIndices,
-      fillOpportunities,
-      probabilityDraws,
-      fillProbabilityDraws,
-      earlyFillCandidateIndices,
-      earlyFillDraws,
-      earlyFillActive,
-      variationActive,
-      fillActive,
-      patternIndices,
-      patternNames: patternIndices.map((index) => patternNames[index] ?? `Pattern ${index + 1}`)
-    };
-  }
-
   // src/components/SeedSequenceTester.tsx
   var MAX_PREVIEW_SAMPLE_VALUES = 8e6;
   var MAX_PREVIEW_SECONDS = 120;
@@ -5737,6 +5901,56 @@ The ZIP remains unchanged and canonical. A separate WAV will be created; nothing
 ${error.message}`);
         }
       };
+      this.downloadGridChopperBank = async (stage = false) => {
+        const project = this.state.project, source = this.source, buffer = source && audioLibrary.get(source.id);
+        if (!source || !buffer) return this.setStatus("Source audio unavailable; import the WAV again.");
+        if (this.state.comparisonPreview) return this.setStatus("Exit A/B preview before compiling a Chopper grid bank.");
+        if (buffer.length !== source.frames || buffer.sampleRate !== source.sampleRate || buffer.numberOfChannels !== source.channels) return this.setStatus("Audio/source coordinates differ; re-import before compiling.");
+        const used = /* @__PURE__ */ new Set([source.id, ...project.variations.flatMap((v) => v.clips.map((c) => c.sourceId))]), sourceBars = {};
+        for (const item of project.sources) {
+          if (!used.has(item.id)) continue;
+          const estimated = item.frames / item.sampleRate * item.bpm / 60, metadataBeats = defaultSamplerSettings(item).beats, beats = Number.isSafeInteger(metadataBeats) && Number(metadataBeats) > 0 ? Number(metadataBeats) : Math.round(estimated);
+          if (!Number.isFinite(estimated) || Math.abs(estimated - beats) > 0.02 || beats % 4 || beats < 4 || beats > 128) {
+            this.setStatus(`${item.name}: reliable 4/4 source length up to 32 bars is required; no WAV created.`);
+            return;
+          }
+          sourceBars[item.id] = beats / 4;
+        }
+        const compiled = compileGridChopperBank(project, source.id, sourceBars);
+        if (!compiled.ok) {
+          window.alert("Cannot build Chopper grid bank:\n\u2022 " + compiled.errors.join("\n\u2022 "));
+          this.setStatus("Chopper grid compilation failed; project and original source are unchanged.");
+          return;
+        }
+        const bars = sourceBars[source.id];
+        if (!window.confirm(`Create an opt-in PVXP v3 Chopper WAV for ${source.name}?
+
+${bars} bars \xB7 ${bars * 2} half-bar cues \xB7 explicit grid policy.
+
+Only authored full-cue events are accepted; legacy marker indices are not remapped. Source metadata and the canonical ZIP remain unchanged. For the experimental Single-Plaits Looper SD renderer with explicit Chopper mode enabled. RAM delivery is unsupported. Hardware/listening acceptance is still pending. ${stage ? "A frozen WAV will be staged in Studio Device tools; hardware transfer requires a separate action." : "Nothing will be sent to the module."}`)) return;
+        try {
+          const audio = await prepareAudio(audioFromBuffer(buffer), { trimStart: 0, trimEnd: buffer.length / buffer.sampleRate, normalize: false, channelMode: buffer.numberOfChannels > 1 ? "stereo" : "mono" });
+          if (audio.channels[0].length > MAX_FRAMES) throw new RangeError("Prepared WAV exceeds the 30-second limit.");
+          const wav = encodePcm16Wav(audio, { bpm: source.bpm, beats: bars * 4, timeNumerator: 4, timeDenominator: 4, chopperGridBank: compiled.bank });
+          if (this.state.project !== project) throw new Error("The project changed during preparation; verify again.");
+          const name = `${source.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_-]+/g, "_")}_chopper_grid_v3.wav`;
+          if (stage) {
+            await stageDeviceArtifact(new Uint8Array(wav), name);
+            this.setStatus("Frozen Chopper v3 WAV staged in Device tools; /LOOPS transfer and enabling Chopper require separate actions. Original/project unchanged.");
+          } else {
+            const blob = new Blob([wav], { type: "audio/wav" }), url = URL.createObjectURL(blob), link = document.createElement("a");
+            link.href = url;
+            link.download = name;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1e3);
+            this.setStatus("PVXP v3 Chopper WAV created for experimental Looper SD playback; enable Chopper explicitly. Original/project unchanged; hardware acceptance pending.");
+          }
+        } catch (error) {
+          this.setStatus(`Could not create Chopper grid WAV: ${error.message}`);
+          window.alert(`Could not create Chopper grid WAV:
+${error.message}`);
+        }
+      };
       this.prepareForModule = async (stage = false) => {
         const project = this.state.project, source = this.source, buffer = source && audioLibrary.get(source.id);
         if (!source || !buffer) return this.setStatus("Source audio unavailable; import the WAV again.");
@@ -5981,7 +6195,7 @@ ${error.message}`);
           const variation = currentVariation(pp);
           if (!variation.clips.length) variation.patternBars = barsForSource(source);
         }, { sourceId: src.id, bpm: +e.target.value });
-      } })), /* @__PURE__ */ React.createElement("span", { className: "tag" }, src?.sampleRate || "\u2013", " Hz")), /* @__PURE__ */ React.createElement("div", { className: "source-wave-wrap " + (!src && (this.state.view === "pattern" || this.state.view === "device") ? "has-empty-action" : "") }, /* @__PURE__ */ React.createElement(SourceWave, { source: src, selectedSlice: this.state.sliceIndex, onSelect: (index) => this.setState({ sliceIndex: index }), onMarkers: this.updateMarkers }), !src && (this.state.view === "pattern" || this.state.view === "device") && /* @__PURE__ */ React.createElement("div", { className: "source-empty-action" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio"), /* @__PURE__ */ React.createElement("small", null, "or use \uFF0B beside Sources"))), /* @__PURE__ */ React.createElement("div", { className: "source-footer" }, /* @__PURE__ */ React.createElement("span", { className: "muted" }, src ? `Slice ${this.state.sliceIndex + 1}/${ranges.length}` : "No source selected", src && range ? ` \xB7 ${(range.startFrame / src.sampleRate).toFixed(3)}\u2013${(range.endFrame / src.sampleRate).toFixed(3)}s` : ""), /* @__PURE__ */ React.createElement("div", { className: "flex" }), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(4), disabled: !src }, "Markers 1/4"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(8), disabled: !src }, "Markers 1/8"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addTransients(), disabled: !src }, "\u26A1 Transients"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.deleteMarker(), disabled: !src }, "\u2212 Marker"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.previewSlice(), disabled: !src }, "\u25B6 Slice"), /* @__PURE__ */ React.createElement("button", { onClick: this.openSourceComparison, disabled: !src, title: "Create a non-destructive variation with another audio source while preserving the slice map" }, "\u21C4 Compare WAV"), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.state.advanced ? this.insertSlice() : this.insertAtPatternStep(), disabled: !src }, this.state.advanced ? "\uFF0B To timeline" : "\uFF0B To step")), !src && this.state.view === "prepare" && /* @__PURE__ */ React.createElement("div", { className: "preparation-empty" }, /* @__PURE__ */ React.createElement("strong", null, "Add a source first"), /* @__PURE__ */ React.createElement("span", null, "It will appear here and in the pattern editor. WAV files are not copied to a separate library."), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio")), src && (this.state.view === "prepare" || this.state.view === "pattern") && /* @__PURE__ */ React.createElement(SourcePreparation, { key: src.id, source: src, expanded: this.state.view === "prepare", selectedSlice: this.state.sliceIndex, readOnly: this.state.comparisonPreview, onSave: this.savePreparation, onOriginal: this.downloadOriginal, onExport: this.downloadSourceWav, onDevice: this.stageDevice, onStretch: this.stretchSource, onRotate: this.rotateSource, onPreview: (start, end) => audioEngine.preview(src, start, end).catch((e) => this.setStatus(e.message)), onSelectSlice: (index) => this.setState({ sliceIndex: index }) }), this.state.view === "break" && /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Firmware Break"), /* @__PURE__ */ React.createElement("p", null, "Native banks A\u2013H and the chain use the same source. This is a separate firmware format, not a conversion of the Slice Lab grid. Apply saves the bank to the project; timeline events remain unchanged."), !src && /* @__PURE__ */ React.createElement("button", { onClick: () => this.audioInput?.click() }, "\uFF0B Add source")), src && this.state.view === "break" && /* @__PURE__ */ React.createElement(NativeBreakEditor, { key: `break-${src.id}`, source: src, readOnly: this.state.comparisonPreview, onSave: this.saveNativeBank }), this.state.view === "device" && /* @__PURE__ */ React.createElement("section", { className: "delivery-preparation" }, /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Prepare and transfer"), /* @__PURE__ */ React.createElement("p", null, "Choose an output from the shared project. Preparation creates a WAV but does not send it to the module. Studio owns the single connection; the source and pattern remain in place when you return.")), /* @__PURE__ */ React.createElement("div", { className: "delivery-choices" }, /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Source sample"), /* @__PURE__ */ React.createElement("p", null, "Trim, channels, normalization, markers, and settings from Source Preparation. Compatible imported native banks are preserved. Grid events and FX are not included."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: this.downloadSourceWav }, "Download source WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: this.stageDevice }, "Stage source for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Slice Lab pattern \u2192 Break WAV"), /* @__PURE__ */ React.createElement("p", null, "Check the current pattern's transitions against the full source. FX, layers, unrepresentable intervals, and unsupported grids block export; they are never silently discarded. The trim recipe is not applied here."), /* @__PURE__ */ React.createElement("button", { disabled: !src, onClick: () => this.prepareForModule() }, "Download Break WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || window.parent === window, onClick: () => this.prepareForModule(true) }, "Stage pattern for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Example-based Break model"), /* @__PURE__ */ React.createElement("p", null, "Compile up to eight authored variations into the firmware bank. Exact name BASE goes first; exact name FILL or a Fill tag goes last. Ratings weight the chain; cross-source mapping uses matching slice indices. Exact events are reused, not invented. Unsupported layers, source ranges, grid positions, and FX block export; duration approximations are reported before confirmation."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.prepareLearnedBank() }, "Download learned bank\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: () => this.prepareLearnedBank(true) }, "Stage learned bank\u2026"))), /* @__PURE__ */ React.createElement(SeedSequenceTester, { project: p, sourceId: src?.id, transportPlaying: this.state.playing }), /* @__PURE__ */ React.createElement("div", { className: "delivery-boundary" }, /* @__PURE__ */ React.createElement("strong", null, "Device compatibility is not yet confirmed"), /* @__PURE__ */ React.createElement("p", null, src ? `${src.name} \xB7 ${ranges.length} slices \xB7 ${(src.frames / src.sampleRate).toFixed(2)} s` : "Add a source first to enable these outputs.", " \xB7 editor limit: 64 slices. Transfer may have stricter limits. RAM writes with metadata are blocked; /LOOPS support does not imply Break support."), /* @__PURE__ */ React.createElement("p", null, "Standalone mode supports WAV and ZIP. Transfer is available only inside Studio. SD, RAM, and audio playback require testing on the actual module.")))), /* @__PURE__ */ React.createElement("section", { className: "arrange" }, /* @__PURE__ */ React.createElement(PatternGrid, { sources: p.sources, effects: v.effects, tracks: v.tracks, onSelectSource: (id) => this.setState({ sourceId: id, sliceIndex: 0 }), comparisonPreview: this.state.comparisonPreview, comparisonAvailable, onToggleComparison: this.toggleComparisonPreview, comparisonError: comparison?.error, readOnly: this.state.comparisonPreview, onCreateFX: this.createPatternFX, onChangeFX: this.changePatternFX, onDeleteFX: (id) => this.commit("fx_delete", (p2) => {
+      } })), /* @__PURE__ */ React.createElement("span", { className: "tag" }, src?.sampleRate || "\u2013", " Hz")), /* @__PURE__ */ React.createElement("div", { className: "source-wave-wrap " + (!src && (this.state.view === "pattern" || this.state.view === "device") ? "has-empty-action" : "") }, /* @__PURE__ */ React.createElement(SourceWave, { source: src, selectedSlice: this.state.sliceIndex, onSelect: (index) => this.setState({ sliceIndex: index }), onMarkers: this.updateMarkers }), !src && (this.state.view === "pattern" || this.state.view === "device") && /* @__PURE__ */ React.createElement("div", { className: "source-empty-action" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio"), /* @__PURE__ */ React.createElement("small", null, "or use \uFF0B beside Sources"))), /* @__PURE__ */ React.createElement("div", { className: "source-footer" }, /* @__PURE__ */ React.createElement("span", { className: "muted" }, src ? `Slice ${this.state.sliceIndex + 1}/${ranges.length}` : "No source selected", src && range ? ` \xB7 ${(range.startFrame / src.sampleRate).toFixed(3)}\u2013${(range.endFrame / src.sampleRate).toFixed(3)}s` : ""), /* @__PURE__ */ React.createElement("div", { className: "flex" }), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(4), disabled: !src }, "Markers 1/4"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(8), disabled: !src }, "Markers 1/8"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addTransients(), disabled: !src }, "\u26A1 Transients"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.deleteMarker(), disabled: !src }, "\u2212 Marker"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.previewSlice(), disabled: !src }, "\u25B6 Slice"), /* @__PURE__ */ React.createElement("button", { onClick: this.openSourceComparison, disabled: !src, title: "Create a non-destructive variation with another audio source while preserving the slice map" }, "\u21C4 Compare WAV"), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.state.advanced ? this.insertSlice() : this.insertAtPatternStep(), disabled: !src }, this.state.advanced ? "\uFF0B To timeline" : "\uFF0B To step")), !src && this.state.view === "prepare" && /* @__PURE__ */ React.createElement("div", { className: "preparation-empty" }, /* @__PURE__ */ React.createElement("strong", null, "Add a source first"), /* @__PURE__ */ React.createElement("span", null, "It will appear here and in the pattern editor. WAV files are not copied to a separate library."), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio")), src && (this.state.view === "prepare" || this.state.view === "pattern") && /* @__PURE__ */ React.createElement(SourcePreparation, { key: src.id, source: src, expanded: this.state.view === "prepare", selectedSlice: this.state.sliceIndex, readOnly: this.state.comparisonPreview, onSave: this.savePreparation, onOriginal: this.downloadOriginal, onExport: this.downloadSourceWav, onDevice: this.stageDevice, onStretch: this.stretchSource, onRotate: this.rotateSource, onPreview: (start, end) => audioEngine.preview(src, start, end).catch((e) => this.setStatus(e.message)), onSelectSlice: (index) => this.setState({ sliceIndex: index }) }), this.state.view === "break" && /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Firmware Break"), /* @__PURE__ */ React.createElement("p", null, "Native banks A\u2013H and the chain use the same source. This is a separate firmware format, not a conversion of the Slice Lab grid. Apply saves the bank to the project; timeline events remain unchanged."), !src && /* @__PURE__ */ React.createElement("button", { onClick: () => this.audioInput?.click() }, "\uFF0B Add source")), src && this.state.view === "break" && /* @__PURE__ */ React.createElement(NativeBreakEditor, { key: `break-${src.id}`, source: src, readOnly: this.state.comparisonPreview, onSave: this.saveNativeBank }), this.state.view === "device" && /* @__PURE__ */ React.createElement("section", { className: "delivery-preparation" }, /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Prepare and transfer"), /* @__PURE__ */ React.createElement("p", null, "Choose an output from the shared project. Preparation creates a WAV but does not send it to the module. Studio owns the single connection; the source and pattern remain in place when you return.")), /* @__PURE__ */ React.createElement("div", { className: "delivery-choices" }, /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Source sample"), /* @__PURE__ */ React.createElement("p", null, "Trim, channels, normalization, markers, and settings from Source Preparation. Compatible imported native banks are preserved. Grid events and FX are not included."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: this.downloadSourceWav }, "Download source WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: this.stageDevice }, "Stage source for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Slice Lab pattern \u2192 Break WAV"), /* @__PURE__ */ React.createElement("p", null, "Check the current pattern's transitions against the full source. FX, layers, unrepresentable intervals, and unsupported grids block export; they are never silently discarded. The trim recipe is not applied here."), /* @__PURE__ */ React.createElement("button", { disabled: !src, onClick: () => this.prepareForModule() }, "Download Break WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || window.parent === window, onClick: () => this.prepareForModule(true) }, "Stage pattern for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Example-based Break model"), /* @__PURE__ */ React.createElement("p", null, "Compile up to eight authored variations into the firmware bank. Exact name BASE goes first; exact name FILL or a Fill tag goes last. Ratings weight the chain; cross-source mapping uses matching slice indices. Exact events are reused, not invented. Unsupported layers, source ranges, grid positions, and FX block export; duration approximations are reported before confirmation."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.prepareLearnedBank() }, "Download learned bank\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: () => this.prepareLearnedBank(true) }, "Stage learned bank\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Explicit Chopper grid \xB7 PVXP v3"), /* @__PURE__ */ React.createElement("p", null, "Compile for the derived 4/4 half-bar grid (up to 64 cues). Legacy marker indices are not silently remapped. Separate WAV for Single-Plaits Looper SD playback in explicit Chopper mode. Staging freezes the WAV in Device tools; it never sends hardware commands. RAM playback is unsupported; hardware acceptance is pending."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.downloadGridChopperBank() }, "Download Chopper grid WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: () => this.downloadGridChopperBank(true) }, "Stage Chopper for device\u2026"))), /* @__PURE__ */ React.createElement(SeedSequenceTester, { project: p, sourceId: src?.id, transportPlaying: this.state.playing }), /* @__PURE__ */ React.createElement("div", { className: "delivery-boundary" }, /* @__PURE__ */ React.createElement("strong", null, "Device compatibility is not yet confirmed"), /* @__PURE__ */ React.createElement("p", null, src ? `${src.name} \xB7 ${ranges.length} slices \xB7 ${(src.frames / src.sampleRate).toFixed(2)} s` : "Add a source first to enable these outputs.", " \xB7 editor limit: 64 slices. Transfer may have stricter limits. RAM writes with metadata are blocked; /LOOPS support does not imply Break support."), /* @__PURE__ */ React.createElement("p", null, "Standalone mode supports WAV and ZIP. Transfer is available only inside Studio. SD, RAM, and audio playback require testing on the actual module.")))), /* @__PURE__ */ React.createElement("section", { className: "arrange" }, /* @__PURE__ */ React.createElement(PatternGrid, { sources: p.sources, effects: v.effects, tracks: v.tracks, onSelectSource: (id) => this.setState({ sourceId: id, sliceIndex: 0 }), comparisonPreview: this.state.comparisonPreview, comparisonAvailable, onToggleComparison: this.toggleComparisonPreview, comparisonError: comparison?.error, readOnly: this.state.comparisonPreview, onCreateFX: this.createPatternFX, onChangeFX: this.changePatternFX, onDeleteFX: (id) => this.commit("fx_delete", (p2) => {
         const v2 = currentVariation(p2);
         v2.effects = v2.effects.filter((f) => f.id !== id);
       }), source: src, slices: ranges, clips: displayClips, bars: v.patternBars || 1, division: v.patternDivision || 8, playhead: this.state.playhead, playing: this.state.playing, selectedSlice: this.state.sliceIndex, selectedClipId: this.state.clipId, onSetStep: this.setPatternStep, onDrawNotes: this.drawPatternNotes, onSelectClip: (clip) => this.setState({ clipId: clip.id, fxId: void 0, playhead: clip.positionBeats }), onRemoveClip: (id) => this.commit("clip_delete", (p2) => {

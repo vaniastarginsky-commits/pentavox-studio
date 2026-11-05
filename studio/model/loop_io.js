@@ -101,6 +101,13 @@ export class LoopIoClient {
     await this.client.request(LOOP_IO_COMMAND.LOAD, Uint8Array.of(slot, number & 0xff, (number >> 8) & 0xff));
   }
 
+  async setChopperMode(enabled, descriptor) {
+    if(typeof enabled!=='boolean'||descriptor?.chopper?.version!==1||descriptor.chopper.pvxp!==3||descriptor.chopper.modeCommand!==0x7b)
+      throw new Error('This target does not advertise the experimental Chopper mode command');
+    const {body}=await this.client.request(0x7b,Uint8Array.of(2,enabled?1:0));
+    if(body.length!==22||Boolean(body[0]&2)!==enabled)throw new Error('Target did not confirm the Chopper mode change');
+  }
+
   async status() {
     const { body } = await this.client.request(LOOP_IO_COMMAND.STATUS);
     return parseLoopStatus(body);
