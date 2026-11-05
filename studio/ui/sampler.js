@@ -547,7 +547,9 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     save.title = 'Save the loop that plays now to the next free /LOOPS/NNNN.WAV (the same as B1 + hold B2 on the module)'; save.addEventListener('click', saveLoop);
     const hint = el('small', loop.failed ? 'error' : '', loop.message || (state.cardInfo ? 'Save the loop that plays now, or load a file into one of the two loops.' : state.cardProblem || (state.cardLoading ? 'Reading the card…' : 'Connect the module to see its loops')));
     body.append(el('div', 'sd-live-actions', ''), hint); body.firstChild.append(save);
-    if(getDescriptor()?.chopper?.version===1) {
+    if(getDescriptor()?.pentavox?.chopperOnly) {
+      body.firstChild.append(el('span','sx-hint','Chopper is always enabled in this firmware. Load a Chopper grid WAV into A or B.'));
+    } else if(getDescriptor()?.chopper?.version===1) {
       for(const enabled of [true,false]) {
         const mode=button(enabled?'Enable Chopper':'Use legacy Slicer','quiet-button');
         mode.disabled=loop.busy||!loopClient();

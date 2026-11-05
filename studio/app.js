@@ -52,7 +52,7 @@ let toastTimer;
 let activeTab = parseRoute(location.hash).tab;
 let activePanelSection = 'live';
 let navigation;
-let buildVoiceCount=2;try { if(localStorage.getItem('pentavox.palette.variant')==='single-plaits')buildVoiceCount=1; } catch {}
+let buildVoiceCount=2;try { if(['single-plaits','chopper'].includes(localStorage.getItem('pentavox.palette.variant')))buildVoiceCount=1; } catch {}
 let buildEngineBanks=3;
 globalThis.addEventListener?.('pentavox-profile',event=>{buildVoiceCount=event.detail.plaitsVoices;buildEngineBanks=event.detail.engineBanks??3;if(activeTab==='palette')document.querySelector('#page-crumb').textContent=`${buildVoiceCount===1?'One voice':'Two voices'}, ${buildEngineBanks===4?'four':'three'} banks of eight`;});
 

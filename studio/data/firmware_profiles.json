@@ -103,6 +103,25 @@
         "MIDI_D2": "1"
       },
       "engineBanks": 4
+    },
+    {
+      "id": "chopper",
+      "label": "1 Plaits + Looper + Chopper",
+      "chopperOnly": true,
+      "plaitsVoices": 1,
+      "looper": true,
+      "engineBanks": 4,
+      "make": {
+        "COMPACT": "1", "LOOPER": "1", "LOOPER_SD": "1", "USB_AUDIO": "1",
+        "MULTITAP_EXPERIMENT": "1", "CPU_BOOST": "1", "AUDIO_BLOCK": "96",
+        "PLACEMENT": "voices_d2", "AXI_ENGINE_OBJECTS": "", "SIDECHAIN_ITCM": "0",
+        "CROSS_FM": "0", "SIDECHAIN": "0", "SLICER_MAIN_DELAY": "0", "PHASER": "0",
+        "LIVE_GUARD": "0", "BENCH_NEUTRAL_START": "1", "SWEEP_METER": "0", "SLICER_SWEEP": "0",
+        "REVERB_EXPERIMENT": "0", "SHIMMER": "0", "REVERB_BLOCK": "1",
+        "REVERB_EARLY_SDRAM": "1", "REVERB_EARLY_DTCM": "0", "REVERB_EARLY_D2": "0",
+        "LOOPER_PLAIN_BLOCK": "1", "SINGLE_PLAITS_EXPERIMENT": "1", "CHOPPER_ONLY": "1",
+        "PLAITS_FM": "1", "PANEL_AXI": "1", "PANEL_SDRAM": "0", "PLAIN_ITCM": "0", "MIDI_D2": "1"
+      }
     }
   ]
 }

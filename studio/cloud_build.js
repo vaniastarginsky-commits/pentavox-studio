@@ -14,13 +14,14 @@ function read(key) { try { return storage()?.getItem(key) ?? null; } catch { ret
 function write(key, value) { try { storage()?.setItem(key, value); } catch { /* a convenience only */ } }
 
 // The workflow refuses every other branch, so a stale override saved in the browser must not reach it.
-const BUILDABLE_REFS = ['experiment/single-plaits-20261024'];
+const BUILDABLE_REFS = ['experiment/single-plaits-20261024', 'feat/chopper-engine'];
 function buildableRef(key, fallback) {
   const value = read(key);
   return BUILDABLE_REFS.includes(value) ? value : fallback;
 }
 
 export function cloudSettings() {
+  if(read('pentavox.palette.variant')==='chopper')return {repo:read('pentavox.cloud.repo')||DEFAULTS.repo,buildRef:'feat/chopper-engine',workflowRef:'feat/chopper-engine'};
   return {
     repo: read('pentavox.cloud.repo') || DEFAULTS.repo,
     buildRef: buildableRef('pentavox.cloud.ref', DEFAULTS.buildRef),
@@ -114,6 +115,7 @@ export class CloudBuild {
 
   /** Start a build; resolves with the request id that names the run. */
   async start(recipe, { compact = true, looper = false, profile, diagnostic = false } = {}) {
+    if(profile==='chopper')this.buildRef=this.workflowRef='feat/chopper-engine';
     const encodedRecipe = toBase64(JSON.stringify(recipe));
     if (encodedRecipe.length > 60000) throw new CloudBuildError('This recipe is too large for cloud Build. Remove some custom wave/terrain banks, or download recipe.json and build with the local Studio server.');
     const request = `${this.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;

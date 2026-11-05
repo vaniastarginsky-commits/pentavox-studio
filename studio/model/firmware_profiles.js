@@ -3,6 +3,7 @@ export const FIRMWARE_PROFILES = Object.freeze([
   { id: 'sampler', label: '2 Plaits + Sampler', plaitsVoices: 2, looper: false },
   { id: 'looper', label: '2 Plaits + Looper', plaitsVoices: 2, looper: true },
   { id: 'single-plaits', label: '1 Plaits + Looper · experimental', plaitsVoices: 1, looper: true, engineBanks:4 },
+  { id: 'chopper', label: '1 Plaits + Looper + Chopper', plaitsVoices: 1, looper: true, engineBanks:4, chopperOnly:true },
 ].map(Object.freeze));
 export function firmwareProfile(id = 'sampler') {
   const profile=FIRMWARE_PROFILES.find(p=>p.id===id);

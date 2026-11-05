@@ -125,7 +125,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   const model = new PaletteModel(catalog, sets, measured);
   let memoryReference = null;
   fetch(new URL('../data/single_plaits_memory.json',import.meta.url)).then(r=>r.ok?r.json():null).then(meta=>{memoryReference=meta;renderSummary();}).catch(()=>{});
-  function memorySummary() { return state.profile==='single-plaits' ? singlePlaitsMemory(model,cloudResult?.meta?.profile==='single-plaits'?cloudResult.meta:memoryReference,{diagnostic:diagnostic.checked}) : model.summary(voiceTotal()); }
+  function memorySummary() { return firmwareProfile(state.profile).plaitsVoices===1 ? singlePlaitsMemory(model,cloudResult?.meta?.profile==='single-plaits'?cloudResult.meta:memoryReference,{diagnostic:diagnostic.checked}) : model.summary(voiceTotal()); }
   const waveEditor = mountWaveResourcesEditor({ getResources: () => model.resources, onChange: (resources) => { model.setResources(resources); changed(); }, model, catalog, onError });
   const presetStore = new EnginePresetStore();
   let hadSavedRecipe = false;
@@ -375,7 +375,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
 
   function fmBadges(id) {
     const group=el('span','eg-fm-badges');
-    if(state.profile==='single-plaits') for(const info of engineFmBadges(id)) {
+    if(firmwareProfile(state.profile).plaitsVoices===1) for(const info of engineFmBadges(id)) {
       const badge=el('span',`eg-fm-badge ${info.kind}`,info.label);
       badge.title=info.description;badge.dataset.tooltip=info.description;
       badge.tabIndex=0;badge.setAttribute('aria-label',info.description);group.append(badge);
@@ -410,14 +410,14 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     const total = voiceTotal();
     const legend = el('div', 'eg-legend');
     legend.innerHTML = `<span class="eg-pill st on static">${SVG_STEREO}<span>Stereo</span></span><span>two output channels (the voice switches it on the module)</span><span class="eg-pill sy on static">${SVG_SYNC}<span>Sync In</span></span><span>restarts the timbre on the bar reset</span><span class="eg-pill static off">${SVG_SYNC}<span>Sync In</span></span><span>off<span class="eg-faint"> · hatched: the engine cannot</span></span>`;
-    if(state.profile==='single-plaits') {
+    if(firmwareProfile(state.profile).plaitsVoices===1) {
       const capabilities=[...new Set(model.slotsOf(0).map(s=>s.id))].map(engineFmCapabilities);
       legend.replaceChildren(el('span','',`TZFM ${capabilities.filter(c=>c.linear).length}/${capabilities.length} models · Audio-rate FM ${capabilities.filter(c=>c.fast).length}/${capabilities.length} · Included automatically`),el('span','eg-faint','Stereo / Sync icons: click to enable'));
     }
     target.append(legend);
     for (const voice of shownVoices()) {
       const others = new Set(); for (let v = 0; v < total; ++v) if (v !== voice) for (const slot of model.slotsOf(v)) others.add(slotKey(slot));
-      const section = el('section', `eg-voice ${dense ? 'dense' : 'comfy'}${state.profile==='single-plaits'?' has-fm':''}`); section.dataset.voice = String(voice);
+      const section = el('section', `eg-voice ${dense ? 'dense' : 'comfy'}${firmwareProfile(state.profile).plaitsVoices===1?' has-fm':''}`); section.dataset.voice = String(voice);
       const head = el('header'); const preset = model.matchingPreset(voice);
       head.append(el('h4', '', `Voice ${voice + 1}`), el('span', 'eg-src', PRESET_LABEL[preset] ?? 'Custom set'));
       const liveIndex = liveIndexFor(voice);
@@ -590,7 +590,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   function engineDetails(item) {
     const details = el('div', 'eg-more-info');
     details.append(el('p', 'eg-facts', `${item.category} · ${item.sizeLabel} · Stereo: ${item.stereo ? 'yes' : item.monoInPractice ? 'no (nearly mono)' : 'no'} · Sync In: ${item.sync ? 'yes' : 'no'}`));
-    if (state.profile === 'single-plaits') {
+    if (firmwareProfile(state.profile).plaitsVoices === 1) {
       const fm = engineFmCapabilities(item.id);
       details.append(el('p', 'eg-facts', `FM/LFO: ${fm.linear ? 'TZFM automatic' : 'pitch LFO'} · ${fm.fast ? 'audio-rate exponential FM' : 'control-rate exponential FM'}`));
     }
@@ -639,7 +639,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
       control('stereo', 'Stereo', SVG_STEREO, slot.stereo, slot.stereoEnabled, slot.stereo ? 'The engine renders left and right differently. Chosen at build; on the module each voice then switches Stereo itself.' : slot.monoInPractice ? 'Left and right stay nearly identical on this engine.' : 'This engine is mono: both channels are the same.'),
       control('sync', 'Sync In', SVG_SYNC, slot.sync, slot.syncEnabled, slot.sync ? 'Lets the oscillator be hard-synced to the module’s bar reset, so the timbre restarts on the beat. Costs code once for the whole kit.' : 'This engine has no sync input.'),
     );
-    if (state.profile === 'single-plaits') {
+    if (firmwareProfile(state.profile).plaitsVoices === 1) {
       const fm = engineFmCapabilities(slot.id);
       const box = el('div', 'eg-ctl');
       box.append(el('b', '', fm.linear ? 'TZFM · automatic' : 'Pitch LFO'),
@@ -747,7 +747,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   const diagnostic = document.createElement('input'); diagnostic.type='checkbox';
   const diagnosticLabel=el('label','firmware-diagnostic');diagnosticLabel.append(diagnostic,document.createTextNode(' CPU diagnostic'));
   diagnostic.setAttribute('aria-label','Build CPU diagnostic firmware');
-  const syncVariant = () => { const busy=['building','cancelling','flashing'].includes(state.phase);variant.disabled=diagnostic.disabled=bankCount.disabled=busy;bankCount.hidden=state.profile!=='single-plaits';bankCount.value=String(state.engineBanks); };
+  const syncVariant = () => { const busy=['building','cancelling','flashing'].includes(state.phase);variant.disabled=diagnostic.disabled=bankCount.disabled=busy;bankCount.hidden=firmwareProfile(state.profile).plaitsVoices!==1;bankCount.value=String(state.engineBanks); };
   variant.addEventListener('change', () => { state.profile=variant.value;state.view='both';state.voice=0;cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;try { localStorage.setItem('pentavox.palette.variant', variant.value); } catch {} changed(); });
   diagnostic.addEventListener('change',()=>{cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;renderSummary();});
   actions.append(variant, bankCount, diagnosticLabel, build, el('span', 'eg-arrow', '→'), flash, dfu, copyLog, suggestButton);
@@ -908,7 +908,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     });
   }
 
-  function changed() { for(let v=0;v<3;++v) model.setSlotCount(v,v===0&&state.profile==='single-plaits'?state.engineBanks*8:24); persist(); globalThis.dispatchEvent?.(new CustomEvent('pentavox-profile',{detail:{...firmwareProfile(state.profile),engineBanks:state.profile==='single-plaits'?state.engineBanks:3}})); renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); renderSetControls(); }
+  function changed() { for(let v=0;v<3;++v) model.setSlotCount(v,v===0&&firmwareProfile(state.profile).plaitsVoices===1?state.engineBanks*8:24); persist(); globalThis.dispatchEvent?.(new CustomEvent('pentavox-profile',{detail:{...firmwareProfile(state.profile),engineBanks:firmwareProfile(state.profile).plaitsVoices===1?state.engineBanks:3}})); renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); renderSetControls(); }
   if (!hadSavedRecipe) applyDefaults();   // a first visit, or a cleared browser: every voice starts from the set chosen as its default
   changed();
   return { waves: waveEditor, refreshLive() { renderSeg(); renderNotes(); renderBoard(); renderDock(); renderSummary(); }, dispose() { if(recoveryTimer)clearTimeout(recoveryTimer); waveEditor.destroy(); if (state.polling) clearInterval(state.polling); root.replaceChildren(); } };

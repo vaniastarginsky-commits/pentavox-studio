@@ -13,16 +13,22 @@ export function firmwarePanelPages(pages, descriptor) {
     let page={...source,perfIndex:source.perfIndex??source.index,pots:source.pots.map(p=>({...p}))};
     if(/^(Voice|Plaits) 1$/.test(page.name)) {
       const shifts=[single?'Engine':'', single && descriptor?.panelFeedback?'Octave':'Twist',single?'Sidechain':fw.sidechain?'Sidechain EQ':'','Reverb send','Attack','Delay send'];
-      page.pots=page.pots.map((p,i)=>({...p,...(single && descriptor?.panelFeedback && i===0?{name:'Twist'}:{}),shift:shifts[i],b2:single?'Tap: Slicer; hold + turn: FM; hold without editing: next bank':p.b2}));
+      page.pots=page.pots.map((p,i)=>({...p,...(single && descriptor?.panelFeedback && i===0?{name:'Twist'}:{}),shift:shifts[i],b2:fw.chopperOnly?'Tap: Chopper controls; hold + turn: FM; hold without editing: next bank':single?'Tap: Slicer; hold + turn: FM; hold without editing: next bank':p.b2}));
       if(single && fw.legatoGlide)page.note='Hold B2 and turn to edit FM. Add B1: top-left becomes Glide (Off–3 s), other pots are inactive. Glide applies only to legato; a gap over 5 ms starts at the new pitch. Catch the stored value before editing. FM/Glide editing cancels bank switching; Attack remains on B1 + bottom-left.';
     }
     if(page.name==='Looper' && fw.looper) {
       const shifts=['File A','File B',single?'Direction A':'Direction',single?'Direction B':fw.sidechain?'Sidechain EQ':'',single?'Pan A':'Reverb send',single?'Pan B':'Delay send'];
-      page.pots=page.pots.map((p,i)=>({...p,shift:shifts[i],b2:globalLoop?'Tap: Slicer; hold/release: Undo/Redo; B2+B3: record / hold save':single?'Tap: Slicer; hold/release: record; 5 s: clear':p.b2}));
+      page.pots=page.pots.map((p,i)=>({...p,shift:shifts[i],b2:globalLoop?(fw.chopperOnly?'Tap: Chopper controls; hold/release: Undo/Redo; B2+B3: record / hold save':'Tap: Slicer; hold/release: Undo/Redo; B2+B3: record / hold save'):single?'Tap: Slicer; hold/release: record; 5 s: clear':p.b2}));
       if(swappedLoops)page.pots[2]={...page.pots[2],name:'Record A/B',live:false};
-      page.note=globalLoop?'B2+B3 on every page: tap record/stop; hold save to SD. Looper B2 hold/release: Undo/Redo; 3 s warning, 5 s clear. B1: files, directions and pans A/B. B1+B2 tap: file page; hold: sends and sidechains. Release B1 to load files. Settings: hold all three buttons.':single?'B1 is always Shift. Hold/release B2 to record. Short B2+B3: Undo/Redo. B1+B2 hold: save; B1+B2 tap: file page. Release B1 to load selected files. Blue/yellow identify A/B; directions are independent.':'Both slots play. Crossfader selects the recording slot; B1 chooses files and direction.';
+      page.note=globalLoop?(fw.chopperOnly?'B2+B3 on every page: tap record/stop; hold save to SD. Looper B2 hold/release: Undo/Redo; 3 s warning, 5 s clear. B1: files, directions and pans A/B. B1+B2 tap: file page; hold: sends and sidechains. Release B1 to load files. Chopper mode is always active. Settings: hold all three buttons.':'B2+B3 on every page: tap record/stop; hold save to SD. Looper B2 hold/release: Undo/Redo; 3 s warning, 5 s clear. B1: files, directions and pans A/B. B1+B2 tap: file page; hold: sends and sidechains. Release B1 to load files. Settings: hold all three buttons.'):single?'B1 is always Shift. Hold/release B2 to record. Short B2+B3: Undo/Redo. B1+B2 hold: save; B1+B2 tap: file page. Release B1 to load selected files. Blue/yellow identify A/B; directions are independent.':'Both slots play. Crossfader selects the recording slot; B1 chooses files and direction.';
     }
     if(swappedLoops && page.name==='Looper')page.note+=' Middle-left selects recording A/B; Master top-right crossfades playback. The recording target is locked during a queued/running take.';
+    if(page.name==='Slice' && fw.chopperOnly) {
+      const names=['Target A / Both / B','Seed','Probability','Not used','Not used','Not used'];
+      const shifts=['Rate','Rate','Rate','','',''];
+      result.push({...page,name:'Chopper',perfIndex:-1,note:'Chopper is the only loop engine in this firmware. Turn the three active pots for target, seed and variation probability. Hold B1 for rate. Hold B2 for a one-bar Fill. The Looper and Chopper use the same transport; select a compatible Chopper grid WAV for slot A or B in Studio.',pots:names.map((name,id)=>({id,name,shift:shifts[id],b2:id===0?'Hold: one-bar Fill':'Hold B2: one-bar Fill',live:false,def:0,colour:'#00a890'}))});
+      continue;
+    }
     if(page.name==='Slice' && single && Number(descriptor?.slice?.version)>=19) {
       const names=Number(descriptor?.slice?.version)>=20?['Loop','Activity',Number(descriptor?.slice?.version)>=23?'Kick doubles':'Detail','Throw','Seed chance','Mix']:['Loop','Density','Edit','Throw chance','Seed','Wet'];
       const lite=Number(descriptor?.slice?.version)>=20;
