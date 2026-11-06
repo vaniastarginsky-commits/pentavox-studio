@@ -553,6 +553,7 @@ function refreshWorkspace() {
   document.getElementById('page-crumb').textContent = crumb;
   document.documentElement.dataset.studioTab = activeTab;
   const samplerLink = document.querySelector('.tabs [data-tab="sampler"]');
+  samplerLink.hidden = !loops;
   for (const node of samplerLink.childNodes) if (node.nodeType === Node.TEXT_NODE) node.textContent = loops ? 'Loops' : 'Sampler · legacy';
   const settingsLink = document.querySelector('.settings-shortcut');
   if (activeTab === 'settings') settingsLink.setAttribute('aria-current','page'); else settingsLink.removeAttribute('aria-current');

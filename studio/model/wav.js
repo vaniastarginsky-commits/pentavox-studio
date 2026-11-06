@@ -104,7 +104,10 @@ export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, timeNumerator
   const frames = audio.channels[0]?.length ?? 0;
   if (audio.channels.some((channel) => channel.length !== frames)) throw new RangeError('WAV channels have different lengths');
   if (frames > MAX_FRAMES) throw new RangeError('The sample is longer than 30 seconds');
-  const hasTempo = Number.isFinite(Number(bpm)) && Number(bpm) > 0 && Number.isInteger(Number(beats)) && Number(beats) > 0;
+  // ACID may carry BPM without an authored beat count. Preserve that timing;
+  // firmware decides whether duration establishes an exact musical grid.
+  const beatCount = beats === undefined || beats === null || beats === '' ? 0 : Number(beats);
+  const hasTempo = Number.isFinite(Number(bpm)) && Number(bpm) > 0 && Number.isInteger(beatCount) && beatCount >= 0;
   if (chopperGridBank && breakBank) throw new RangeError('Choose either legacy Break v1 or explicit Chopper grid v3, not both');
   let cueInputs=Array.isArray(slices)?slices:[];
   if(chopperGridBank){
@@ -147,7 +150,7 @@ export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, timeNumerator
   if (hasAcid) {
     writeTag(bytes, offset, 'acid'); view.setUint32(offset + 4, 24, true);
     view.setUint32(offset + 8, acidFlags({ hasCue, oneShot, playMode, step, filter: playFilter }), true); view.setUint16(offset + 12, rootNote, true); view.setUint16(offset + 14, 0, true);
-    view.setUint32(offset + 16, 0, true); view.setUint32(offset + 20, hasTempo ? Number(beats) : 0, true);
+    view.setUint32(offset + 16, 0, true); view.setUint32(offset + 20, hasTempo ? beatCount : 0, true);
     view.setUint16(offset + 24, timeNumerator, true); view.setUint16(offset + 26, timeDenominator, true); view.setFloat32(offset + 28, hasTempo ? Number(bpm) : 0, true);
     offset += 32;
   }

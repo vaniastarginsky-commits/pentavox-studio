@@ -108,6 +108,23 @@ export class LoopIoClient {
     if(body.length!==22||Boolean(body[0]&2)!==enabled)throw new Error('Target did not confirm the Chopper mode change');
   }
 
+  async loadChopperCueFile(slot, descriptor, { timeoutMs = 30000, delay = ms => new Promise(resolve => setTimeout(resolve, ms)) } = {}) {
+    if (![0,1].includes(slot) || descriptor?.chopper?.cueFileVersion !== 1 || descriptor.chopper.cueFileCommand !== 0x7b)
+      throw new Error('This firmware does not support loading a standalone Chopper cue file');
+    const query = async start => {
+      const {body} = await this.client.request(0x7b, Uint8Array.of(3, slot, start ? 1 : 0));
+      if (body.length !== 22 || body[0] > 1 || body[1] > 3) throw new Error('Invalid cue-load response');
+      return {busy: body[0] === 1, result: body[1]};
+    };
+    let state = await query(true); const deadline = Date.now() + timeoutMs;
+    while (state.busy) {
+      if (Date.now() > deadline) throw new Error('Chopper cue file load timed out');
+      await delay(100); state = await query(false);
+    }
+    if (state.result === 2) throw new Error('Chopper cue file is missing on the SD card');
+    if (state.result !== 1) throw new Error('Chopper cue file is invalid or could not be read');
+  }
+
   async status() {
     const { body } = await this.client.request(LOOP_IO_COMMAND.STATUS);
     return parseLoopStatus(body);
