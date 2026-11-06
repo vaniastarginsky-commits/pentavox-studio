@@ -198,7 +198,7 @@ samplerMount = mountSampler(document.querySelector('#sampler-root'), {
   onOpenSdTab: () => openSdDialog(),
 });
 
-mountSamplesBridge({frame:document.querySelector('.slice-lab-frame'),stage:file=>samplerMount.stageArtifact(file),navigate:()=>samplesDelivery.open()});
+mountSamplesBridge({frame:document.querySelector('.slice-lab-frame'),stage:file=>samplerMount.stageArtifact(file),installCue:(file,slot)=>samplerMount.installCueBank(file,slot),reloadCue:slot=>samplerMount.reloadCueBank(slot),navigate:()=>samplesDelivery.open()});
 
 locksMount = mountKnobLocks(document.querySelector('#locks-root'), {
   getSession: () => connectionStatus.dataset.state === 'on' ? session : null,

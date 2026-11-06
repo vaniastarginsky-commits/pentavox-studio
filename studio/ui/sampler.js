@@ -497,27 +497,32 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   }
 
   async function reloadCueBank(slot) {
-    const loops=loopClient();if(!loops||loop.busy||state.card)return;
+    const loops=loopClient(),descriptor=getDescriptor();
+    if(![0,1].includes(slot))throw new Error('Invalid Chopper slot.');
+    if(!loops||descriptor?.chopper?.cueFileVersion!==1)throw new Error('Connect a firmware with Chopper cue-bank support first.');
+    if(loop.busy||state.card||state.upload||state.importing)throw new Error('Another transfer is in progress.');
     loop.busy=true;refreshSide();const endJob=beginLinkJob('Loading Chopper cues from SD');
-    try{await loops.loadChopperCueFile(slot,getDescriptor());onSuccess(`SD cue bank selected for loop ${slot+1}; compatible BPM-tagged loops use it at a valid bar boundary.`);}
-    catch(error){onError(error);}
+    try{await loops.loadChopperCueFile(slot,descriptor);onSuccess(`SD cue bank selected for loop ${slot+1}; compatible BPM-tagged loops use it at a valid bar boundary.`);}
     finally{endJob();loop.busy=false;refreshSide();}
   }
 
   async function installCueBank(file, slot) {
-    const fsClient=files(),loops=loopClient(),descriptor=getDescriptor();
-    if(!fsClient||!loops||loop.busy||state.card)return;
+    const client=getClient(),fsClient=files(),loops=loopClient(),descriptor=getDescriptor();
+    if(![0,1].includes(slot))throw new Error('Invalid Chopper slot.');
+    if(!fsClient||!loops||descriptor?.chopper?.cueFileVersion!==1)throw new Error('Connect a firmware with Chopper cue-bank support first.');
+    if(loop.busy||state.card||state.upload||state.importing)throw new Error('Another transfer is in progress.');
     const bytes=new Uint8Array(await file.arrayBuffer()),bank=decodeChopperBank(bytes);
-    if(!bank||!chopperGridStep(bank.cuePolicy)||(bytes[0]===4&&descriptor?.chopper?.pvxpMax!==4))return onError(new Error('Choose a supported standalone PVXP v3/v4 Chopper cue bank; nothing was written.'));
+    if(!bank||!chopperGridStep(bank.cuePolicy)||(bytes[0]===4&&descriptor?.chopper?.pvxpMax!==4))throw new Error('Choose a supported standalone PVXP v3/v4 Chopper cue bank; nothing was written.');
+    if(loop.busy||state.card||state.upload||state.importing||client!==getClient()||descriptor!==getDescriptor())throw new Error('Connection or transfer state changed; retry.');
     const path=`/CHOPPER/${slot===0?'A':'B'}.PVXP`;
-    if(!confirm(`Replace the persistent Chopper cue bank for loop ${slot+1} at ${path}? The bank will be selected independently of the current WAV.`))return;
+    if(!confirm(`Replace the persistent Chopper cue bank for loop ${slot+1} at ${path}? The bank will be selected independently of the current WAV.`))throw new Error('Cue bank transfer cancelled; nothing was written.');
     const controller=new AbortController();loop.busy=true;state.card={label:`Writing ${path}`,progress:0,controller};renderCardBar();refreshSide();
     const endJob=beginLinkJob('Writing Chopper cue bank');
     try{
       await fsClient.upload(path,bytes,{overwrite:true,makeParents:true,signal:controller.signal,onProgress:progress=>{if(state.card){state.card.progress=progress;renderCardBar();}}});
       await loops.loadChopperCueFile(slot,descriptor);
       onSuccess(`Cue bank saved to ${path} and selected for loop ${slot+1}; playback changes at a valid bar boundary. The file will reload after reboot.`);
-    }catch(error){if(error?.name!=='AbortError')onError(new Error(`Chopper cue bank: ${error.message}. The file may already be on the card; check before retrying.`,{cause:error}));}
+    }catch(error){throw new Error(`Chopper cue bank: ${error.message}. The file may already be on the card; check before retrying.`,{cause:error});}
     finally{endJob();state.card=null;loop.busy=false;renderCardBar();refreshSide();}
   }
 
@@ -573,17 +578,6 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     save.title = 'Save the loop that plays now to the next free /LOOPS/NNNN.WAV (the same as B1 + hold B2 on the module)'; save.addEventListener('click', saveLoop);
     const hint = el('small', loop.failed ? 'error' : '', loop.message || (state.cardInfo ? 'Save the loop that plays now, or load a file into one of the two loops.' : state.cardProblem || (state.cardLoading ? 'Reading the card…' : 'Connect the module to see its loops')));
     body.append(el('div', 'sd-live-actions', ''), hint); body.firstChild.append(save);
-    if(getDescriptor()?.chopper?.cueFileVersion===1) {
-      for(let slot=0;slot<2;slot++) {
-        const picker=document.createElement('input');picker.type='file';picker.accept='.pvxp,application/octet-stream';picker.hidden=true;
-        picker.addEventListener('change',()=>{const file=picker.files?.[0];picker.value='';if(file)installCueBank(file,slot).catch(onError);});
-        const install=button(`Load cue bank ${slot===0?'A':'B'}…`,'quiet-button');install.disabled=loop.busy||state.cardLoading||!loopClient()||!state.cardInfo;
-        install.title=`Choose a .PVXP cue bank, save it to /CHOPPER/${slot===0?'A':'B'}.PVXP and load it into Chopper`;
-        install.addEventListener('click',()=>picker.click());
-        const reload=button(`Reload cues ${slot===0?'A':'B'} from SD`,'quiet-button');reload.disabled=install.disabled;
-        reload.addEventListener('click',()=>reloadCueBank(slot));body.firstChild.append(install,reload,picker);
-      }
-    }
     if(getDescriptor()?.pentavox?.chopperOnly) {
       body.firstChild.append(el('span','sx-hint','Chopper is always enabled. Load a cue bank and a BPM-tagged loop, or a WAV containing its own Chopper bank.'));
     } else if(getDescriptor()?.chopper?.version===1) {
@@ -696,6 +690,8 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   updateHeading(); renderList(); renderEditor(); renderPlan();
   const dispose = () => { ++state.generation; state.upload?.controller.abort(); state.card?.controller.abort(); breakPanel?.destroy(); sliceBar?.destroy(); editor?.destroy(); themeWatch.disconnect(); root.replaceChildren(); };
   dispose.stageArtifact = async file => {if(state.upload||state.card||state.importing)throw new Error('Finish the current sampler operation before staging a snapshot.');const bytes=new Uint8Array(await file.arrayBuffer()),marks=readWavMarkers(bytes);if(!marks||marks.sampleRate!==48000||marks.frames<=0||marks.frames>1440000||marks.slices.length>64)throw new Error('Invalid prepared Samples WAV.');const item=await decodedFile(file);item.normalize=false;item.frozenWav=bytes;item.name=file.name.replace(/\.wav$/i,'');state.items.push(item);state.selected=item;renderEditor();refreshSide();};
+  dispose.installCueBank = installCueBank;
+  dispose.reloadCueBank = reloadCueBank;
   dispose.show = () => loadCard();
   dispose.refreshConnection = () => { ++state.generation; state.cardInfo = null; state.cardFiles = Array.from({ length: slotCount() }, () => []); state.starts = Array.from({ length: slotCount() }, () => null); for (const item of state.items) if (item.slot >= slotCount()) item.slot = 0; state.cardProblem = ''; hooks.status(); loadCard(); };
   return dispose;

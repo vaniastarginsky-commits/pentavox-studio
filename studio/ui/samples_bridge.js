@@ -1,5 +1,5 @@
 import {readWavMarkers} from '../model/wav.js';
-import {chopperGridStep} from '../model/chopper_bank.js';
+import {chopperGridStep,decodeChopperBank,MAX_CHOPPER_BYTES} from '../model/chopper_bank.js';
 // Only a frozen, explicitly approved WAV crosses the Samples -> device-tools boundary.
 export const SAMPLES_BRIDGE = 'cubreak-samples-device-v1';
 export const MAX_ARTIFACT_BYTES = 6_000_000;
@@ -21,15 +21,21 @@ export function validateArtifactBytes(bytes){
  }
  if(fmt!==1||data!==1||!frames||frames>1440000||!marks||marks.warnings.length||marks.unsupportedAcidFlags||marks.metadata.unknownChunks.length||marks.metadata.pvxo||marks.slices.length>64||marks.slices.some((n,i,a)=>n<0||n>=frames||(i>0&&n<=a[i-1]))||marks.metadata.pvxp&&!marks.breakBank&&!chopperGridStep(marks.chopperBank?.cuePolicy))throw new Error('Invalid or unsupported snapshot metadata; use the byte-exact original for unknown chunks.');return marks;
 }
-export function mountSamplesBridge({frame,stage,navigate,window:win=window}) {
+export function validCueInstall(message) {
+ return Boolean(message && message.protocol===SAMPLES_BRIDGE && message.type==='install-cue' && typeof message.id==='string' && message.id.length>0 && message.id.length<=100 && [0,1].includes(message.slot) && message.bytes instanceof ArrayBuffer && message.bytes.byteLength>=3 && message.bytes.byteLength<=MAX_CHOPPER_BYTES);
+}
+export function validCueReload(message) {
+ return Boolean(message && message.protocol===SAMPLES_BRIDGE && message.type==='reload-cue' && typeof message.id==='string' && message.id.length>0 && message.id.length<=100 && [0,1].includes(message.slot));
+}
+export function mountSamplesBridge({frame,stage,navigate,installCue,reloadCue,window:win=window}) {
  let busy=false;const completed=new Map();
  const receive=async event=>{
-  if(event.source!==frame.contentWindow||event.origin!==win.location.origin||win.location.protocol==='file:'||!validArtifact(event.data))return;
-  const request=event.data,reply=(ok,error)=>event.source.postMessage({protocol:SAMPLES_BRIDGE,type:'staged',id:request.id,ok,error},event.origin);
+  if(event.source!==frame.contentWindow||event.origin!==win.location.origin||win.location.protocol==='file:'||(!validArtifact(event.data)&&!validCueInstall(event.data)&&!validCueReload(event.data)))return;
+  const request=event.data,isCue=request.type==='install-cue'||request.type==='reload-cue',reply=(ok,error)=>event.source.postMessage({protocol:SAMPLES_BRIDGE,type:isCue?'cue-installed':'staged',id:request.id,ok,error},event.origin);
   if(completed.has(request.id)){const result=completed.get(request.id);reply(result.ok,result.error);return;}
   if(busy){reply(false,'Another source is being staged. Retry after it finishes.');return;}
   busy=true;
-  try{validateArtifactBytes(new Uint8Array(request.bytes));await stage(new File([request.bytes],request.name,{type:'audio/wav'}));completed.set(request.id,{ok:true});reply(true);navigate();}
+  try{if(request.type==='reload-cue'){if(!reloadCue)throw new Error('Cue bank reload unavailable.');await reloadCue(request.slot);}else if(isCue){const bytes=new Uint8Array(request.bytes),bank=decodeChopperBank(bytes);if(!bank||!chopperGridStep(bank.cuePolicy))throw new Error('Invalid standalone Chopper cue bank.');if(!installCue)throw new Error('Cue bank transfer unavailable.');await installCue(new File([bytes],'cues.PVXP',{type:'application/octet-stream'}),request.slot);}else{validateArtifactBytes(new Uint8Array(request.bytes));await stage(new File([request.bytes],request.name,{type:'audio/wav'}));}completed.set(request.id,{ok:true});reply(true);if(!isCue)navigate();}
   catch(error){const message=error?.message||String(error);completed.set(request.id,{ok:false,error:message});reply(false,message);}
   finally{busy=false;if(completed.size>32)completed.delete(completed.keys().next().value);}
  };
