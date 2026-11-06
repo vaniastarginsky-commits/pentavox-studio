@@ -1,5 +1,5 @@
 import { decodeBank, encodeBank } from './break_pattern.js';
-import { decodeChopperBank, encodeChopperGridBank } from './chopper_bank.js';
+import { decodeChopperBank, encodeChopperGridBank, chopperGridStep } from './chopper_bank.js';
 export const TARGET_SAMPLE_RATE = 48000;
 export const MAX_FRAMES = 1440000;
 export const MAX_SLICE_POINTS = 64;
@@ -111,10 +111,11 @@ export function encodePcm16Wav(audio, { bpm, beats, rootNote = 60, timeNumerator
   if (chopperGridBank && breakBank) throw new RangeError('Choose either legacy Break v1 or explicit Chopper grid v3, not both');
   let cueInputs=Array.isArray(slices)?slices:[];
   if(chopperGridBank){
-    const bars=Number(beats)/4,count=bars*2,expectedFrames=bars*240/Number(bpm)*audio.sampleRate;
-    if(chopperGridBank.cuePolicy!=='half-bar-grid-v1'||!hasTempo||timeNumerator!==4||timeDenominator!==4
+    const gridStep=chopperGridStep(chopperGridBank.cuePolicy);
+    const bars=Number(beats)/4,count=bars*16/gridStep,expectedFrames=bars*240/Number(bpm)*audio.sampleRate;
+    if(!gridStep||count>64||!hasTempo||timeNumerator!==4||timeDenominator!==4
         ||!Number.isInteger(bars)||bars<1||bars>32||Math.abs(frames-expectedFrames)>2||frames<count)
-      throw new RangeError('Chopper v3 WAV needs verified 4/4 timing and a representable 1–32 bar half-bar cue grid');
+      throw new RangeError('Chopper WAV needs verified 4/4 timing and a representable grid of at most 64 cues');
     if(oneShot||playMode!==0||playFilter!==0)throw new RangeError('Chopper grid playback is separate from legacy sampler play modes and filters');
     if(!Array.isArray(chopperGridBank.patterns)||chopperGridBank.patterns.some(p=>!Array.isArray(p.events)||p.events.some(e=>e.src>=count)))
       throw new RangeError('Chopper bank references a cue outside this source grid');
@@ -218,7 +219,7 @@ export function readWavMarkers(bytes) {
     } else if (id === 'pvxp' && avail >= 3) {
       const packet=bytes.subarray(body,body+avail);
       info.breakBank=decodeBank(packet); // legacy API remains v1-only
-      if(packet[0]===2||packet[0]===3)info.chopperBank=decodeChopperBank(packet);
+      if(packet[0]===2||packet[0]===3||packet[0]===4)info.chopperBank=decodeChopperBank(packet);
       if (!info.breakBank && !info.chopperBank) info.warnings.push('Unsupported or malformed pvxp bank; original bytes remain available.');
     } else if (id === 'data' && info.channels > 0 && info.blockAlign > 0) {
       if (info.formatTag === 1 || info.formatTag === 3) info.frames = Math.floor(avail / info.blockAlign);

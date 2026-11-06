@@ -4,19 +4,22 @@
 import {encodeBank, decodeBank} from './break_pattern.js';
 export const CHOPPER_ROLES = Object.freeze(['base', 'variation', 'fill']);
 export const MAX_CHOPPER_BYTES = 8236;
+export const CHOPPER_GRIDS = Object.freeze({'half-bar-grid-v1':8,'quarter-note-grid-v1':4,'eighth-note-grid-v1':2});
+export function chopperGridStep(policy) { return Object.hasOwn(CHOPPER_GRIDS,policy) ? CHOPPER_GRIDS[policy] : 0; }
 const integer = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
 const signed = v => v < 128 ? v : v - 256;
 
 // Intentionally stricter than legacy decoding: no sorting, repair or clamping.
 export function decodeChopperBank(bytes) {
-  if (!(bytes instanceof Uint8Array) || bytes.length < 3 || bytes.length > MAX_CHOPPER_BYTES || (bytes[0] !== 2 && bytes[0] !== 3)) return null;
+  if (!(bytes instanceof Uint8Array) || bytes.length < 3 || bytes.length > MAX_CHOPPER_BYTES || (bytes[0] !== 2 && bytes[0] !== 3 && bytes[0] !== 4)) return null;
   const version=bytes[0],count = bytes[1], length = bytes[2];
   if (count < 1 || count > 8 || length > 16 || bytes.length < 3 + length + count) return null;
   for (let i = 0; i < length; i++) if (bytes[3+i] >= count) return null;
   const roleBytes = bytes.subarray(3+length,3+length+count);
   if ([...roleBytes].some(v => v > 2) || !roleBytes.includes(0)) return null;
   let at = 3+length+count;
-  if(version===3 && bytes[at++]!==1)return null; // explicit 4/4 half-bar cue policy
+  let policy=0;
+  if(version>=3){policy=bytes[at++];if(version===3 ? policy!==1 : (policy!==2&&policy!==3))return null;}
   for (let p = 0; p < count; p++) {
     if (at+2 > bytes.length) return null;
     const steps = bytes[at++]*16, n = bytes[at++];
@@ -31,12 +34,12 @@ export function decodeChopperBank(bytes) {
     }
   }
   if (at !== bytes.length) return null;
-  const policyBytes=version===3?1:0;
+  const policyBytes=version>=3?1:0;
   const v1 = new Uint8Array(bytes.length-count-policyBytes);
   v1.set(bytes.subarray(0,3+length)); v1[0] = 1;
   v1.set(bytes.subarray(3+length+count+policyBytes),3+length);
   const bank = decodeBank(v1);
-  return {...bank, roles: [...roleBytes].map(v => CHOPPER_ROLES[v]), ...(version===3?{cuePolicy:'half-bar-grid-v1'}:{})};
+  return {...bank, roles: [...roleBytes].map(v => CHOPPER_ROLES[v]), ...(version>=3?{cuePolicy:Object.keys(CHOPPER_GRIDS)[policy-1]}:{})};
 }
 
 export function encodeChopperBank(bank) {
@@ -73,7 +76,10 @@ export function encodeChopperBank(bank) {
 export function encodeChopperGridBank(bank) {
   const v2=encodeChopperBank(bank), count=bank?.patterns?.length;
   const out=new Uint8Array(v2.length+1); out.set(v2.subarray(0,3+bank.chain.length+count));
-  out[0]=3; out[3+bank.chain.length+count]=1;
+  const policy=bank.cuePolicy??'half-bar-grid-v1';
+  if(!chopperGridStep(policy))throw new RangeError('Unknown Chopper grid policy');
+  out[0]=policy==='half-bar-grid-v1'?3:4;
+  out[3+bank.chain.length+count]=Object.keys(CHOPPER_GRIDS).indexOf(policy)+1;
   out.set(v2.subarray(3+bank.chain.length+count),4+bank.chain.length+count);
   return out;
 }

@@ -14,7 +14,7 @@ import { beginLinkJob } from '../model/link_jobs.js';
 import { SdFilesClient, describeFsError, describeTransfer } from '../model/sd_files.js';
 import { samplerFolders, cardSummary, formatSize, sortEntries } from './sdcard_vm.js';
 import { LOOP_DIR, LOOP_SLOTS, LoopIoClient, describeLoopError, describeLoopFailure, loopFileName, loopFiles, renumberProblem } from '../model/loop_io.js';
-import { decodeChopperBank } from '../model/chopper_bank.js';
+import { decodeChopperBank, chopperGridStep } from '../model/chopper_bank.js';
 
 function el(tag, className, text) { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; }
 function button(text, className = '') { const node = el('button', className, text); node.type = 'button'; return node; }
@@ -152,7 +152,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     state.card = { label: `Writing ${item.name} to ${path}`, progress: 0, controller }; renderCardBar(); updateHeading(); refreshSide();
     const endJob = beginLinkJob('Writing a loop to the card');
     try {
-      if(item.chopperBank && (item.chopperBank.cuePolicy!=='half-bar-grid-v1'||getDescriptor()?.chopper?.pvxp!==3))throw new Error('This target does not advertise PVXP v3 Looper delivery; Chopper data was not stripped or sent.');
+      if(item.chopperBank && (!chopperGridStep(item.chopperBank.cuePolicy)||getDescriptor()?.chopper?.pvxp!==3||(item.chopperBank.cuePolicy!=='half-bar-grid-v1' && getDescriptor()?.chopper?.pvxpMax!==4)))throw new Error('This target does not advertise PVXP v3 Looper delivery; Chopper data was not stripped or sent.');
       const bytes = await wavFor(item, { origin: 2 });   // origin 2: the module's loop picker marks it as made by Studio
       state.card.size = bytes.length; state.card.startedAt = performance.now();
       await fsClient.upload(path, bytes, { overwrite: false, signal: controller.signal, onProgress: (progress) => { if (state.card) { state.card.progress = progress; renderCardBar(); } } });
@@ -508,7 +508,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
     const fsClient=files(),loops=loopClient(),descriptor=getDescriptor();
     if(!fsClient||!loops||loop.busy||state.card)return;
     const bytes=new Uint8Array(await file.arrayBuffer()),bank=decodeChopperBank(bytes);
-    if(bytes[0]!==3||!bank||bank.cuePolicy!=='half-bar-grid-v1')return onError(new Error('Choose a valid standalone PVXP v3 Chopper cue bank; nothing was written.'));
+    if(!bank||!chopperGridStep(bank.cuePolicy)||(bytes[0]===4&&descriptor?.chopper?.pvxpMax!==4))return onError(new Error('Choose a supported standalone PVXP v3/v4 Chopper cue bank; nothing was written.'));
     const path=`/CHOPPER/${slot===0?'A':'B'}.PVXP`;
     if(!confirm(`Replace the persistent Chopper cue bank for loop ${slot+1} at ${path}? The bank will be selected independently of the current WAV.`))return;
     const controller=new AbortController();loop.busy=true;state.card={label:`Writing ${path}`,progress:0,controller};renderCardBar();refreshSide();
