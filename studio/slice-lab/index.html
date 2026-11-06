@@ -84,6 +84,62 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .source-preparation{margin-top:8px;border:1px solid #435263;border-radius:7px;background:#17232d}.source-preparation summary{cursor:pointer;padding:7px 9px;font-size:11px;font-weight:600}.source-preparation summary .muted{font-size:10px;font-weight:400}.preparation-body{padding:0 10px 7px;max-height:270px;overflow:auto}.preparation-mode .preparation-body{max-height:none;overflow:visible}.preparation-mode .arrange,.preparation-mode .sidebar .side-section:nth-child(2),.preparation-mode .inspector{display:none}.preparation-mode .source-panel{width:100%;flex:1;overflow:auto;padding:18px clamp(14px,3vw,42px)}.preparation-mode .source-panel .panel-head{margin-bottom:12px}.preparation-mode .source-wave-wrap{height:clamp(160px,24vh,280px)}.preparation-mode .source-preparation{margin-top:14px}.preparation-mode .source-preparation summary{font-size:14px;padding:10px 12px}.preparation-mode .source-preparation .preparation-body{padding:5px 12px 12px}.preparation-mode .preparation-fields{grid-template-columns:repeat(4,minmax(140px,1fr));gap:12px}.preparation-mode .preparation-fields input,.preparation-mode .preparation-fields select{padding:8px;font-size:13px}.preparation-mode .preparation-actions{margin-top:12px}.preparation-mode .preparation-actions button{font-size:12px;padding:8px 11px}.preparation-mode .preparation-status{font-size:12px;padding:8px;background:#202d39;border-radius:6px}.preparation-empty{display:grid;gap:9px;max-width:560px;margin:32px auto;padding:24px;border:1px dashed #526577;border-radius:12px;text-align:center;color:var(--muted)}.preparation-empty strong{font-size:17px;color:var(--text)}.preparation-empty button{justify-self:center}.preparation-body fieldset{margin:0;padding:0;border:0;min-width:0}.preparation-fields{display:grid;grid-template-columns:repeat(4,minmax(90px,1fr));gap:9px}.preparation-fields label{display:grid;gap:4px;font-size:10px;color:#acbfcb}.preparation-fields input,.preparation-fields select{width:100%;min-width:0;padding:5px;font-size:11px}.preparation-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}.preparation-actions button{font-size:10px;padding:5px 7px}.preparation-actions label,.preparation-actions .muted,.preparation-status{font-size:10px}.preparation-status{color:#e4bd80;margin:7px 0}.preparation-body .hint{margin:6px 0;line-height:1.4}.sampler-settings{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;align-items:end;margin:10px 0}.sampler-settings>label{display:grid;gap:4px;font-size:11px;color:#acbfcb}.sampler-settings input:not([type=checkbox]),.sampler-settings select{width:100%;padding:7px}.sampler-settings button{font-size:11px;padding:7px}.sampler-settings .check{display:flex;align-items:center;gap:6px}.sampler-settings .signature-inputs{display:flex;align-items:center;gap:6px}.sampler-settings .signature-inputs input{flex:1;min-width:0}.derived-tools{display:grid;grid-template-columns:1.4fr 1fr auto 1fr auto;align-items:end;gap:10px;margin:12px 0;padding:12px;border:1px solid var(--border);border-radius:8px}.derived-tools>strong,.derived-tools>.hint{grid-column:1/-1}.derived-tools label{display:grid;gap:4px;font-size:12px}.derived-tools input{min-width:0;padding:8px;border:1px solid var(--line);border-radius:6px;background:#0e1721;color:var(--text)}.derived-tools button{height:34px}.slice-labels{margin:12px 0;padding:10px;border:1px solid #354754;border-radius:7px}.slice-labels>strong,.slice-labels>.muted{display:block;font-size:11px}.slice-labels>div{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-top:8px}.slice-labels label{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:10px}.slice-labels select{min-width:0;max-width:110px;font-size:10px;padding:4px}.preparation-mode .sampler-settings{grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px}.preparation-mode .sampler-settings input:not([type=checkbox]),.preparation-mode .sampler-settings select{padding:9px;font-size:13px}.preparation-mode .slice-labels>div{grid-template-columns:repeat(auto-fill,minmax(145px,1fr))}.preparation-mode .slice-labels select{max-width:130px;font-size:12px;padding:7px}@media(max-width:760px){.preparation-fields,.sampler-settings,.preparation-mode .sampler-settings{grid-template-columns:repeat(2,minmax(90px,1fr))}.derived-tools{grid-template-columns:1fr 1fr}.derived-tools>strong,.derived-tools>.hint{grid-column:1/-1}}
 .app.embedded .brand,.app.embedded .pill{display:none}
 
+/* Isolated Chopper UX: on narrow screens the sticky ruler must not cover every
+   tappable cue lane when the toolbar wraps to multiple rows. */
+@media (max-width:540px) {
+  .pattern-mode .pattern-editor {min-height:490px}
+  .pattern-mode .clip-scroll {min-height:255px;flex:1;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+}
+
+/* Chopper keeps the waveform, transfer controls and event grid in one workspace. */
+.pattern-mode .chopper-workspace .source-panel {
+  background: #16202b;
+  padding: 10px 14px 12px;
+}
+.pattern-mode .chopper-workspace .source-wave-wrap {
+  height: clamp(92px, 17dvh, 190px);
+  background: #0c151f;
+}
+.chopper-actions {
+  display: flex;
+  gap: 6px 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.chopper-actions label { display: inline-flex; align-items: center; gap: 6px; }
+.chopper-actions details { position: relative; }
+.chopper-actions summary { cursor: pointer; padding: 6px 10px; border: 1px solid var(--border); border-radius: 7px; }
+.chopper-actions details[open] > div {
+  position: absolute;
+  z-index: 8;
+  display: grid;
+  gap: 5px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px;
+}
+.samples-views button[aria-current="page"] { background: #20494e; border-color: #56aeb3; color: #e8ffff; }
+@media (max-width: 600px) {
+  .pattern-mode .chopper-workspace .source-panel { padding: 7px 8px; }
+  .chopper-actions .hint { flex-basis: 100%; }
+  .chopper-actions summary { padding: 8px 10px; }
+}
+.source-playhead {
+  position: absolute;
+  inset-block: 0;
+  width: 2px;
+  background: #f7cc63;
+  pointer-events: none;
+}
+.source-canvas:focus-visible { outline: 2px solid var(--teal); outline-offset: -3px; }
+.chopper-workspace .source-canvas { touch-action: pan-y pinch-zoom; }
+.chopper-pending { color: #f0c57b; font-size: 11px; }
+.chopper-actions .chopper-seed-controls { width: min(230px, 60vw); }
+.chopper-seed-controls input[type=number] { width: 100%; }
+.chopper-seed-controls input[type=range] { flex: 1; }
+
 .native-break-editor{margin-top:16px;padding:12px;border:1px solid var(--border);border-radius:8px;--line:var(--border);--surface:var(--panel);--surface-2:var(--panel-hi);--accent:var(--teal);--accent-ink:var(--text);color:var(--text)}.native-break-editor summary{cursor:pointer;font-weight:700}.native-break-editor fieldset{border:0;padding:0;min-width:0}.native-break-editor .bk{display:grid;gap:10px;padding:10px 0}.native-break-editor .bk-title{margin:0;font-size:15px}.native-break-editor .bk-row,.native-break-editor .bk-inspector{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}.native-break-editor .bk-hint,.native-break-editor .bk-note{font-size:11px;color:var(--muted)}.native-break-editor .bk-tab.on{background:var(--accent);color:var(--accent-ink)}.native-break-editor .bk-chain{width:12ch}.native-break-editor .bk-chain.bad{outline:2px solid #d881ac}.native-break-editor .bk-grid{display:grid;grid-template-columns:repeat(var(--cols,16),minmax(0,1fr));gap:3px}.native-break-editor .bk-step{appearance:none;position:relative;min-width:0;height:48px;padding:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--surface-2);color:var(--text)}.native-break-editor .bk-step small{font-size:9px}.native-break-editor .bk-nat{font-size:9px;color:var(--muted)}.native-break-editor .bk-step.ev{background:color-mix(in srgb,var(--accent) 58%,var(--surface));color:var(--accent-ink)}.native-break-editor .bk-step.ev.kick{background:color-mix(in srgb,#d4473c 68%,var(--surface))}.native-break-editor .bk-step.ev.snare{background:color-mix(in srgb,#d98a1f 68%,var(--surface))}.native-break-editor .bk-step.ev.hat{background:color-mix(in srgb,#b9a21a 68%,var(--surface))}.native-break-editor .bk-step.sel{outline:2px solid var(--text)}.native-break-editor .bk-step.head{box-shadow:0 0 0 3px var(--accent)}.native-break-editor .bk-step.tail{opacity:.55}.native-break-editor .bk-field{display:grid;font-size:11px;gap:4px}.native-break-editor .bk-field input[type=number]{width:7ch}.native-break-editor .bk-field.check{display:flex;align-items:center}.native-break-editor .bk-keys{display:grid;grid-template-columns:repeat(37,minmax(0,1fr));gap:2px}.native-break-editor .bk-key{display:flex;flex-direction:column;min-width:0;height:40px;background:var(--surface-2);color:var(--text);border:1px solid var(--border)}.native-break-editor .bk-key small{font-size:8px}.native-break-editor .bk-key.empty{opacity:.35}.native-break-editor .bk-count{width:6ch}.native-break-editor .bk-key.black{background:color-mix(in srgb,var(--surface-2) 75%,var(--text))}.native-break-editor input,.native-break-editor select{max-width:100%}:root[data-studio-appearance="custom"] .app .native-break-editor .bk-step{background-color:var(--panel-hi)!important;color:var(--text)!important;border-color:var(--border)!important}:root[data-studio-appearance="custom"] .app .native-break-editor .bk-step.ev{background:color-mix(in srgb,var(--accent) 58%,var(--surface))!important;color:var(--accent-ink)!important;border-color:transparent!important}:root[data-studio-appearance="custom"] .app .native-break-editor .bk-step.ev.kick{background:color-mix(in srgb,#d4473c 68%,var(--surface))!important}:root[data-studio-appearance="custom"] .app .native-break-editor .bk-step.ev.snare{background:color-mix(in srgb,#d98a1f 68%,var(--surface))!important}:root[data-studio-appearance="custom"] .app .native-break-editor .bk-step.ev.hat{background:color-mix(in srgb,#b9a21a 68%,var(--surface))!important}:root[data-studio-appearance="custom"] .app .native-break-editor .bk-key{background:var(--panel-hi)!important;color:var(--text)!important;border-color:var(--border)!important}:root[data-studio-appearance="custom"] .app .native-break-editor .bk-key.black{background:color-mix(in srgb,var(--panel-hi) 75%,var(--text))}:root[data-studio-appearance="custom"] .app .native-break-editor .bk-tab.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 
 /* Unified modes share the source rail and source waveform, never a second import queue. */
@@ -458,19 +514,19 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
   function renderPattern(pattern, { sliceStarts, fileSteps, head = 0 }) {
     const p = normalizePattern(pattern);
     const grains = [];
-    let h = wrap(head, fileSteps);
+    let h = wrap2(head, fileSteps);
     let step = 0;
     let i = 0;
     while (step < p.steps) {
       const e = p.events[i]?.step === step ? p.events[i++] : null;
       if (!e) {
         grains.push({ t: step, src: h, dur: 1, gain: 1, pitch: 0, rev: false });
-        h = wrap(h + 1, fileSteps);
+        h = wrap2(h + 1, fileSteps);
         step += 1;
         continue;
       }
-      if (e.src === HOME) h = wrap(step, fileSteps);
-      else if (e.src >= 0) h = wrap(sliceStarts[Math.min(e.src, sliceStarts.length - 1)] ?? 0, fileSteps);
+      if (e.src === HOME) h = wrap2(step, fileSteps);
+      else if (e.src >= 0) h = wrap2(sliceStarts[Math.min(e.src, sliceStarts.length - 1)] ?? 0, fileSteps);
       const durs = repeatDurations(e.len, e.reps, e.roll);
       let t = step;
       durs.forEach((dur, r) => {
@@ -478,7 +534,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         if (e.gate) grains.push({ t, src: h, dur, gain: e.amp0 + (e.amp1 - e.amp0) * k, pitch: e.pitch0 + (e.pitch1 - e.pitch0) * k, rev: e.rev });
         t += dur;
       });
-      h = wrap(h + e.len, fileSteps);
+      h = wrap2(h + e.len, fileSteps);
       step += e.len;
     }
     return { grains, head: h };
@@ -497,7 +553,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     }
     return { grains: out, head, steps: offset };
   }
-  var CONTINUE, HOME, ROLL, REPS, PATTERN_STEPS, ACCEL_RATIO, clamp, wrap;
+  var CONTINUE, HOME, ROLL, REPS, PATTERN_STEPS, ACCEL_RATIO, clamp, wrap2;
   var init_break_engine = __esm({
     "../../studio/model/break_engine.js"() {
       CONTINUE = -1;
@@ -507,7 +563,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       PATTERN_STEPS = [16, 32, 48, 64, 80, 96, 112, 128];
       ACCEL_RATIO = 0.8;
       clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-      wrap = (pos, fileSteps) => (pos % fileSteps + fileSteps) % fileSteps;
+      wrap2 = (pos, fileSteps) => (pos % fileSteps + fileSteps) % fileSteps;
     }
   });
 
@@ -1204,6 +1260,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         number(c.fadeInMs, cp + ".fadeInMs", 0);
         number(c.fadeOutMs, cp + ".fadeOutMs", 0);
         if (typeof c.reverse !== "boolean") fail(cp + ".reverse");
+        if (c.addressMode !== void 0 && c.addressMode !== "relative" && c.addressMode !== "absolute") fail(cp + ".addressMode");
         if (c.playbackMode !== void 0 && c.playbackMode !== "gate") fail(cp + ".playbackMode");
       }
       for (const f of v.effects) {
@@ -1255,11 +1312,6 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
   }
   function currentVariation(p) {
     return p.variations.find((v) => v.id === p.activeVariationId) || p.variations[0];
-  }
-  function logAction(p, kind, details = {}) {
-    const item = { id: uid("act"), at: now(), variationId: p.activeVariationId, kind, details };
-    p.history.push(item);
-    p.updatedAt = item.at;
   }
   function newClip(src, trackId, sourceRange, positionBeats, projectBpm) {
     const durSeconds = (sourceRange.endFrame - sourceRange.startFrame) / src.sampleRate;
@@ -1371,9 +1423,84 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     return { clip: { ...clip, durationBeats: naturalBeats }, endBeat: clip.positionBeats + Math.min(clip.durationBeats, naturalBeats) };
   }
 
+  // src/core/chopper-playback.ts
+  var CHOPPER_EXPORT_LIMIT = "REL/ABS events use the browser Chopper transport. Convert the events to Legacy fixed frames before exporting to firmware.";
+  var wrap = (value, size) => (value % size + size) % size;
+  var framesPerBeat = (source) => source.sampleRate * 60 / source.bpm;
+  function chopperWindow(project, variation, base, origin) {
+    const length = (variation.patternBars || 1) * 4;
+    const clips = [];
+    const covered = [];
+    for (const authored of variation.clips) {
+      const source = project.sources.find((s) => s.id === authored.sourceId);
+      if (!source || authored.positionBeats >= length) continue;
+      const gate = gatePlayback(authored, source, project.bpm);
+      const duration = Math.min(gate.endBeat - authored.positionBeats, length - authored.positionBeats);
+      if (duration <= 0) continue;
+      const start = authored.addressMode === "relative" ? wrap(Math.round(origin * framesPerBeat(source)) + authored.sourceStartFrame, source.frames) : authored.sourceStartFrame;
+      const total = authored.sourceEndFrame - authored.sourceStartFrame;
+      const first = Math.min(total, source.frames - start);
+      const parts = [{ start, end: start + first }, { start: 0, end: total - first }].filter((p) => p.end > p.start);
+      if (authored.reverse) parts.reverse();
+      let offset = 0;
+      for (const part of parts) {
+        const span3 = gate.clip.durationBeats * (part.end - part.start) / total;
+        const keep = Math.min(span3, duration - offset);
+        if (keep <= 0) break;
+        const frames = Math.max(1, Math.round((part.end - part.start) * keep / span3));
+        clips.push({
+          ...authored,
+          positionBeats: authored.positionBeats + offset,
+          durationBeats: keep,
+          sourceStartFrame: authored.reverse ? part.end - frames : part.start,
+          sourceEndFrame: authored.reverse ? part.end : part.start + frames,
+          playbackMode: void 0
+        });
+        offset += span3;
+      }
+      if (variation.tracks.some((t) => t.id === authored.trackId && !t.mute)) {
+        covered.push({ start: authored.positionBeats, end: authored.positionBeats + duration });
+      }
+    }
+    const track = variation.tracks[0];
+    if (base && track && !track.mute) {
+      const perBeat = framesPerBeat(base), sourceBeats = base.frames / perBeat;
+      const addBase = (start, end) => {
+        while (end - start > 1e-8) {
+          const phase = wrap(origin + start, sourceBeats);
+          const span3 = Math.min(end - start, sourceBeats - phase);
+          const first = Math.min(base.frames - 1, Math.round(phase * perBeat));
+          const last = Math.min(base.frames, Math.round((phase + span3) * perBeat));
+          if (last > first) clips.push({
+            id: "base",
+            sourceId: base.id,
+            trackId: track.id,
+            positionBeats: start,
+            durationBeats: span3,
+            sourceStartFrame: first,
+            sourceEndFrame: last,
+            gain: 1,
+            reverse: false,
+            fadeInMs: 2,
+            fadeOutMs: 2
+          });
+          start += span3;
+        }
+      };
+      let cursor = 0;
+      for (const interval of covered.sort((a, b) => a.start - b.start)) {
+        if (interval.start > cursor) addBase(cursor, interval.start);
+        cursor = Math.max(cursor, interval.end);
+      }
+      addBase(cursor, length);
+    }
+    return { ...variation, clips };
+  }
+
   // src/core/numbered-compat.ts
   function numberedCompatibility(source, variation, sourceBars) {
     const errors = [], warnings = [], sequence = [];
+    if (variation.clips.some((c) => c.addressMode)) return { errors: [CHOPPER_EXPORT_LIMIT], warnings, sequence };
     const division = variation.patternDivision || 8, bars = variation.patternBars || 1;
     if (division !== 4 && division !== 8) errors.push("Choose a 1/4 or 1/8 pattern grid.");
     if (!Number.isInteger(sourceBars) || sourceBars < 1 || sourceBars > 8) errors.push("Source loop length must be 1\u20138 bars.");
@@ -1444,6 +1571,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     return counts;
   }
   function learnBreakBank(project, targetSourceId, maxSourceSlices = 32) {
+    if (project.variations.some((v) => v.clips.some((c) => c.addressMode))) return { ok: false, errors: [CHOPPER_EXPORT_LIMIT] };
     const target2 = project.sources.find((source) => source.id === targetSourceId);
     if (!target2) return { ok: false, errors: [`Target source ${targetSourceId} is not in the project.`] };
     const targetProblem = sourceProblem(target2, `Target ${target2.name}`, maxSourceSlices);
@@ -1652,6 +1780,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     const fillCandidateIndices = Array(length).fill(-1);
     const fillOpportunities = Array(length).fill(false);
     const elapsedStepsAtEnd = Array(length).fill(0);
+    const fillChoicesByCount = /* @__PURE__ */ new Map();
     let elapsedSteps = 0;
     const intervalSteps = Math.max(1, Math.round(intervalBars * 16));
     for (let slot = 0; slot < length; slot++) {
@@ -1663,7 +1792,12 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       fillOpportunities[slot] = true;
       const matchingFills = fillIndices.filter((index) => patternSteps[index] === slotSteps);
       if (!matchingFills.length) continue;
-      const fillChoice = generateSeedSequence(seed ^ 3266489909, matchingFills.length, length)[slot];
+      let choices = fillChoicesByCount.get(matchingFills.length);
+      if (!choices) {
+        choices = generateSeedSequence(seed ^ 3266489909, matchingFills.length, length);
+        fillChoicesByCount.set(matchingFills.length, choices);
+      }
+      const fillChoice = choices[slot];
       fillCandidateIndices[slot] = matchingFills[fillChoice] ?? matchingFills[0];
     }
     const earlyFillCandidateIndices = Array(length).fill(-1);
@@ -1758,6 +1892,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
 
   // src/core/rendered-chopper.ts
   function renderedChopperPlan(project) {
+    if (project.variations.some((v) => v.clips.some((c) => c.addressMode))) throw new Error(CHOPPER_EXPORT_LIMIT);
     if (project.beatsPerBar !== 4 || !Number.isFinite(project.bpm) || project.bpm <= 0) throw new Error("Rendered Chopper requires a valid project BPM and 4/4 meter.");
     const variations = project.variations.filter((v) => v.clips.length);
     if (!variations.length || variations.length > 8) throw new Error("Rendered Chopper requires 1\u20138 non-empty patterns.");
@@ -2042,8 +2177,12 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       this.playStartBeat = 0;
       this.lastEndBeat = 0;
       this.master = null;
+      this.generation = 0;
+      this.liveGains = /* @__PURE__ */ new Map();
       this.delayInput = null;
       this.reverbInput = null;
+      this.auditionNode = null;
+      this.auditionGain = null;
     }
     setup() {
       const ctx = audioLibrary.context();
@@ -2078,6 +2217,9 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       conv.connect(this.master);
       return ctx;
     }
+    reachedEnd() {
+      return this.currentBeat() >= this.lastEndBeat;
+    }
     isPlaying() {
       return this.playing;
     }
@@ -2086,6 +2228,10 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       return Math.min(this.lastEndBeat, this.playStartBeat + (this.ctx.currentTime - this.startAt) * this.projectBpm / 60);
     }
     stop() {
+      this.generation++;
+      clearInterval(this.windowTimer);
+      this.windowTimer = void 0;
+      this.liveGains.clear();
       for (const node of this.nodes) {
         try {
           node.stop();
@@ -2095,7 +2241,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       this.nodes = [];
       this.playing = false;
     }
-    trigger(clip, buffer, segmentStart, segmentEnd, when, beatsPerSecond, fx, trackGain) {
+    trigger(clip, buffer, segmentStart, segmentEnd, when, beatsPerSecond, fx, trackGain, gainScale = 1) {
       if (!this.ctx || !this.master || segmentEnd <= segmentStart) return;
       const ctx = this.ctx;
       const localStart = (segmentStart - clip.positionBeats) / clip.durationBeats, localEnd = (segmentEnd - clip.positionBeats) / clip.durationBeats;
@@ -2136,19 +2282,28 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         lfo.start(when);
         lfo.stop(when + timeLength + 1e-3);
         this.nodes.push(lfo);
+        lfo.onended = () => {
+          lfo.disconnect();
+          depth.disconnect();
+          this.nodes = this.nodes.filter((node) => node !== lfo);
+        };
         chain.connect(wet);
         wet.connect(sum);
         wetOutput = sum;
       }
       const gain = ctx.createGain();
-      const peak = clip.gain * trackGain;
+      const peak = trackGain;
       const fadeIn = Math.min(timeLength * 0.35, clip.fadeInMs / 1e3), fadeOut = Math.min(timeLength * 0.35, clip.fadeOutMs / 1e3);
       gain.gain.setValueAtTime(0, when);
       gain.gain.linearRampToValueAtTime(peak, when + Math.max(1e-3, fadeIn));
       gain.gain.setValueAtTime(peak, when + Math.max(1e-3, timeLength - fadeOut));
       gain.gain.linearRampToValueAtTime(0, when + timeLength);
-      wetOutput.connect(gain);
+      const level = ctx.createGain();
+      level.gain.value = clip.gain * gainScale;
+      wetOutput.connect(level);
+      level.connect(gain);
       gain.connect(this.master);
+      this.liveGains.set(source, { id: clip.id, gain: level.gain, scale: gainScale });
       for (const f of fx) {
         if (f.startBeats >= segmentEnd || f.startBeats + f.durationBeats <= segmentStart) continue;
         if (f.type === "delay_send" && this.delayInput) {
@@ -2167,8 +2322,15 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       source.start(when, Math.max(0, frameStart / buffer.sampleRate));
       source.stop(when + timeLength + 2e-3);
       this.nodes.push(source);
+      source.onended = () => {
+        this.liveGains.delete(source);
+        this.nodes = this.nodes.filter((node) => node !== source);
+        source.disconnect();
+        level.disconnect();
+        gain.disconnect();
+      };
     }
-    scheduleClip(clip, project, v, playFrom) {
+    scheduleClip(clip, project, v, playFrom, startAt = this.startAt) {
       const track = v.tracks.find((t) => t.id === clip.trackId);
       if (!track || track.mute) return;
       const buf = clip.reverse ? audioLibrary.getReverse(clip.sourceId) : audioLibrary.get(clip.sourceId);
@@ -2211,11 +2373,10 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
               shortClip.sourceEndFrame = Math.min(clip.sourceEndFrame, originalEnd);
               shortClip.sourceStartFrame = Math.max(clip.sourceStartFrame, shortClip.sourceEndFrame - range);
             }
-            shortClip.gain = clip.gain * (roll.params.gain ?? 0.9);
             shortClip.fadeOutMs = 3;
-            this.trigger(shortClip, buf, position, position + span3, this.startAt + (position - playFrom) / bps, bps, active.filter((f) => f !== roll), track.gain);
+            this.trigger(shortClip, buf, position, position + span3, startAt + (position - playFrom) / bps, bps, active.filter((f) => f !== roll), track.gain, roll.params.gain ?? 0.9);
           }
-        } else this.trigger(clip, buf, s, e, this.startAt + (s - playFrom) / bps, bps, active, track.gain);
+        } else this.trigger(clip, buf, s, e, startAt + (s - playFrom) / bps, bps, active, track.gain);
       }
     }
     relativeFrame(c, beat, buffer) {
@@ -2233,15 +2394,92 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       for (const c of v.clips) this.scheduleClip(c, p, v, fromBeat);
       this.playing = true;
     }
+    updateClipGain(id, value) {
+      if (!this.ctx) return;
+      for (const entry of this.liveGains.values()) {
+        if (entry.id === id) entry.gain.setTargetAtTime(value * entry.scale, this.ctx.currentTime, 8e-3);
+      }
+    }
+    async playChopper(read, fromBeat, onWindow) {
+      this.stop();
+      const generation = this.generation, ctx = this.setup();
+      await ctx.resume();
+      if (generation !== this.generation) return;
+      const initial = read(0);
+      const bps = initial.project.bpm / 60;
+      const length = (initial.variation.patternBars || 1) * 4;
+      let origin = 0, windowIndex = 0, local = Math.max(0, Math.min(fromBeat, length - 1e-6)), snapshot = initial;
+      this.startAt = ctx.currentTime + 0.025;
+      this.playStartBeat = local;
+      this.projectBpm = initial.project.bpm;
+      this.lastEndBeat = Infinity;
+      this.playing = true;
+      let activeOrigin = 0, activeLength = length, publishedOrigin = -1;
+      const pump = () => {
+        if (activeOrigin !== publishedOrigin && this.currentBeat() >= activeOrigin) {
+          onWindow(activeOrigin, activeLength, snapshot.project, snapshot.variation.name, snapshot.base);
+          publishedOrigin = activeOrigin;
+        }
+        const when = this.startAt + (origin + local - this.playStartBeat) / bps;
+        if (when > ctx.currentTime + 0.08) return;
+        if (origin > 0) {
+          const next = read(windowIndex);
+          if (!next.loop) {
+            this.lastEndBeat = origin;
+            clearInterval(this.windowTimer);
+            return;
+          }
+          snapshot = next;
+        }
+        const project = { ...snapshot.project, bpm: this.projectBpm };
+        const window2 = chopperWindow(project, snapshot.variation, snapshot.base, origin);
+        const late = Math.max(0, (ctx.currentTime - when) * bps);
+        for (const clip of window2.clips) this.scheduleClip(clip, project, window2, local + late, when + late / bps);
+        activeOrigin = origin;
+        activeLength = (snapshot.variation.patternBars || 1) * 4;
+        origin += activeLength;
+        windowIndex++;
+        local = 0;
+      };
+      pump();
+      this.windowTimer = setInterval(pump, 25);
+    }
     async preview(source, startFrame, endFrame) {
       const ctx = this.setup();
       await ctx.resume();
-      const buf = audioLibrary.get(source.id);
-      if (!buf || !this.master) return;
-      const node = ctx.createBufferSource();
-      node.buffer = buf;
-      node.connect(this.master);
-      node.start(0, startFrame / source.sampleRate, (endFrame - startFrame) / source.sampleRate);
+      const buffer = audioLibrary.get(source.id);
+      if (!buffer || !this.master) return;
+      if (!Number.isSafeInteger(startFrame) || !Number.isSafeInteger(endFrame) || startFrame < 0 || endFrame <= startFrame || endFrame > buffer.length) throw new RangeError("Cue preview is outside the source audio.");
+      const now2 = ctx.currentTime;
+      if (this.auditionGain && this.auditionNode) {
+        this.auditionGain.gain.cancelScheduledValues(now2);
+        this.auditionGain.gain.setValueAtTime(this.auditionGain.gain.value, now2);
+        this.auditionGain.gain.linearRampToValueAtTime(0, now2 + 6e-3);
+        try {
+          this.auditionNode.stop(now2 + 8e-3);
+        } catch (_) {
+        }
+      }
+      const node = ctx.createBufferSource(), gain = ctx.createGain(), duration = (endFrame - startFrame) / buffer.sampleRate;
+      node.buffer = buffer;
+      gain.gain.setValueAtTime(0, now2);
+      gain.gain.linearRampToValueAtTime(0.82, now2 + Math.min(3e-3, duration / 3));
+      gain.gain.setValueAtTime(0.82, now2 + Math.max(3e-3, duration - 5e-3));
+      gain.gain.linearRampToValueAtTime(0, now2 + duration);
+      node.connect(gain);
+      gain.connect(this.master);
+      this.auditionNode = node;
+      this.auditionGain = gain;
+      node.onended = () => {
+        node.disconnect();
+        gain.disconnect();
+        if (this.auditionNode === node) {
+          this.auditionNode = null;
+          this.auditionGain = null;
+        }
+      };
+      node.start(now2, startFrame / buffer.sampleRate, duration);
+      node.stop(now2 + duration + 1e-3);
     }
   };
   var audioEngine = new AudioEngine();
@@ -2286,6 +2524,77 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       peaks.push(item.index);
     }
     return peaks;
+  }
+
+  // src/core/chopper-seed.ts
+  function seedPatterns(variations, active) {
+    const patterns = variations.filter((v) => v.clips.length && (v.patternBars || 1) === (active.patternBars || 1));
+    const roles = patterns.map((v) => {
+      const name = v.name.trim().toUpperCase();
+      if (name === "BASE") return "base";
+      return name === "FILL" || v.tags.some((t) => t.kind === "fill") ? "fill" : "variation";
+    });
+    return { patterns, roles, available: roles.filter((role) => role === "base").length === 1 && roles.length > 1 };
+  }
+  var ChopperSeed = class {
+    constructor() {
+      this.key = "";
+      this.choices = [];
+    }
+    choose(variations, active, seed, probability, window2) {
+      const { patterns, roles, available } = seedPatterns(variations, active);
+      if (!available) return active;
+      const key = JSON.stringify([seed, probability, active.patternBars || 1, patterns.map((v, i) => [v.id, roles[i]])]);
+      if (this.key !== key || window2 >= this.choices.length - 1) {
+        const length = this.key === key ? Math.max(this.choices.length * 2 + 1, window2 + 2) : Math.max(63, window2 * 2 + 3);
+        this.choices = buildSeedSequence(
+          seed,
+          patterns.map((v) => v.name),
+          roles,
+          probability,
+          length,
+          patterns.map((v) => (v.patternBars || 1) * 16)
+        ).patternIndices;
+        this.key = key;
+      }
+      return patterns[this.choices[window2]] || active;
+    }
+  };
+
+  // src/core/chopper-quarter-cues.ts
+  var CHOPPER_CUE_LIMIT = 64;
+  function quarterCueRanges(source, limit = CHOPPER_CUE_LIMIT) {
+    if (!Number.isSafeInteger(source.frames) || source.frames <= 0 || !Number.isFinite(source.sampleRate) || source.sampleRate <= 0 || !Number.isFinite(source.bpm) || source.bpm <= 0) return [];
+    const framesPerBeat2 = source.sampleRate * 60 / source.bpm;
+    if (!Number.isFinite(framesPerBeat2) || framesPerBeat2 < 1) return [];
+    const ranges = [];
+    const max = Math.min(CHOPPER_CUE_LIMIT, Math.max(0, Math.trunc(limit)));
+    for (let i = 0; i < max; i++) {
+      const startFrame = Math.round(i * framesPerBeat2);
+      if (startFrame >= source.frames) break;
+      const endFrame = Math.min(source.frames, Math.round((i + 1) * framesPerBeat2));
+      if (endFrame > startFrame) ranges.push({ startFrame, endFrame });
+    }
+    return ranges;
+  }
+  function quarterCueIndexAtFrame(ranges, frame) {
+    if (!Number.isFinite(frame)) return -1;
+    return ranges.findIndex((r) => frame >= r.startFrame && frame < r.endFrame);
+  }
+
+  // src/core/chopper-sample.ts
+  function chopperSampleTiming(source) {
+    const beats = Math.round(source.frames / source.sampleRate * source.bpm / 60);
+    if (source.sampler && (source.sampler.timeNumerator !== 4 || source.sampler.timeDenominator !== 4)) {
+      throw new Error("Choose a 4/4 source for the Chopper WAV.");
+    }
+    if (!Number.isFinite(beats) || beats < 4 || beats % 4 || Math.abs(source.frames / source.sampleRate * source.bpm / 60 - beats) > 0.02) {
+      throw new Error("Set Source BPM so the full audio matches a whole number of 4/4 bars.");
+    }
+    if (source.sampler?.beats && source.sampler.beats !== beats) {
+      throw new Error("The stored beat count differs from the audio duration and Source BPM. Confirm the timing in Source settings.");
+    }
+    return { beats, bars: beats / 4, cueCount: Math.min(beats, CHOPPER_CUE_LIMIT) };
   }
 
   // ../../studio/model/timestretch.js
@@ -2632,6 +2941,26 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     setTimeout(() => URL.revokeObjectURL(url), 3e3);
   }
 
+  // src/core/slice-placement.ts
+  var SLICE_DRAG_MIME = "application/x-slice-lab";
+  function validatedSliceDrag(raw, sources) {
+    if (!raw || typeof raw !== "object") return null;
+    const input = raw;
+    if (typeof input.sourceId !== "string") return null;
+    const source = sources.find((s) => s.id === input.sourceId);
+    if (!source) return null;
+    const { startFrame, endFrame } = input;
+    if (!Number.isSafeInteger(startFrame) || !Number.isSafeInteger(endFrame)) return null;
+    if (!(startFrame >= 0 && endFrame > startFrame && endFrame <= source.frames)) return null;
+    return { sourceId: source.id, startFrame, endFrame };
+  }
+  function stepAtClientX(clientX, left, pixelsPerBeat, division, bars) {
+    if (![clientX, left, pixelsPerBeat, division, bars].every(Number.isFinite) || pixelsPerBeat <= 0 || division <= 0 || bars <= 0) return 0;
+    const count = bars * division, unit = 4 / division;
+    const beat = Math.max(0, (clientX - left) / pixelsPerBeat);
+    return Math.max(0, Math.min(count - 1, Math.round(beat / unit)));
+  }
+
   // src/components/SourceWave.tsx
   var SourceWave = class extends React.Component {
     constructor() {
@@ -2640,6 +2969,8 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       this.dragMarker = null;
       this.dragMoved = false;
       this.startX = 0;
+      this.startY = 0;
+      this.pressedSlice = null;
       this.draw = () => {
         const canvas = this.canvas;
         if (!canvas) return;
@@ -2674,23 +3005,51 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         ctx.textAlign = "left";
         slices.forEach((slice, i) => {
           const x = slice.startFrame / source.frames * w;
-          ctx.fillStyle = i === this.props.selectedSlice ? accent : muted;
-          ctx.fillText(`${i + 1}`, Math.min(w - 18, x + 5), 13);
-        });
-        ctx.lineWidth = 1.4;
-        ctx.strokeStyle = "#f1b764";
-        for (const m of source.markers) {
-          const x = m / source.frames * w;
+          ctx.lineWidth = this.props.chopperCues ? 1.1 : 0.5;
+          ctx.strokeStyle = this.props.chopperCues ? "#6ac9d2" : "#647a8c";
+          ctx.globalAlpha = this.props.chopperCues ? 0.65 : 0.4;
           ctx.beginPath();
           ctx.moveTo(x, 0);
           ctx.lineTo(x, h);
           ctx.stroke();
-          ctx.fillStyle = "#f1b764";
-          ctx.beginPath();
-          ctx.moveTo(x - 4, 0);
-          ctx.lineTo(x + 4, 0);
-          ctx.lineTo(x, 7);
-          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = i === this.props.selectedSlice ? accent : muted;
+          ctx.fillText(`${i + 1}`, Math.min(w - 20, x + 4), 13);
+        });
+        if (this.props.chopperCues) {
+          ctx.fillStyle = "#f0c57b";
+          ctx.textAlign = "right";
+          ctx.fillText("Quarter-note cues", w - 9, h - 9);
+        } else {
+          ctx.lineWidth = 1.4;
+          ctx.strokeStyle = "#f1b764";
+          for (const m of source.markers) {
+            const x = m / source.frames * w;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+            ctx.stroke();
+            ctx.fillStyle = "#f1b764";
+            ctx.beginPath();
+            ctx.moveTo(x - 4, 0);
+            ctx.lineTo(x + 4, 0);
+            ctx.lineTo(x, 7);
+            ctx.fill();
+          }
+        }
+      };
+      this.onCueKey = (event) => {
+        const ranges = this.slices();
+        if (!this.props.chopperCues || !ranges.length) return;
+        const index = Math.min(ranges.length - 1, Math.max(0, this.props.selectedSlice));
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault();
+          this.props.onSelect(Math.min(ranges.length - 1, Math.max(0, index + (event.key === "ArrowLeft" ? -1 : 1))));
+        } else if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          event.stopPropagation();
+          this.props.onSelect(index);
+          this.props.onPreview?.(ranges[index]);
         }
       };
     }
@@ -2701,12 +3060,13 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       this.install();
       this.draw();
     }
-    componentDidUpdate() {
-      this.draw();
+    componentDidUpdate(previous) {
+      if (previous.source !== this.props.source || previous.selectedSlice !== this.props.selectedSlice || previous.chopperCues !== this.props.chopperCues) this.draw();
     }
     componentWillUnmount() {
       window.removeEventListener("resize", this.draw);
       this.themeObserver?.disconnect();
+      this.dragImage?.remove();
     }
     install() {
       const c = this.canvas;
@@ -2714,20 +3074,61 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       c.onpointerdown = (event) => this.down(event);
       c.onpointermove = (event) => this.move(event);
       c.onpointerup = (event) => this.up(event);
+      c.onpointercancel = () => {
+        this.dragMarker = null;
+        this.pressedSlice = null;
+        this.dragMoved = true;
+      };
       c.ondblclick = (event) => this.doubleClick(event);
       c.draggable = true;
       c.ondragstart = (event) => {
-        const s = this.props.source;
-        if (!s) return;
-        const range = this.slices()[this.props.selectedSlice];
-        if (!range) return;
-        event.dataTransfer?.setData("application/x-slice-lab", JSON.stringify({ sourceId: s.id, ...range }));
-        event.dataTransfer?.setData("text/plain", `${s.name} slice ${this.props.selectedSlice + 1}`);
+        const source = this.props.source, index = this.pressedSlice, transfer = event.dataTransfer;
+        const range = index === null ? void 0 : this.slices()[index];
+        if (!source || index === null || !range || !transfer) {
+          event.preventDefault();
+          return;
+        }
+        this.dragMoved = true;
+        transfer.effectAllowed = "copy";
+        transfer.setData(SLICE_DRAG_MIME, JSON.stringify({ sourceId: source.id, ...range }));
+        transfer.setData("text/plain", `${source.name} cue ${index + 1}`);
+        this.setSliceDragImage(transfer, source, range, index);
       };
+      c.ondragend = () => {
+        this.dragImage?.remove();
+        this.dragImage = void 0;
+        this.dragMarker = null;
+        this.pressedSlice = null;
+        this.dragMoved = false;
+      };
+    }
+    setSliceDragImage(transfer, source, range, index) {
+      const image = document.createElement("canvas");
+      image.width = 152;
+      image.height = 54;
+      const ctx = image.getContext("2d");
+      if (!ctx) return;
+      ctx.fillStyle = "#101923";
+      ctx.fillRect(0, 0, image.width, image.height);
+      ctx.strokeStyle = "#6ac9d2";
+      ctx.strokeRect(0.5, 0.5, image.width - 1, image.height - 1);
+      ctx.fillStyle = "#e6eff6";
+      ctx.font = "600 12px system-ui";
+      ctx.fillText(`Cue ${index + 1}`, 9, 16);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#94a6b7";
+      ctx.fillText(`${Math.round((range.endFrame - range.startFrame) / source.sampleRate * 1e3)} ms`, image.width - 9, 16);
+      drawWave(ctx, audioLibrary.get(source.id), range.startFrame, range.endFrame, 8, 21, image.width - 16, 27, "#6ac9d2");
+      Object.assign(image.style, { position: "fixed", left: "-200px", top: "0", pointerEvents: "none" });
+      this.dragImage?.remove();
+      this.dragImage = image;
+      document.body.append(image);
+      transfer.setDragImage(image, 12, 12);
     }
     slices() {
       const s = this.props.source;
       if (!s) return [];
+      if (this.props.chopperCues) return quarterCueRanges(s);
       const markers = [0, ...s.markers, s.frames];
       return markers.slice(0, -1).map((startFrame, i) => ({ startFrame, endFrame: markers[i + 1] }));
     }
@@ -2740,38 +3141,53 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     markerAt(frame) {
       const s = this.props.source, c = this.canvas;
       if (!s || !c) return -1;
-      const radius = Math.round(9 / c.clientWidth * s.frames);
+      const radius = Math.round(9 / Math.max(1, c.clientWidth) * s.frames);
       return s.markers.findIndex((m) => Math.abs(frame - m) <= radius);
     }
     down(event) {
       const s = this.props.source, c = this.canvas;
-      if (!s || !c) return;
+      if (!s || !c || event.button !== 0) return;
       const frame = this.frameAt(event);
       this.startX = event.clientX;
+      this.startY = event.clientY;
       this.dragMoved = false;
-      const nearest = this.markerAt(frame);
+      const nearest = this.props.chopperCues ? -1 : this.markerAt(frame);
       this.dragMarker = nearest >= 0 ? nearest : null;
-      c.setPointerCapture(event.pointerId);
-      if (nearest < 0) {
-        const index = this.slices().findIndex((r) => frame >= r.startFrame && frame < r.endFrame);
-        this.props.onSelect(Math.max(0, index));
+      this.pressedSlice = null;
+      if (nearest >= 0) {
+        c.setPointerCapture(event.pointerId);
+        return;
+      }
+      const ranges = this.slices();
+      const index = this.props.chopperCues ? quarterCueIndexAtFrame(ranges, frame) : ranges.findIndex((r) => frame >= r.startFrame && frame < r.endFrame);
+      if (index >= 0) {
+        this.pressedSlice = index;
+        this.props.onSelect(index);
       }
     }
     move(event) {
-      if (this.dragMarker === null || !this.props.source || !this.canvas) return;
-      const s = this.props.source, markers = [...s.markers];
-      this.dragMoved = true;
-      const i = this.dragMarker, prev = i ? markers[i - 1] : 0, next = i < markers.length - 1 ? markers[i + 1] : s.frames;
-      markers[i] = Math.max(prev + 1, Math.min(next - 1, this.frameAt(event)));
-      this.props.onMarkers(markers, "marker_preview");
+      if (this.dragMarker !== null && this.props.source) {
+        const s = this.props.source, markers = [...s.markers];
+        this.dragMoved = true;
+        const i = this.dragMarker, prev = i ? markers[i - 1] : 0, next = i < markers.length - 1 ? markers[i + 1] : s.frames;
+        markers[i] = Math.max(prev + 1, Math.min(next - 1, this.frameAt(event)));
+        this.props.onMarkers(markers, "marker_preview");
+        return;
+      }
+      if (this.pressedSlice !== null && Math.hypot(event.clientX - this.startX, event.clientY - this.startY) > 6) this.dragMoved = true;
     }
     up(_event) {
-      if (this.dragMarker !== null && this.dragMoved && this.props.source) {
-        this.props.onMarkers([...this.props.source.markers], "marker_move");
+      if (this.dragMarker !== null && this.dragMoved && this.props.source) this.props.onMarkers([...this.props.source.markers], "marker_move");
+      if (this.dragMarker === null && !this.dragMoved && this.pressedSlice !== null) {
+        const range = this.slices()[this.pressedSlice];
+        if (range) this.props.onPreview?.(range);
       }
       this.dragMarker = null;
+      this.pressedSlice = null;
+      this.dragMoved = false;
     }
     doubleClick(event) {
+      if (this.props.chopperCues) return;
       const s = this.props.source;
       if (!s) return;
       const frame = this.frameAt(event);
@@ -2779,7 +3195,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       this.props.onMarkers([...s.markers, frame].sort((a, b) => a - b), "marker_add");
     }
     render() {
-      return /* @__PURE__ */ React.createElement("canvas", { className: "source-canvas", ref: (c) => this.canvas = c, title: "Click to select and preview a slice \xB7 Double-click to add a marker \xB7 Drag markers \xB7 Drag slices to pattern steps" });
+      return /* @__PURE__ */ React.createElement("canvas", { tabIndex: this.props.source && this.props.chopperCues ? 0 : void 0, "aria-label": this.props.chopperCues ? "Source waveform. Use arrow keys to select a cue and Enter to audition." : void 0, onKeyDown: this.onCueKey, className: "source-canvas", ref: (c) => this.canvas = c, title: this.props.chopperCues ? "Tap to audition and arm a quarter-note cue; drag it onto a pattern lane" : "Click to select and audition a slice \xB7 Double-click to add a marker \xB7 Drag markers" });
     }
   };
 
@@ -4639,8 +5055,8 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       body.append(renderKeyStrip(c), renderGrid(p, c), renderInspector(p, c), renderTransport());
     }
     function renderKeyStrip(c) {
-      const wrap2 = el("div", "bk-keys-wrap");
-      wrap2.append(el("p", "bk-hint", "Keys C3-C6 play the slices (permanent map: kicks C3-B3, snares C4-B4, hats C5-B5, other C6)"));
+      const wrap3 = el("div", "bk-keys-wrap");
+      wrap3.append(el("p", "bk-hint", "Keys C3-C6 play the slices (permanent map: kicks C3-B3, snares C4-B4, hats C5-B5, other C6)"));
       const strip = el("div", "bk-keys");
       for (const k of keyStripModel(c.labels, c.sliceStarts.length)) {
         const cell = el("div", `bk-key ${k.slice ? `r-${k.role}` : "empty"}${k.name.length === 3 && k.name[1] === "#" ? " black" : ""}`);
@@ -4648,8 +5064,8 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         cell.append(el("small", "", k.name), el("b", "", k.slice ? String(k.slice) : ""));
         strip.append(cell);
       }
-      wrap2.append(strip);
-      return wrap2;
+      wrap3.append(strip);
+      return wrap3;
     }
     function renderGrid(p, c) {
       const grid = el("div", "bk-grid");
@@ -4979,6 +5395,11 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
     return /* @__PURE__ */ React.createElement("div", { className: "inspector-body" }, /* @__PURE__ */ React.createElement("h3", null, "Inspector"), /* @__PURE__ */ React.createElement("p", { className: "hint" }, "Select an audio clip or FX event to view its parameters."), source && /* @__PURE__ */ React.createElement("div", { className: "meta" }, "Active source", /* @__PURE__ */ React.createElement("br", null), /* @__PURE__ */ React.createElement("strong", null, source.name), /* @__PURE__ */ React.createElement("br", null), (source.frames / source.sampleRate).toFixed(2), " s \xB7 ", source.sampleRate, " Hz \xB7 ", source.channels, " ch", /* @__PURE__ */ React.createElement("br", null), source.markers.length + 1, " slices"), /* @__PURE__ */ React.createElement("h4", null, "Controls"), /* @__PURE__ */ React.createElement("p", { className: "hint" }, "Double-click the source waveform to add a marker. Drag a marker to adjust it. Click a slice to select it."), /* @__PURE__ */ React.createElement("p", { className: "hint" }, "Timeline: drag clips; drag the right edge to trim; Alt-drag to copy. Double-click to seek."), /* @__PURE__ */ React.createElement("p", { className: "hint" }, "Drag slices from the source waveform onto a track, or add them with the button."));
   }
 
+  // src/components/ChopperActions.tsx
+  function ChopperActions(p) {
+    return /* @__PURE__ */ React.createElement("div", { className: "chopper-actions" }, /* @__PURE__ */ React.createElement("details", null, /* @__PURE__ */ React.createElement("summary", null, "Sample"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { onClick: p.onSampleImport }, "Import audio\u2026"), /* @__PURE__ */ React.createElement("button", { disabled: !p.hasSource, onClick: p.onSampleExport }, "Prepare Chopper WAV\u2026"), /* @__PURE__ */ React.createElement("button", { disabled: !p.hasSource, onClick: p.onSourceSettings }, "Markers and WAV settings"))), /* @__PURE__ */ React.createElement("details", null, /* @__PURE__ */ React.createElement("summary", null, "Pattern"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { onClick: p.onProjectImport }, "Open project ZIP\u2026"), /* @__PURE__ */ React.createElement("button", { onClick: p.onProjectExport }, "Save project ZIP"), /* @__PURE__ */ React.createElement("button", { onClick: p.onDevice }, "Device files and transfer"))), /* @__PURE__ */ React.createElement("label", { title: "Browser transport with continuous BASE and pattern-boundary editing" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: p.live, disabled: p.playing, onChange: (e) => p.onLive(e.target.checked) }), " Live Chopper"), p.live && /* @__PURE__ */ React.createElement("details", null, /* @__PURE__ */ React.createElement("summary", null, "Seed"), /* @__PURE__ */ React.createElement("div", { className: "chopper-seed-controls" }, /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: p.seeded, disabled: !p.seedAvailable, onChange: (e) => p.onSeeded(e.target.checked) }), " Play sequence"), /* @__PURE__ */ React.createElement("label", null, "Seed ", /* @__PURE__ */ React.createElement("input", { type: "number", min: "0", max: "4294967295", value: p.seed, onChange: (e) => p.onSeed(+e.target.value >>> 0) })), /* @__PURE__ */ React.createElement("label", null, "Probability ", /* @__PURE__ */ React.createElement("input", { type: "range", min: "0", max: "100", value: p.probability, onChange: (e) => p.onProbability(+e.target.value) }), " ", p.probability, "%"), /* @__PURE__ */ React.createElement("small", { className: "hint" }, p.seedAvailable ? "Uses same-length BASE, variation and FILL patterns." : "Create a BASE and another pattern of the same length."))), p.clip && /* @__PURE__ */ React.createElement("label", null, "Event address ", /* @__PURE__ */ React.createElement("select", { "aria-label": "Event address", value: p.clip.addressMode || "legacy", onChange: (e) => p.onAddress(e.target.value === "legacy" ? void 0 : e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "relative" }, "REL \xB7 pattern window"), /* @__PURE__ */ React.createElement("option", { value: "absolute" }, "ABS \xB7 fixed source position"), /* @__PURE__ */ React.createElement("option", { value: "legacy" }, "Legacy \xB7 fixed frames"))), p.activePattern && /* @__PURE__ */ React.createElement("span", { className: "hint" }, "Playing ", p.activePattern), /* @__PURE__ */ React.createElement("span", { className: p.pending ? "chopper-pending" : "hint" }, p.pending ? "Edits queued for next pattern repeat" : p.live ? "Browser playback \xB7 gain updates live \xB7 structural edits apply at pattern repeats" : "Legacy playback \xB7 enable Live Chopper to hear REL addressing"));
+  }
+
   // src/components/PatternFX.tsx
   var PatternFX = class extends React.Component {
     constructor() {
@@ -5050,7 +5471,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       };
       this.suppressDraw = false;
       this.beginDraw = (e, range) => {
-        if (this.props.readOnly || this.suppressDraw || e.button !== 0 || this.state.tool !== "pen" || e.target !== e.currentTarget) return;
+        if (this.props.readOnly || this.props.armedCue || this.suppressDraw || e.button !== 0 || this.state.tool !== "pen" || e.target !== e.currentTarget) return;
         e.preventDefault();
         const left = e.currentTarget.getBoundingClientRect().left;
         const start = Math.min(this.props.bars * 4 - 4 / this.props.division, snapBeat((e.clientX - left) / this.ppb, this.props.division));
@@ -5106,6 +5527,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       };
       this.finish = () => {
         const g = this.gesture, p = this.state.preview;
+        if (g && !g.moved && g.mode === "move" && this.state.audition) this.props.onPreviewStep(g.clip);
         if (g && g.moved && p) {
           this.suppressDraw = true;
           setTimeout(() => {
@@ -5122,6 +5544,36 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         }
         this.release();
         this.setState({ preview: null });
+      };
+      this.insertArmed = (e) => {
+        if (this.props.readOnly || !this.props.armedCue || e.target !== e.currentTarget) return;
+        const cue = validatedSliceDrag(this.props.armedCue, this.props.sources);
+        if (!cue) return;
+        const lane = e.currentTarget;
+        const step = stepAtClientX(e.clientX, lane.getBoundingClientRect().left, this.ppb, this.props.division, this.props.bars);
+        this.props.onSetStep(step, cue.sourceId, cue);
+        this.props.onPlacedCue();
+      };
+      this.dragOver = (e) => {
+        if (this.props.readOnly || !Array.from(e.dataTransfer?.types || []).includes(SLICE_DRAG_MIME)) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+      };
+      this.dropCue = (e) => {
+        if (this.props.readOnly) return;
+        const raw = e.dataTransfer?.getData(SLICE_DRAG_MIME);
+        if (!raw) return;
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          const cue = validatedSliceDrag(JSON.parse(raw), this.props.sources);
+          if (!cue) return;
+          const lane = e.currentTarget;
+          const step = stepAtClientX(e.clientX, lane.getBoundingClientRect().left, this.ppb, this.props.division, this.props.bars);
+          this.props.onSetStep(step, cue.sourceId, cue);
+          this.props.onPlacedCue();
+        } catch (_) {
+        }
       };
       this.insert = (e, range) => {
         if (this.props.readOnly || !this.props.source) return;
@@ -5161,7 +5613,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       const play = Math.max(0, this.props.playhead % end), preview = this.state.preview;
       const sourceColorFor = (index) => index === 0 ? "var(--accent)" : `color-mix(in srgb,var(--accent) 12%,hsl(${(209 + (index - 1) * 137.508) % 360} 58% 36%))`;
       const sourceIndex = Math.max(0, this.props.sources.findIndex((s) => s.id === this.props.source?.id)), sourceColor = sourceColorFor(sourceIndex), sourceInk = sourceIndex === 0 ? "var(--accent-ink, #14202a)" : "#fff";
-      return /* @__PURE__ */ React.createElement("section", { className: "pattern-editor", "aria-label": "Drum slice editor" }, /* @__PURE__ */ React.createElement("div", { className: "pattern-toolbar" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "tag" }, "SLICE DRUM EDITOR"), /* @__PURE__ */ React.createElement("strong", null, this.props.source?.name || "Add a source first"), /* @__PURE__ */ React.createElement("small", null, "Pointer: double-click to add \xB7 Pencil: drag to set length \xB7 Alt + Pencil: repeat \xB7 Delete: remove")), /* @__PURE__ */ React.createElement("div", { className: "pattern-actions" }, /* @__PURE__ */ React.createElement("button", { "aria-pressed": this.state.tool === "pointer", onClick: () => this.setState({ tool: "pointer" }) }, "\u2196 Pointer"), /* @__PURE__ */ React.createElement("button", { "aria-pressed": this.state.tool === "pen", disabled: this.props.readOnly, onClick: () => this.setState({ tool: "pen" }) }, "\u270E Pencil"), /* @__PURE__ */ React.createElement("label", { className: "compact" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: this.state.audition, onChange: (e) => this.setState({ audition: e.target.checked }) }), "Audition"), /* @__PURE__ */ React.createElement("label", { className: "compact" }, "SNAP", /* @__PURE__ */ React.createElement("select", { value: this.props.division, onChange: (e) => this.props.onDivisionChange(+e.target.value) }, [4, 8, 16, 32, 64].map((n) => /* @__PURE__ */ React.createElement("option", { key: n, value: n }, "1/", n)))), /* @__PURE__ */ React.createElement("button", { "aria-label": "Zoom out", title: "Zoom out", onClick: () => this.setState({ zoom: Math.max(0.25, this.state.zoom / 2) }) }, "\u2212"), /* @__PURE__ */ React.createElement("button", { "aria-label": "Zoom in", title: "Zoom in", onClick: () => this.setState({ zoom: Math.min(4, this.state.zoom * 2) }) }, "+"), /* @__PURE__ */ React.createElement("label", { className: "compact" }, "BARS", /* @__PURE__ */ React.createElement("select", { value: this.props.bars, onChange: (e) => this.props.onBarsChange(+e.target.value) }, [1, 2, 4, 8].map((n) => /* @__PURE__ */ React.createElement("option", { key: n, value: n }, n)))), /* @__PURE__ */ React.createElement("button", { onClick: this.props.onFillFromSource, disabled: !this.props.source || this.props.readOnly }, "\u21BB Source order"), /* @__PURE__ */ React.createElement("button", { onClick: this.props.onToggleComparison, disabled: !this.props.comparisonAvailable && !this.props.comparisonPreview, title: this.props.comparisonError || "Preview the same slice index in a second WAV; the project stays unchanged" }, this.props.comparisonPreview ? "\u21A9 Return to source WAV" : "\u21C4 A/B preview"))), /* @__PURE__ */ React.createElement("div", { className: "source-tabs" }, this.props.sources.map((source, index) => /* @__PURE__ */ React.createElement("button", { key: source.id, "aria-pressed": source.id === this.props.source?.id, style: { borderColor: sourceColorFor(index) }, onClick: () => this.props.onSelectSource(source.id) }, String.fromCharCode(65 + index), " \xB7 ", source.name, " ", /* @__PURE__ */ React.createElement("small", null, "(", this.props.clips.filter((c) => c.sourceId === source.id).length, ")"))), /* @__PURE__ */ React.createElement("small", null, this.props.comparisonPreview ? this.props.comparisonError || "A/B preview \xB7 event order unchanged \xB7 editing disabled \xB7 project unchanged" : "Slices from the selected source are shown \xB7 all sources are audible")), exactRows > 0 && /* @__PURE__ */ React.createElement("div", { className: "source-tabs", role: "status" }, exactRows, " exact ranges are outside the current slices \xB7 events and boundaries are preserved in the Exact rows below. Moving one to another row changes its range explicitly."), /* @__PURE__ */ React.createElement("div", { className: "clip-scroll", ref: (node) => {
+      return /* @__PURE__ */ React.createElement("section", { className: "pattern-editor", "aria-label": "Drum slice editor" }, /* @__PURE__ */ React.createElement("div", { className: "pattern-toolbar" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", { className: "tag" }, "Pattern"), /* @__PURE__ */ React.createElement("strong", null, this.props.source?.name || "Add a source first"), /* @__PURE__ */ React.createElement("small", null, this.props.armedCue ? "Cue armed \xB7 tap an empty step or drop onto the grid to insert" : "Tap source waveform to audition \xB7 drag cue here \xB7 Pointer: double-click \xB7 Pencil: draw")), /* @__PURE__ */ React.createElement("div", { className: "pattern-actions" }, /* @__PURE__ */ React.createElement("button", { "aria-pressed": this.state.tool === "pointer", onClick: () => this.setState({ tool: "pointer" }) }, "\u2196 Pointer"), /* @__PURE__ */ React.createElement("button", { "aria-pressed": this.state.tool === "pen", disabled: this.props.readOnly, onClick: () => this.setState({ tool: "pen" }) }, "\u270E Pencil"), /* @__PURE__ */ React.createElement("label", { className: "compact" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: this.state.audition, onChange: (e) => this.setState({ audition: e.target.checked }) }), "Audition"), /* @__PURE__ */ React.createElement("label", { className: "compact" }, "SNAP", /* @__PURE__ */ React.createElement("select", { value: this.props.division, onChange: (e) => this.props.onDivisionChange(+e.target.value) }, [4, 8, 16, 32, 64].map((n) => /* @__PURE__ */ React.createElement("option", { key: n, value: n }, "1/", n)))), /* @__PURE__ */ React.createElement("button", { "aria-label": "Zoom out", title: "Zoom out", onClick: () => this.setState({ zoom: Math.max(0.25, this.state.zoom / 2) }) }, "\u2212"), /* @__PURE__ */ React.createElement("button", { "aria-label": "Zoom in", title: "Zoom in", onClick: () => this.setState({ zoom: Math.min(4, this.state.zoom * 2) }) }, "+"), /* @__PURE__ */ React.createElement("label", { className: "compact" }, "BARS", /* @__PURE__ */ React.createElement("select", { "aria-label": "Pattern length in bars", value: this.props.bars, onChange: (e) => this.props.onBarsChange(+e.target.value) }, [1, 2, 4, 8].map((n) => /* @__PURE__ */ React.createElement("option", { key: n, value: n }, n)))), /* @__PURE__ */ React.createElement("button", { onClick: this.props.onFillFromSource, disabled: !this.props.source || this.props.readOnly }, "\u21BB Source order"), /* @__PURE__ */ React.createElement("button", { onClick: this.props.onToggleComparison, disabled: !this.props.comparisonAvailable && !this.props.comparisonPreview, title: this.props.comparisonError || "Preview the same slice index in a second WAV; the project stays unchanged" }, this.props.comparisonPreview ? "\u21A9 Return to source WAV" : "\u21C4 A/B preview"))), /* @__PURE__ */ React.createElement("div", { className: "source-tabs" }, this.props.sources.map((source, index) => /* @__PURE__ */ React.createElement("button", { key: source.id, "aria-pressed": source.id === this.props.source?.id, style: { borderColor: sourceColorFor(index) }, onClick: () => this.props.onSelectSource(source.id) }, String.fromCharCode(65 + index), " \xB7 ", source.name, " ", /* @__PURE__ */ React.createElement("small", null, "(", this.props.clips.filter((c) => c.sourceId === source.id).length, ")"))), /* @__PURE__ */ React.createElement("small", null, this.props.comparisonPreview ? this.props.comparisonError || "A/B preview \xB7 event order unchanged \xB7 editing disabled \xB7 project unchanged" : "Slices from the selected source are shown \xB7 all sources are audible")), exactRows > 0 && /* @__PURE__ */ React.createElement("div", { className: "source-tabs", role: "status" }, exactRows, " exact ranges are outside the current slices \xB7 events and boundaries are preserved in the Exact rows below. Moving one to another row changes its range explicitly."), /* @__PURE__ */ React.createElement("div", { className: "clip-scroll", ref: (node) => {
         this.scroll = node;
       } }, !this.props.source && /* @__PURE__ */ React.createElement("div", { className: "pattern-empty" }, "No source added yet. Choose an audio file above to start adding slices and building patterns."), /* @__PURE__ */ React.createElement("div", { className: "clip-editor", style: { width: 112 + width } }, /* @__PURE__ */ React.createElement("div", { className: "clip-header" }, /* @__PURE__ */ React.createElement("div", { className: "clip-label-header" }, "SLICE / TIME"), /* @__PURE__ */ React.createElement("div", { className: "clip-ruler", style: { width } }, Array.from({ length: end }, (_, beat) => /* @__PURE__ */ React.createElement("span", { key: beat, className: beat % 4 === 0 ? "bar" : "", style: { left: beat * this.ppb, width: this.ppb } }, Math.floor(beat / 4) + 1, ".", beat % 4 + 1)))), ranges.map((range, row) => /* @__PURE__ */ React.createElement("div", { className: "clip-row", "data-slice-row": row, key: `${range.startFrame}-${range.endFrame}` }, /* @__PURE__ */ React.createElement("div", { className: "clip-label", style: { borderLeft: `3px solid ${sourceColor}` } }, /* @__PURE__ */ React.createElement("button", { title: "Preview slice", onClick: () => this.preview(range) }, /* @__PURE__ */ React.createElement("strong", null, String.fromCharCode(65 + sourceIndex), " \xB7 ", row < this.props.slices.length ? `S${row + 1}` : `Exact ${row - this.props.slices.length + 1}`, " \u25B7"), /* @__PURE__ */ React.createElement("small", { title: `${range.startFrame}\u2013${range.endFrame} frames` }, this.props.source ? ((range.endFrame - range.startFrame) / this.props.source.sampleRate).toFixed(3) : "", " s"))), /* @__PURE__ */ React.createElement(
         "div",
@@ -5169,8 +5621,11 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
           className: "clip-lane",
           style: { width, backgroundSize: `${snap * this.ppb}px 100%,${this.ppb}px 100%`, backgroundImage: "linear-gradient(90deg,color-mix(in srgb,var(--line) 72%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--text) 36%,transparent) 1px,transparent 1px)" },
           onMouseDown: (e) => this.beginDraw(e, range),
+          onClick: (e) => this.insertArmed(e),
+          onDragOver: (e) => this.dragOver(e),
+          onDrop: (e) => this.dropCue(e),
           onDoubleClick: (e) => {
-            if (!this.props.readOnly && e.target === e.currentTarget && this.state.tool === "pointer") this.insert(e, range);
+            if (!this.props.armedCue && !this.props.readOnly && e.target === e.currentTarget && this.state.tool === "pointer") this.insert(e, range);
           }
         },
         this.props.playing && /* @__PURE__ */ React.createElement("i", { className: "clip-playhead", style: { left: play * this.ppb } }),
@@ -5187,13 +5642,14 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
               className: `clip-event ${c.id === this.props.selectedClipId ? "selected" : ""} ${this.props.playing && play >= start && play < start + duration ? "playing" : ""}`,
               style: { left: start * this.ppb + 1, width: Math.max(6, duration * this.ppb - 2), background: sourceColor, color: sourceInk },
               onMouseDown: (e) => this.start(e, c, row, "move"),
+              onClick: () => this.props.onSelectClip(c),
               onDoubleClick: () => this.props.onPreviewStep(c),
               onContextMenu: (e) => {
                 e.preventDefault();
                 if (!this.props.readOnly) this.props.onRemoveClip(c.id);
               }
             },
-            /* @__PURE__ */ React.createElement("span", null, row < this.props.slices.length ? `S${row + 1}` : "Exact"),
+            /* @__PURE__ */ React.createElement("span", null, row < this.props.slices.length ? `S${row + 1}` : "Exact", c.addressMode ? c.addressMode === "relative" ? " REL" : " ABS" : ""),
             /* @__PURE__ */ React.createElement("i", { className: "clip-resize", title: "Change duration without changing playback speed", onMouseDown: (e) => this.start(e, c, row, "resize") })
           );
         })
@@ -5369,7 +5825,11 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
   var App = class extends React.Component {
     constructor() {
       super(...arguments);
-      this.state = { project: newProject(), view: "pattern", sliceIndex: 0, playhead: 0, playing: false, loop: true, pan: false, zoom: 1, snap: 0.25, fxType: "roll", status: "Add an audio source and create your first pattern.", sidebar: false, railCollapsed: false, inspector: false, advanced: false, audioDrop: false, comparisonPreview: false };
+      this.state = { project: newProject(), view: "pattern", seeded: false, seed: 1, probability: 100, sliceIndex: 0, cueIndex: 0, playhead: 0, playing: false, loop: true, pan: false, zoom: 1, snap: 0.25, fxType: "roll", status: "Add an audio source and create your first pattern.", sidebar: false, railCollapsed: false, inspector: false, advanced: false, audioDrop: false, comparisonPreview: false };
+      this.chopperSeed = new ChopperSeed();
+      this.liveSession = false;
+      this.liveOrigin = 0;
+      this.liveLength = 4;
       this.undo = [];
       this.redo = [];
       this.saveTimer = null;
@@ -5383,18 +5843,20 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       this.loadGeneration = 0;
       this.undoAction = () => {
         if (!this.undo.length) return;
-        audioEngine.stop();
+        const playing = this.state.playing && this.liveSession;
+        if (!playing) audioEngine.stop();
         const p = this.undo.pop();
         this.redo.push(cloneProject(this.state.project));
-        this.setState({ project: p, clipId: void 0, fxId: void 0, playing: false, status: "Undone" });
+        this.setState({ project: p, clipId: void 0, fxId: void 0, playing, status: "Undone" });
         this.persist(p);
       };
       this.redoAction = () => {
         if (!this.redo.length) return;
-        audioEngine.stop();
+        const playing = this.state.playing && this.liveSession;
+        if (!playing) audioEngine.stop();
         const p = this.redo.pop();
         this.undo.push(cloneProject(this.state.project));
-        this.setState({ project: p, clipId: void 0, fxId: void 0, playing: false, status: "Redone" });
+        this.setState({ project: p, clipId: void 0, fxId: void 0, playing, status: "Redone" });
         this.persist(p);
       };
       this.onKey = (e) => {
@@ -5410,7 +5872,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
           this.redoAction();
           return;
         }
-        if (e.code === "Space") {
+        if (e.code === "Space" && target2?.tagName !== "BUTTON" && target2?.tagName !== "SUMMARY") {
           e.preventDefault();
           if (!e.repeat) this.togglePlay(true);
         }
@@ -5506,7 +5968,9 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       this.previewSlice = () => {
         const s = this.source;
         if (!s) return;
-        const r = slicesOf(s)[this.state.sliceIndex];
+        const cues = this.state.view === "pattern" ? quarterCueRanges(s) : slicesOf(s);
+        const index = this.state.view === "pattern" ? this.state.cueIndex : this.state.sliceIndex;
+        const r = cues[index];
         if (r) audioEngine.preview(s, r.startFrame, r.endFrame).catch((e) => this.setStatus(e.message));
       };
       this.insertSlice = (data, position, trackId) => {
@@ -5527,6 +5991,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         const clip = newClip(source, trackId, range, positionBeats, p.bpm);
         clip.durationBeats = Math.min(stepBeats, (v.patternBars || 1) * 4 - positionBeats);
         clip.playbackMode = "gate";
+        clip.addressMode = "relative";
         clip.fadeInMs = 2;
         clip.fadeOutMs = 3;
         if (existing) clip.parentClipId = existing.id;
@@ -5546,6 +6011,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
             const clip = newClip(source, trackId, note.range, note.position, p.bpm);
             clip.durationBeats = note.duration;
             clip.playbackMode = "gate";
+            clip.addressMode = "relative";
             v.clips.push(clip);
           }
         }, { events: notes.length }, { clipId: void 0 });
@@ -5582,7 +6048,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
       this.fillPatternFromSource = () => {
         const source = this.source;
         if (!source) return;
-        const ranges = slicesOf(source), v = this.v(), trackId = v.tracks[0]?.id;
+        const ranges = quarterCueRanges(source), v = this.v(), trackId = v.tracks[0]?.id;
         if (!ranges.length || !trackId) return;
         const end = (v.patternBars || 1) * 4, old = v.clips.filter((c) => c.trackId === trackId && c.sourceId === source.id);
         if (old.length && !window.confirm("Replace this pattern's current events with the source slice order?")) return;
@@ -5592,6 +6058,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
           const range = ranges[index++ % ranges.length], clip = newClip(source, trackId, range, position, this.state.project.bpm);
           clip.durationBeats = Math.min(clip.durationBeats, end - position);
           clip.playbackMode = "gate";
+          clip.addressMode = "relative";
           created.push(clip);
           position += clip.durationBeats;
         }
@@ -5603,7 +6070,7 @@ return sg}"object"===typeof exports&&"undefined"!==typeof module?module.exports=
         }, { sourceId: source.id, bars: v.patternBars || 1, events: count }, { clipId: void 0, fxId: void 0 });
       };
       this.insertAtPatternStep = () => {
-        const source = this.source, range = source && slicesOf(source)[this.state.sliceIndex];
+        const source = this.source, range = source && quarterCueRanges(source)[this.state.cueIndex];
         if (!source || !range) return;
         const bars = this.v().patternBars || 1, stepsPerBar = this.v().patternDivision || 8, step = Math.max(0, Math.min(bars * stepsPerBar - 1, Math.floor(this.state.playhead / (4 / stepsPerBar))));
         this.setPatternStep(step, source.id, range);
@@ -5774,6 +6241,7 @@ All clips using these sources will also be deleted.`)) return;
         if (this.state.comparisonPreview) return;
         const id = this.state.clipId;
         if (!id) return;
+        if (this.liveSession && patch.gain !== void 0) audioEngine.updateClipGain(id, patch.gain);
         this.commit("clip_property", (p) => {
           const c = currentVariation(p).clips.find((c2) => c2.id === id);
           if (c) Object.assign(c, patch);
@@ -5841,6 +6309,10 @@ All clips using these sources will also be deleted.`)) return;
         if (name?.trim()) this.commit("variation_rename", (p) => currentVariation(p).name = name.trim(), { name });
       };
       this.setVariation = (id) => {
+        if (this.state.playing && this.liveSession) {
+          this.setState({ project: { ...this.state.project, activeVariationId: id }, clipId: void 0, fxId: void 0 });
+          return;
+        }
         audioEngine.stop();
         this.setState({ project: { ...this.state.project, activeVariationId: id }, clipId: void 0, fxId: void 0, playhead: 0, playing: false, trackId: void 0, comparisonPreview: false });
       };
@@ -5858,6 +6330,19 @@ All clips using these sources will also be deleted.`)) return;
       this.tick = () => {
         if (!audioEngine.isPlaying()) return;
         const beat = audioEngine.currentBeat(), time = performance.now();
+        if (this.liveSession) {
+          if (audioEngine.reachedEnd()) {
+            audioEngine.stop();
+            this.setState({ playing: false, playhead: 0 });
+            return;
+          }
+          if (time - this.lastFrame > 60) {
+            this.setState({ playhead: Math.max(0, Math.min(this.liveLength, beat - this.liveOrigin)) });
+            this.lastFrame = time;
+          }
+          this.raf = requestAnimationFrame(this.tick);
+          return;
+        }
         const v = this.patternPlaybackVariation();
         const end = Math.max(4, ...v.clips.map((c) => c.positionBeats + c.durationBeats), ...v.effects.map((f) => f.startBeats + f.durationBeats));
         if (beat >= end) {
@@ -6129,6 +6614,27 @@ Only authored full-cue events are accepted; legacy marker indices are not remapp
 ${error.message}`);
         }
       };
+      this.prepareChopperSample = async () => {
+        const source = this.source, buffer = source && audioLibrary.get(source.id);
+        if (!source || !buffer) return this.setStatus("Import audio before preparing a Chopper WAV.");
+        try {
+          const { beats, bars, cueCount } = chopperSampleTiming(source);
+          if (Math.round(buffer.duration * TARGET_SAMPLE_RATE) > MAX_FRAMES) throw new Error("This source plays in the browser. The prepared WAV format is limited to 30 seconds.");
+          const long = beats > cueCount ? " The source exceeds 64 quarter-note addresses and needs browser REL playback for later windows." : "";
+          if (!window.confirm(`Prepare a separate Chopper WAV from ${source.name}?
+
+${source.bpm} BPM, ${bars} bars in 4/4, ${cueCount} quarter-note addresses.${long}
+
+Uses the full source and writes timing metadata. Original audio and legacy markers stay in the project.`)) return;
+          const audio = await prepareAudio(audioFromBuffer(buffer), { trimStart: 0, trimEnd: buffer.duration, normalize: false, channelMode: buffer.numberOfChannels > 1 ? "stereo" : "mono" });
+          if (this.source !== source) throw new Error("The source changed during preparation. Try again.");
+          const wav = encodePcm16Wav(audio, { bpm: source.bpm, beats, timeNumerator: 4, timeDenominator: 4 });
+          download(new Blob([wav], { type: "audio/wav" }), `${source.name.replace(/\.[^.]+$/, "")}_chopper.wav`);
+          this.setStatus("Chopper sample downloaded with BPM and beat count. Device acceptance depends on firmware and file length.");
+        } catch (error) {
+          this.setStatus(error.message);
+        }
+      };
       this.downloadChopperCueFile = async (cuePolicy = "half-bar-grid-v1", slot) => {
         const project = this.state.project, source = this.source;
         if (!source) return this.setStatus("Source audio unavailable; import the WAV again.");
@@ -6261,6 +6767,7 @@ ${error.message}`);
       }).catch((e) => this.setStatus("Local restore: " + e.message));
     }
     componentWillUnmount() {
+      audioEngine.stop();
       this.loadGeneration++;
       clearTimeout(this.saveTimer);
       document.removeEventListener("keydown", this.onKey);
@@ -6282,7 +6789,7 @@ ${error.message}`);
     commit(kind, mutate2, details = {}, selection = {}) {
       const before = cloneProject(this.state.project), p = cloneProject(this.state.project);
       mutate2(p);
-      logAction(p, kind, details);
+      p.updatedAt = now();
       this.undo.push(this.historySnapshot || before);
       this.historySnapshot = null;
       if (this.undo.length > 90) this.undo.shift();
@@ -6310,20 +6817,21 @@ ${error.message}`);
             if (first && !currentVariation(p).clips.length) {
               const variation = currentVariation(p), trackId = variation.tracks[0]?.id;
               variation.patternBars = barsForSource(src);
-              variation.patternDivision = 8;
+              variation.patternDivision = 16;
               if (trackId) {
-                const ranges = slicesOf(src), count = (variation.patternBars || 1) * 8;
-                for (let i = 0; i < count; i++) {
-                  const clip = newClip(src, trackId, ranges[i % ranges.length], i * 0.5, p.bpm);
-                  clip.durationBeats = 0.5;
+                const ranges = quarterCueRanges(src), count = (variation.patternBars || 1) * 4;
+                for (let i = 0; i < count && ranges.length; i++) {
+                  const clip = newClip(src, trackId, ranges[i % ranges.length], i, p.bpm);
+                  clip.durationBeats = 1;
                   clip.playbackMode = "gate";
+                  clip.addressMode = "relative";
                   clip.fadeInMs = 2;
                   clip.fadeOutMs = 3;
                   variation.clips.push(clip);
                 }
               }
             }
-          }, { sourceId: src.id, name: src.name }, { sourceId: src.id, sliceIndex: 0 });
+          }, { sourceId: src.id, name: src.name }, { sourceId: src.id, sliceIndex: 0, cueIndex: 0, armedCue: void 0 });
         } catch (e) {
           this.setStatus(`Could not open ${f.name}: ${e.message}`);
         }
@@ -6362,9 +6870,13 @@ ${error.message}`);
       }
       if (this.compareInput) this.compareInput.value = "";
     }
+    liveEnabled() {
+      return this.state.liveChopper ?? this.v().clips.some((c) => c.addressMode !== void 0);
+    }
     async togglePlay(fromStart = false) {
       if (audioEngine.isPlaying()) {
         audioEngine.stop();
+        if (this.raf !== null) cancelAnimationFrame(this.raf);
         this.setState({ playing: false, status: "Stopped" });
         return;
       }
@@ -6374,7 +6886,26 @@ ${error.message}`);
           return;
         }
         const startBeat = fromStart ? 0 : this.state.playhead;
-        await audioEngine.play(this.state.project, this.patternPlaybackVariation(), startBeat);
+        this.liveSession = this.liveEnabled() && !this.state.comparisonPreview;
+        if (this.liveSession) {
+          this.liveOrigin = 0;
+          this.liveLength = (this.v().patternBars || 1) * 4;
+          this.liveProject = this.state.project;
+          this.liveSource = this.source;
+          this.livePattern = this.v().name;
+          await audioEngine.playChopper((window2) => {
+            const { project, seeded, seed, probability, loop } = this.state;
+            const active = this.patternPlaybackVariation();
+            const variation = seeded ? this.chopperSeed.choose(project.variations, active, seed, probability / 100, window2) : active;
+            return { project, variation, base: this.source, loop };
+          }, startBeat, (origin, length, project, pattern, base) => {
+            this.liveOrigin = origin;
+            this.liveLength = length;
+            this.liveProject = project;
+            this.liveSource = base;
+            this.livePattern = pattern;
+          });
+        } else await audioEngine.play(this.state.project, this.patternPlaybackVariation(), startBeat);
         this.setState({ playing: true, playhead: startBeat });
         this.lastFrame = 0;
         this.tick();
@@ -6403,7 +6934,7 @@ ${error.message}`);
         this.undo = [];
         this.redo = [];
         this.historySnapshot = null;
-        this.setState({ project: p, sourceId: p.sources[0]?.id, sliceIndex: 0, clipId: void 0, fxId: void 0, trackId: void 0, comparisonPreview: false, playhead: 0, playing: false, status: "ZIP project loaded" + (staged.notices.length ? "; " + staged.notices.join("; ") : "") });
+        this.setState({ project: p, sourceId: p.sources[0]?.id, sliceIndex: 0, clipId: void 0, fxId: void 0, trackId: void 0, comparisonPreview: false, cueIndex: 0, armedCue: void 0, liveChopper: void 0, seeded: false, playhead: 0, playing: false, status: "ZIP project loaded" + (staged.notices.length ? "; " + staged.notices.join("; ") : "") });
         this.persist(p);
       } catch (e) {
         this.setStatus("Import: " + e.message + " The current project is preserved.");
@@ -6411,11 +6942,14 @@ ${error.message}`);
       if (this.zipInput) this.zipInput.value = "";
     }
     render() {
-      const { project: p } = this.state, v = this.v(), src = this.source, clips = v.clips, effects = v.effects, selClip = clips.find((c) => c.id === this.state.clipId), selFx = effects.find((f) => f.id === this.state.fxId), ranges = src ? slicesOf(src) : [], range = ranges[this.state.sliceIndex], patternClips = v.clips.filter((c) => c.positionBeats < (v.patternBars || 1) * 4), comparison = this.state.comparisonPreview && src ? this.comparisonMap() : null, displayClips = comparison && !comparison.error ? comparison.clips : patternClips, comparisonReference = this.comparisonReference(), comparisonAvailable = Boolean(src && comparisonReference && src.id !== comparisonReference.id && !mapPatternToComparison(patternClips, comparisonReference, src).error);
-      return /* @__PURE__ */ React.createElement("div", { className: "app " + (!this.state.advanced ? "pattern-mode " : "") + (this.state.view === "prepare" ? "preparation-mode " : "") + (this.state.view === "break" ? "break-mode " : "") + (this.state.view === "device" ? "device-mode " : "") + (new URLSearchParams(location.search).get("embedded") === "1" ? "embedded" : "") }, /* @__PURE__ */ React.createElement("header", { className: "top" }, /* @__PURE__ */ React.createElement("button", { className: "mobile-btn", "aria-label": this.state.sidebar ? "Close library" : "Open library", "aria-expanded": this.state.sidebar, onClick: () => this.setState({ sidebar: !this.state.sidebar, inspector: false }) }, "\u2630"), /* @__PURE__ */ React.createElement("div", { className: "brand" }, "CUBREAK ", /* @__PURE__ */ React.createElement("span", null, "SAMPLES"), /* @__PURE__ */ React.createElement("sup", null, "patterns + source prep")), /* @__PURE__ */ React.createElement("span", { className: "pill" }, "ONE SOURCE \xB7 ONE PROJECT"), /* @__PURE__ */ React.createElement("div", { className: "divider-v" }), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.togglePlay() }, this.state.playing ? "\u25A0 Stop" : "\u25B6 Play"), /* @__PURE__ */ React.createElement("label", { className: "compact" }, "BPM ", /* @__PURE__ */ React.createElement("input", { className: "bpm", type: "number", min: "45", max: "300", value: p.bpm, onChange: (e) => this.commit("tempo", (pp) => pp.bpm = Math.max(45, Math.min(300, +e.target.value)), { bpm: +e.target.value }) })), /* @__PURE__ */ React.createElement("label", { className: "compact" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: this.state.loop, onChange: (e) => this.setState({ loop: e.target.checked }) }), "LOOP"), /* @__PURE__ */ React.createElement("div", { className: "flex" }), /* @__PURE__ */ React.createElement("button", { onClick: () => this.audioInput?.click() }, "\uFF0B Add source"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.zipInput?.click() }, "Open ZIP"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.prepareForModule(), disabled: !src, title: "Check compatibility and download a WAV with Break transitions" }, "Prepare module WAV"), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.saveZip() }, "\u2193 Save ZIP"), /* @__PURE__ */ React.createElement("button", { className: "mobile-btn", "aria-label": this.state.inspector ? "Close inspector" : "Open inspector", "aria-pressed": this.state.inspector, onClick: () => this.setState({ inspector: !this.state.inspector, sidebar: false }) }, "\u2699")), /* @__PURE__ */ React.createElement("nav", { className: "samples-views", "aria-label": "Samples workspaces" }, /* @__PURE__ */ React.createElement("button", { "aria-current": this.state.view === "pattern" ? "page" : void 0, onClick: () => this.setState({ view: "pattern", inspector: false }) }, "Editor ", /* @__PURE__ */ React.createElement("small", null, "slices \xB7 patterns \xB7 FX")), /* @__PURE__ */ React.createElement("button", { "aria-current": this.state.view === "prepare" ? "page" : void 0, onClick: () => this.setState({ view: "prepare", inspector: false }) }, "Preparation ", /* @__PURE__ */ React.createElement("small", null, "source \xB7 settings")), /* @__PURE__ */ React.createElement("button", { "aria-current": this.state.view === "break" ? "page" : void 0, onClick: () => this.setState({ view: "break", inspector: false }) }, "Firmware Break ", /* @__PURE__ */ React.createElement("small", null, "banks \xB7 generators")), /* @__PURE__ */ React.createElement("button", { "aria-current": this.state.view === "device" ? "page" : void 0, onClick: () => this.setState({ view: "device", inspector: false }) }, "Device and SD ", /* @__PURE__ */ React.createElement("small", null, "transfer \xB7 card")), /* @__PURE__ */ React.createElement("button", { className: "rail-toggle", "aria-pressed": !this.state.railCollapsed, onClick: () => this.setState({ railCollapsed: !this.state.railCollapsed, sidebar: this.state.railCollapsed }) }, this.state.railCollapsed ? "Show library" : "Hide library"), /* @__PURE__ */ React.createElement("button", { className: "inspector-toggle", "aria-pressed": this.state.inspector, onClick: () => this.setState({ inspector: !this.state.inspector }) }, "Inspector"), /* @__PURE__ */ React.createElement("span", null, "One source \xB7 one project \xB7 original preserved")), /* @__PURE__ */ React.createElement("div", { className: "surface" }, /* @__PURE__ */ React.createElement("aside", { className: "sidebar " + (this.state.sidebar ? "open " : "") + (this.state.railCollapsed ? "collapsed" : "") }, /* @__PURE__ */ React.createElement("div", { className: "side-section source-drop-target " + (this.state.audioDrop ? "drag-over" : ""), onDragEnter: this.sourceDragEnter, onDragOver: this.sourceDragOver, onDragLeave: this.sourceDragLeave, onDrop: this.sourceDrop }, /* @__PURE__ */ React.createElement("div", { className: "side-head" }, /* @__PURE__ */ React.createElement("span", { className: "tag" }, "SOURCES"), /* @__PURE__ */ React.createElement("button", { className: "mini", "aria-label": "Add source", onClick: () => this.audioInput?.click() }, "\uFF0B")), this.state.audioDrop && /* @__PURE__ */ React.createElement("div", { className: "source-drop-hint" }, "Drop to add audio"), p.sources.map((s) => /* @__PURE__ */ React.createElement("div", { key: s.id, className: "entry source-entry " + (s.id === src?.id ? "selected" : "") }, /* @__PURE__ */ React.createElement("div", { role: "button", tabIndex: 0, className: "entry-main", onClick: () => this.setState({ sourceId: s.id, sliceIndex: 0, sidebar: false }), onKeyDown: (e) => {
+      const { project: p } = this.state, v = this.v(), src = this.source, clips = v.clips, effects = v.effects, selClip = clips.find((c) => c.id === this.state.clipId), selFx = effects.find((f) => f.id === this.state.fxId), ranges = src ? slicesOf(src) : [], chopperRanges = src ? quarterCueRanges(src) : [], waveRanges = this.state.view === "pattern" ? chopperRanges : ranges, range = waveRanges[this.state.view === "pattern" ? this.state.cueIndex : this.state.sliceIndex], patternClips = v.clips.filter((c) => c.positionBeats < (v.patternBars || 1) * 4), comparison = this.state.comparisonPreview && src ? this.comparisonMap() : null, displayClips = comparison && !comparison.error ? comparison.clips : patternClips, comparisonReference = this.comparisonReference(), comparisonAvailable = Boolean(src && comparisonReference && src.id !== comparisonReference.id && !mapPatternToComparison(patternClips, comparisonReference, src).error);
+      const live = this.state.playing && this.liveSession;
+      const pending = live && (this.liveProject !== p || this.liveSource?.id !== src?.id);
+      const sourcePhase = live && src && this.liveSource?.id === src.id ? (this.liveOrigin + this.state.playhead) * this.liveSource.sampleRate * 60 / this.liveSource.bpm % this.liveSource.frames / this.liveSource.frames : void 0;
+      return /* @__PURE__ */ React.createElement("div", { className: "app " + (!this.state.advanced ? "pattern-mode " : "") + (this.state.view === "prepare" ? "preparation-mode " : "") + (this.state.view === "break" ? "break-mode " : "") + (this.state.view === "device" ? "device-mode " : "") + (new URLSearchParams(location.search).get("embedded") === "1" ? "embedded" : "") }, /* @__PURE__ */ React.createElement("header", { className: "top" }, /* @__PURE__ */ React.createElement("button", { className: "mobile-btn", "aria-label": this.state.sidebar ? "Close library" : "Open library", "aria-expanded": this.state.sidebar, onClick: () => this.setState({ sidebar: !this.state.sidebar, inspector: false }) }, "\u2630"), /* @__PURE__ */ React.createElement("div", { className: "brand" }, "CHOPPER ", /* @__PURE__ */ React.createElement("span", null, "/ SLICE LAB")), /* @__PURE__ */ React.createElement("div", { className: "divider-v" }), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.togglePlay() }, this.state.playing ? "\u25A0 Stop" : "\u25B6 Play"), /* @__PURE__ */ React.createElement("label", { className: "compact" }, "BPM ", /* @__PURE__ */ React.createElement("input", { className: "bpm", type: "number", disabled: this.state.playing, min: "45", max: "300", value: p.bpm, onChange: (e) => this.commit("tempo", (pp) => pp.bpm = Math.max(45, Math.min(300, +e.target.value)), { bpm: +e.target.value }) })), /* @__PURE__ */ React.createElement("label", { className: "compact" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: this.state.loop, onChange: (e) => this.setState({ loop: e.target.checked }) }), "LOOP"), /* @__PURE__ */ React.createElement("div", { className: "flex" }), /* @__PURE__ */ React.createElement("button", { className: "mobile-btn", "aria-label": this.state.inspector ? "Close inspector" : "Open inspector", "aria-pressed": this.state.inspector, onClick: () => this.setState({ inspector: !this.state.inspector, sidebar: false }) }, "\u2699")), /* @__PURE__ */ React.createElement("nav", { className: "samples-views", "aria-label": "Samples workspaces" }, /* @__PURE__ */ React.createElement("button", { "aria-current": this.state.view === "pattern" ? "page" : void 0, onClick: () => this.setState({ view: "pattern", inspector: false }) }, "Chopper ", /* @__PURE__ */ React.createElement("small", null, "waveform \xB7 pattern")), /* @__PURE__ */ React.createElement("button", { "aria-current": this.state.view === "prepare" ? "page" : void 0, onClick: () => this.setState({ view: "prepare", inspector: false }) }, "Source settings ", /* @__PURE__ */ React.createElement("small", null, "markers \xB7 WAV")), /* @__PURE__ */ React.createElement("button", { "aria-current": this.state.view === "break" ? "page" : void 0, onClick: () => this.setState({ view: "break", inspector: false }) }, "Legacy Break"), /* @__PURE__ */ React.createElement("button", { "aria-current": this.state.view === "device" ? "page" : void 0, onClick: () => this.setState({ view: "device", inspector: false }) }, "Device and SD ", /* @__PURE__ */ React.createElement("small", null, "transfer \xB7 card")), /* @__PURE__ */ React.createElement("button", { className: "rail-toggle", "aria-pressed": !this.state.railCollapsed, onClick: () => this.setState({ railCollapsed: !this.state.railCollapsed, sidebar: this.state.railCollapsed }) }, this.state.railCollapsed ? "Show library" : "Hide library"), /* @__PURE__ */ React.createElement("button", { className: "inspector-toggle", "aria-pressed": this.state.inspector, onClick: () => this.setState({ inspector: !this.state.inspector }) }, "Inspector")), /* @__PURE__ */ React.createElement("div", { className: "surface" }, /* @__PURE__ */ React.createElement("aside", { className: "sidebar " + (this.state.sidebar ? "open " : "") + (this.state.railCollapsed ? "collapsed" : "") }, /* @__PURE__ */ React.createElement("div", { className: "side-section source-drop-target " + (this.state.audioDrop ? "drag-over" : ""), onDragEnter: this.sourceDragEnter, onDragOver: this.sourceDragOver, onDragLeave: this.sourceDragLeave, onDrop: this.sourceDrop }, /* @__PURE__ */ React.createElement("div", { className: "side-head" }, /* @__PURE__ */ React.createElement("span", { className: "tag" }, "SOURCES"), /* @__PURE__ */ React.createElement("button", { className: "mini", "aria-label": "Add source", onClick: () => this.audioInput?.click() }, "\uFF0B")), this.state.audioDrop && /* @__PURE__ */ React.createElement("div", { className: "source-drop-hint" }, "Drop to add audio"), p.sources.map((s) => /* @__PURE__ */ React.createElement("div", { key: s.id, className: "entry source-entry " + (s.id === src?.id ? "selected" : "") }, /* @__PURE__ */ React.createElement("div", { role: "button", tabIndex: 0, className: "entry-main", onClick: () => this.setState({ sourceId: s.id, sliceIndex: 0, cueIndex: 0, armedCue: void 0, sidebar: false }), onKeyDown: (e) => {
         if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
-          this.setState({ sourceId: s.id, sliceIndex: 0, sidebar: false });
+          this.setState({ sourceId: s.id, sliceIndex: 0, cueIndex: 0, armedCue: void 0, sidebar: false });
         }
       } }, /* @__PURE__ */ React.createElement("span", { className: "dot" }), /* @__PURE__ */ React.createElement(EditableName, { value: s.name, onChange: (name) => this.commit("source_rename", (p2) => {
         p2.sources.find((x) => x.id === s.id).name = name;
@@ -6426,17 +6960,57 @@ ${error.message}`);
         }
       } }, /* @__PURE__ */ React.createElement(EditableName, { value: x.name, onChange: (name) => this.commit("variation_rename", (p2) => {
         p2.variations.find((y) => y.id === x.id).name = name;
-      }) }), /* @__PURE__ */ React.createElement("small", null, this.state.advanced ? `${x.clips.length} clips \xB7 ${x.effects.length} FX \xB7 \u2605 ${x.rating}` : `${x.clips.length} events \xB7 ${x.patternBars || 1} bars \xB7 \u2605 ${x.rating}`)), /* @__PURE__ */ React.createElement("button", { className: "delete-mini", title: "Remove pattern", disabled: p.variations.length <= 1, onClick: () => this.deleteVariation(x.id) }, "\xD7"))), /* @__PURE__ */ React.createElement("div", { className: "inline" }, /* @__PURE__ */ React.createElement("button", { className: "mini", onClick: () => this.cloneVariant() }, this.state.advanced ? "\u29C9 Clone" : "\u29C9 Duplicate pattern"), /* @__PURE__ */ React.createElement("button", { className: "mini", onClick: () => this.renameVariant() }, "\u270E Rename"), /* @__PURE__ */ React.createElement("button", { className: "mini warn", onClick: () => this.clearPattern() }, "Clear")), /* @__PURE__ */ React.createElement("label", { className: "compact block" }, "Variation rating ", /* @__PURE__ */ React.createElement("select", { value: v.rating, onChange: (e) => this.setRating(+e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "0" }, "Unrated"), /* @__PURE__ */ React.createElement("option", { value: "1" }, "\u2605 Weak"), /* @__PURE__ */ React.createElement("option", { value: "2" }, "\u2605\u2605"), /* @__PURE__ */ React.createElement("option", { value: "3" }, "\u2605\u2605\u2605"), /* @__PURE__ */ React.createElement("option", { value: "4" }, "\u2605\u2605\u2605\u2605"), /* @__PURE__ */ React.createElement("option", { value: "5" }, "\u2605\u2605\u2605\u2605\u2605 Excellent")))), /* @__PURE__ */ React.createElement("div", { className: "side-section" }, /* @__PURE__ */ React.createElement("div", { className: "side-head" }, /* @__PURE__ */ React.createElement("span", { className: "tag" }, "DATASET")), /* @__PURE__ */ React.createElement("div", { className: "stats" }, /* @__PURE__ */ React.createElement("strong", null, p.sources.length), /* @__PURE__ */ React.createElement("span", null, "sources"), /* @__PURE__ */ React.createElement("strong", null, p.variations.length), /* @__PURE__ */ React.createElement("span", null, "variations"), /* @__PURE__ */ React.createElement("strong", null, p.history.length), /* @__PURE__ */ React.createElement("span", null, "actions")), /* @__PURE__ */ React.createElement("button", { onClick: () => this.exportTraining(), className: "wide" }, "\u2193 Export training JSON"), /* @__PURE__ */ React.createElement("p", { className: "hint" }, "Sources, sample ranges, FX, variations, and ratings are included."))), /* @__PURE__ */ React.createElement("main", { className: "workspace" }, /* @__PURE__ */ React.createElement("section", { className: "source-panel" }, /* @__PURE__ */ React.createElement("div", { className: "panel-head" }, /* @__PURE__ */ React.createElement("span", { className: "tag" }, "01 / SOURCE WAVEFORM"), /* @__PURE__ */ React.createElement("strong", { className: "truncate" }, src?.name || "No source selected"), /* @__PURE__ */ React.createElement("div", { className: "flex" }), /* @__PURE__ */ React.createElement("label", { className: "compact" }, "SOURCE BPM ", /* @__PURE__ */ React.createElement("input", { className: "bpm", type: "number", min: "1", max: "999", value: src?.bpm || p.bpm, disabled: !src, onChange: (e) => {
+      }) }), /* @__PURE__ */ React.createElement("small", null, this.state.advanced ? `${x.clips.length} clips \xB7 ${x.effects.length} FX \xB7 \u2605 ${x.rating}` : `${x.clips.length} events \xB7 ${x.patternBars || 1} bars \xB7 \u2605 ${x.rating}`)), /* @__PURE__ */ React.createElement("button", { className: "delete-mini", title: "Remove pattern", disabled: p.variations.length <= 1, onClick: () => this.deleteVariation(x.id) }, "\xD7"))), /* @__PURE__ */ React.createElement("div", { className: "inline" }, /* @__PURE__ */ React.createElement("button", { className: "mini", onClick: () => this.cloneVariant() }, this.state.advanced ? "\u29C9 Clone" : "\u29C9 Duplicate pattern"), /* @__PURE__ */ React.createElement("button", { className: "mini", onClick: () => this.renameVariant() }, "\u270E Rename"), /* @__PURE__ */ React.createElement("button", { className: "mini warn", onClick: () => this.clearPattern() }, "Clear")), /* @__PURE__ */ React.createElement("label", { className: "compact block" }, "Variation rating ", /* @__PURE__ */ React.createElement("select", { value: v.rating, onChange: (e) => this.setRating(+e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "0" }, "Unrated"), /* @__PURE__ */ React.createElement("option", { value: "1" }, "\u2605 Weak"), /* @__PURE__ */ React.createElement("option", { value: "2" }, "\u2605\u2605"), /* @__PURE__ */ React.createElement("option", { value: "3" }, "\u2605\u2605\u2605"), /* @__PURE__ */ React.createElement("option", { value: "4" }, "\u2605\u2605\u2605\u2605"), /* @__PURE__ */ React.createElement("option", { value: "5" }, "\u2605\u2605\u2605\u2605\u2605 Excellent")))), /* @__PURE__ */ React.createElement("div", { className: "side-section" }, /* @__PURE__ */ React.createElement("div", { className: "side-head" }, /* @__PURE__ */ React.createElement("span", { className: "tag" }, "DATASET")), /* @__PURE__ */ React.createElement("div", { className: "stats" }, /* @__PURE__ */ React.createElement("strong", null, p.sources.length), /* @__PURE__ */ React.createElement("span", null, "sources"), /* @__PURE__ */ React.createElement("strong", null, p.variations.length), /* @__PURE__ */ React.createElement("span", null, "variations")), /* @__PURE__ */ React.createElement("button", { onClick: () => this.exportTraining(), className: "wide" }, "\u2193 Export training JSON"), /* @__PURE__ */ React.createElement("p", { className: "hint" }, "Sources, sample ranges, FX, variations, and ratings are included."))), /* @__PURE__ */ React.createElement("main", { className: "workspace " + (this.state.view === "pattern" ? "chopper-workspace" : "") }, /* @__PURE__ */ React.createElement("section", { className: "source-panel" }, this.state.view === "pattern" && /* @__PURE__ */ React.createElement(
+        ChopperActions,
+        {
+          hasSource: !!src,
+          playing: this.state.playing,
+          live: this.liveEnabled(),
+          pending,
+          clip: this.state.comparisonPreview ? void 0 : selClip,
+          activePattern: live ? this.livePattern : void 0,
+          seedAvailable: seedPatterns(p.variations, v).available,
+          seeded: this.state.seeded,
+          seed: this.state.seed,
+          probability: this.state.probability,
+          onSeeded: (seeded) => this.setState({ seeded }),
+          onSeed: (seed) => this.setState({ seed }),
+          onProbability: (probability) => this.setState({ probability }),
+          onLive: (liveChopper) => this.setState({ liveChopper }),
+          onAddress: (addressMode) => this.patchClip({ addressMode }),
+          onSampleImport: () => this.audioInput?.click(),
+          onSourceSettings: () => this.setState({ view: "prepare" }),
+          onSampleExport: this.prepareChopperSample,
+          onProjectImport: () => this.zipInput?.click(),
+          onProjectExport: () => this.saveZip(),
+          onDevice: () => this.setState({ view: "device" })
+        }
+      ), /* @__PURE__ */ React.createElement("div", { className: "panel-head" }, /* @__PURE__ */ React.createElement("span", { className: "tag" }, "Source"), /* @__PURE__ */ React.createElement("strong", { className: "truncate" }, src?.name || "No source selected"), /* @__PURE__ */ React.createElement("div", { className: "flex" }), /* @__PURE__ */ React.createElement("label", { className: "compact" }, "SOURCE BPM ", /* @__PURE__ */ React.createElement("input", { className: "bpm", type: "number", min: "1", max: "999", value: src?.bpm || p.bpm, disabled: !src, onChange: (e) => {
         if (src) this.commit("source_bpm", (pp) => {
           const source = pp.sources.find((s) => s.id === src.id);
           source.bpm = Math.max(1, Math.min(999, +e.target.value));
-          const variation = currentVariation(pp);
-          if (!variation.clips.length) variation.patternBars = barsForSource(source);
         }, { sourceId: src.id, bpm: +e.target.value });
-      } })), /* @__PURE__ */ React.createElement("span", { className: "tag" }, src?.sampleRate || "\u2013", " Hz")), /* @__PURE__ */ React.createElement("div", { className: "source-wave-wrap " + (!src && (this.state.view === "pattern" || this.state.view === "device") ? "has-empty-action" : "") }, /* @__PURE__ */ React.createElement(SourceWave, { source: src, selectedSlice: this.state.sliceIndex, onSelect: (index) => this.setState({ sliceIndex: index }), onMarkers: this.updateMarkers }), !src && (this.state.view === "pattern" || this.state.view === "device") && /* @__PURE__ */ React.createElement("div", { className: "source-empty-action" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio"), /* @__PURE__ */ React.createElement("small", null, "or use \uFF0B beside Sources"))), /* @__PURE__ */ React.createElement("div", { className: "source-footer" }, /* @__PURE__ */ React.createElement("span", { className: "muted" }, src ? `Slice ${this.state.sliceIndex + 1}/${ranges.length}` : "No source selected", src && range ? ` \xB7 ${(range.startFrame / src.sampleRate).toFixed(3)}\u2013${(range.endFrame / src.sampleRate).toFixed(3)}s` : ""), /* @__PURE__ */ React.createElement("div", { className: "flex" }), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(4), disabled: !src }, "Markers 1/4"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(8), disabled: !src }, "Markers 1/8"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addTransients(), disabled: !src }, "\u26A1 Transients"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.deleteMarker(), disabled: !src }, "\u2212 Marker"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.previewSlice(), disabled: !src }, "\u25B6 Slice"), /* @__PURE__ */ React.createElement("button", { onClick: this.openSourceComparison, disabled: !src, title: "Create a non-destructive variation with another audio source while preserving the slice map" }, "\u21C4 Compare WAV"), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.state.advanced ? this.insertSlice() : this.insertAtPatternStep(), disabled: !src }, this.state.advanced ? "\uFF0B To timeline" : "\uFF0B To step")), !src && this.state.view === "prepare" && /* @__PURE__ */ React.createElement("div", { className: "preparation-empty" }, /* @__PURE__ */ React.createElement("strong", null, "Add a source first"), /* @__PURE__ */ React.createElement("span", null, "It will appear here and in the pattern editor. WAV files are not copied to a separate library."), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio")), src && (this.state.view === "prepare" || this.state.view === "pattern") && /* @__PURE__ */ React.createElement(SourcePreparation, { key: src.id, source: src, expanded: this.state.view === "prepare", selectedSlice: this.state.sliceIndex, readOnly: this.state.comparisonPreview, onSave: this.savePreparation, onOriginal: this.downloadOriginal, onExport: this.downloadSourceWav, onDevice: this.stageDevice, onStretch: this.stretchSource, onRotate: this.rotateSource, onPreview: (start, end) => audioEngine.preview(src, start, end).catch((e) => this.setStatus(e.message)), onSelectSlice: (index) => this.setState({ sliceIndex: index }) }), this.state.view === "break" && /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Firmware Break"), /* @__PURE__ */ React.createElement("p", null, "Native banks A\u2013H and the chain use the same source. This is a separate firmware format, not a conversion of the Slice Lab grid. Apply saves the bank to the project; timeline events remain unchanged."), !src && /* @__PURE__ */ React.createElement("button", { onClick: () => this.audioInput?.click() }, "\uFF0B Add source")), src && this.state.view === "break" && /* @__PURE__ */ React.createElement(NativeBreakEditor, { key: `break-${src.id}`, source: src, readOnly: this.state.comparisonPreview, onSave: this.saveNativeBank }), this.state.view === "device" && /* @__PURE__ */ React.createElement("section", { className: "delivery-preparation" }, /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Prepare and transfer"), /* @__PURE__ */ React.createElement("p", null, "Choose an output from the shared project. Preparation creates a WAV but does not send it to the module. Studio owns the single connection; the source and pattern remain in place when you return.")), /* @__PURE__ */ React.createElement("div", { className: "delivery-choices" }, /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Source sample"), /* @__PURE__ */ React.createElement("p", null, "Trim, channels, normalization, markers, and settings from Source Preparation. Compatible imported native banks are preserved. Grid events and FX are not included."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: this.downloadSourceWav }, "Download source WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: this.stageDevice }, "Stage source for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Slice Lab pattern \u2192 Break WAV"), /* @__PURE__ */ React.createElement("p", null, "Check the current pattern's transitions against the full source. FX, layers, unrepresentable intervals, and unsupported grids block export; they are never silently discarded. The trim recipe is not applied here."), /* @__PURE__ */ React.createElement("button", { disabled: !src, onClick: () => this.prepareForModule() }, "Download Break WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || window.parent === window, onClick: () => this.prepareForModule(true) }, "Stage pattern for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Example-based Break model"), /* @__PURE__ */ React.createElement("p", null, "Compile up to eight authored variations into the firmware bank. Exact name BASE goes first; exact name FILL or a Fill tag goes last. Ratings weight the chain; cross-source mapping uses matching slice indices. Exact events are reused, not invented. Unsupported layers, source ranges, grid positions, and FX block export; duration approximations are reported before confirmation."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.prepareLearnedBank() }, "Download learned bank\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: () => this.prepareLearnedBank(true) }, "Stage learned bank\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Rendered Chopper patterns \xB7 PVXP v3"), /* @__PURE__ */ React.createElement("p", null, "Render up to eight complete patterns, including uneven or partial slices, overlaps, fractional timing, gates and fades. BASE / Variation / FILL roles remain selectable; individual clips are baked into audio. Existing half-bar PVXP v3 format, up to 32 source bars / 30 seconds. Pattern FX block export. Staging is not hardware transfer; RAM playback is unsupported."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.downloadRenderedChopperBank() }, "Download rendered Chopper WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: () => this.downloadRenderedChopperBank(true) }, "Stage Chopper for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Reusable Chopper cue bank \xB7 SD"), /* @__PURE__ */ React.createElement("p", null, "Export authored BASE / Variation / FILL events without audio. Choose the source cue grid: 1/4 (up to 16 bars), 1/8 (up to 8 bars), or legacy half-bar (32 bars). Maximum 64 cues; unsupported clips and FX block export. Create patterns in Editor, then send the selected grid directly to slot A or B here. The bank reloads after reboot and can drive compatible BPM-tagged WAVs without manual markers."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.downloadChopperCueFile("quarter-note-grid-v1") }, "Download 1/4 cue bank\u2026"), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.downloadChopperCueFile("eighth-note-grid-v1") }, "Download 1/8 cue bank\u2026"), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.downloadChopperCueFile() }, "Download half-bar cue bank\u2026"), ["quarter-note-grid-v1", "eighth-note-grid-v1", "half-bar-grid-v1"].map((policy) => /* @__PURE__ */ React.createElement("div", { key: policy }, /* @__PURE__ */ React.createElement("span", null, policy === "quarter-note-grid-v1" ? "1/4" : policy === "eighth-note-grid-v1" ? "1/8" : "Half-bar", " \u2192 "), [0, 1].map((slot) => /* @__PURE__ */ React.createElement("button", { key: slot, className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: () => this.downloadChopperCueFile(policy, slot) }, "Send to ", slot === 0 ? "A" : "B", "\u2026")))), [0, 1].map((slot) => /* @__PURE__ */ React.createElement("div", { key: slot }, /* @__PURE__ */ React.createElement("label", null, "Load .PVXP to ", slot === 0 ? "A" : "B", " ", /* @__PURE__ */ React.createElement("input", { type: "file", accept: ".pvxp,application/octet-stream", disabled: window.parent === window, onChange: (event) => this.installCueFile(event, slot) })), /* @__PURE__ */ React.createElement("button", { disabled: window.parent === window, onClick: () => this.reloadCueFile(slot) }, "Reload ", slot === 0 ? "A" : "B", " from SD"))))), /* @__PURE__ */ React.createElement(SeedSequenceTester, { project: p, sourceId: src?.id, transportPlaying: this.state.playing }), /* @__PURE__ */ React.createElement("div", { className: "delivery-boundary" }, /* @__PURE__ */ React.createElement("strong", null, "Device compatibility is not yet confirmed"), /* @__PURE__ */ React.createElement("p", null, src ? `${src.name} \xB7 ${ranges.length} slices \xB7 ${(src.frames / src.sampleRate).toFixed(2)} s` : "Add a source first to enable these outputs.", " \xB7 editor limit: 64 slices. Transfer may have stricter limits. RAM writes with metadata are blocked; /LOOPS support does not imply Break support."), /* @__PURE__ */ React.createElement("p", null, "Standalone mode supports WAV and ZIP. Transfer is available only inside Studio. SD, RAM, and audio playback require testing on the actual module.")))), /* @__PURE__ */ React.createElement("section", { className: "arrange" }, /* @__PURE__ */ React.createElement(PatternGrid, { sources: p.sources, effects: v.effects, tracks: v.tracks, onSelectSource: (id) => this.setState({ sourceId: id, sliceIndex: 0 }), comparisonPreview: this.state.comparisonPreview, comparisonAvailable, onToggleComparison: this.toggleComparisonPreview, comparisonError: comparison?.error, readOnly: this.state.comparisonPreview, onCreateFX: this.createPatternFX, onChangeFX: this.changePatternFX, onDeleteFX: (id) => this.commit("fx_delete", (p2) => {
+      } })), /* @__PURE__ */ React.createElement("span", { className: "tag" }, src?.sampleRate || "\u2013", " Hz")), /* @__PURE__ */ React.createElement("div", { className: "source-wave-wrap " + (!src && (this.state.view === "pattern" || this.state.view === "device") ? "has-empty-action" : "") }, /* @__PURE__ */ React.createElement(
+        SourceWave,
+        {
+          source: src,
+          chopperCues: this.state.view === "pattern",
+          selectedSlice: this.state.view === "pattern" ? this.state.cueIndex : this.state.sliceIndex,
+          onSelect: (index) => {
+            if (this.state.view === "pattern" && src) {
+              const cue = chopperRanges[index];
+              this.setState({ cueIndex: index, armedCue: cue ? { sourceId: src.id, ...cue } : void 0 });
+            } else this.setState({ sliceIndex: index });
+          },
+          onPreview: (cue) => {
+            if (src) audioEngine.preview(src, cue.startFrame, cue.endFrame).catch((e) => this.setStatus(e.message));
+          },
+          onMarkers: this.updateMarkers
+        }
+      ), sourcePhase !== void 0 && this.state.view === "pattern" && /* @__PURE__ */ React.createElement("span", { className: "source-playhead", style: { left: `${sourcePhase * 100}%` } }), !src && (this.state.view === "pattern" || this.state.view === "device") && /* @__PURE__ */ React.createElement("div", { className: "source-empty-action" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio"), /* @__PURE__ */ React.createElement("small", null, "or use \uFF0B beside Sources"))), /* @__PURE__ */ React.createElement("div", { className: "source-footer" }, /* @__PURE__ */ React.createElement("span", { className: "muted" }, src ? `Slice ${(this.state.view === "pattern" ? this.state.cueIndex : this.state.sliceIndex) + 1}/${waveRanges.length}` : "No source selected", src ? ` \xB7 ${(src.frames / src.sampleRate * src.bpm / 240).toFixed(2)} source bars` : "", src && range ? ` \xB7 ${(range.startFrame / src.sampleRate).toFixed(3)}\u2013${(range.endFrame / src.sampleRate).toFixed(3)}s` : ""), /* @__PURE__ */ React.createElement("div", { className: "flex" }), this.state.view === "pattern" ? /* @__PURE__ */ React.createElement("span", { className: "tag", title: "Chopper cues use source BPM. Transient and role markers stay separate." }, "1/4 CUES \xB7 MAX 64", this.state.armedCue ? " \xB7 TAP A STEP TO PLACE" : "", src && src.frames / src.sampleRate * src.bpm / 60 > 64.01 ? " \xB7 LONG SOURCE: REL WINDOW ADVANCES IN BROWSER" : "") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(4), disabled: !src }, "Markers 1/4"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addGridMarkers(8), disabled: !src }, "Markers 1/8"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.addTransients(), disabled: !src }, "\u26A1 Transients"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.deleteMarker(), disabled: !src }, "\u2212 Marker")), /* @__PURE__ */ React.createElement("button", { onClick: () => this.previewSlice(), disabled: !src }, "Audition cue"), /* @__PURE__ */ React.createElement("button", { onClick: this.openSourceComparison, disabled: !src, title: "Create a non-destructive variation with another audio source while preserving the slice map" }, "\u21C4 Compare WAV"), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.state.advanced ? this.insertSlice() : this.insertAtPatternStep(), disabled: !src }, this.state.advanced ? "\uFF0B To timeline" : "\uFF0B To step")), !src && this.state.view === "prepare" && /* @__PURE__ */ React.createElement("div", { className: "preparation-empty" }, /* @__PURE__ */ React.createElement("strong", null, "Add a source first"), /* @__PURE__ */ React.createElement("span", null, "It will appear here and in the pattern editor. WAV files are not copied to a separate library."), /* @__PURE__ */ React.createElement("button", { className: "primary", onClick: () => this.audioInput?.click() }, "\uFF0B Choose audio")), src && this.state.view === "prepare" && /* @__PURE__ */ React.createElement(SourcePreparation, { key: src.id, source: src, expanded: this.state.view === "prepare", selectedSlice: this.state.sliceIndex, readOnly: this.state.comparisonPreview, onSave: this.savePreparation, onOriginal: this.downloadOriginal, onExport: this.downloadSourceWav, onDevice: this.stageDevice, onStretch: this.stretchSource, onRotate: this.rotateSource, onPreview: (start, end) => audioEngine.preview(src, start, end).catch((e) => this.setStatus(e.message)), onSelectSlice: (index) => this.setState({ sliceIndex: index }) }), this.state.view === "break" && /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Firmware Break"), /* @__PURE__ */ React.createElement("p", null, "Native banks A\u2013H and the chain use the same source. This is a separate firmware format, not a conversion of the Slice Lab grid. Apply saves the bank to the project; timeline events remain unchanged."), !src && /* @__PURE__ */ React.createElement("button", { onClick: () => this.audioInput?.click() }, "\uFF0B Add source")), src && this.state.view === "break" && /* @__PURE__ */ React.createElement(NativeBreakEditor, { key: `break-${src.id}`, source: src, readOnly: this.state.comparisonPreview, onSave: this.saveNativeBank }), this.state.view === "device" && /* @__PURE__ */ React.createElement("section", { className: "delivery-preparation" }, /* @__PURE__ */ React.createElement("div", { className: "workspace-mode-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Prepare and transfer"), /* @__PURE__ */ React.createElement("p", null, "Choose an output from the shared project. Preparation creates a WAV but does not send it to the module. Studio owns the single connection; the source and pattern remain in place when you return.")), /* @__PURE__ */ React.createElement("div", { className: "delivery-choices" }, /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Source sample"), /* @__PURE__ */ React.createElement("p", null, "Trim, channels, normalization, markers, and settings from Source Preparation. Compatible imported native banks are preserved. Grid events and FX are not included."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: this.downloadSourceWav }, "Download source WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: this.stageDevice }, "Stage source for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Slice Lab pattern \u2192 Break WAV"), /* @__PURE__ */ React.createElement("p", null, "Check the current pattern's transitions against the full source. FX, layers, unrepresentable intervals, and unsupported grids block export; they are never silently discarded. The trim recipe is not applied here."), /* @__PURE__ */ React.createElement("button", { disabled: !src, onClick: () => this.prepareForModule() }, "Download Break WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || window.parent === window, onClick: () => this.prepareForModule(true) }, "Stage pattern for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Example-based Break model"), /* @__PURE__ */ React.createElement("p", null, "Compile up to eight authored variations into the firmware bank. Exact name BASE goes first; exact name FILL or a Fill tag goes last. Ratings weight the chain; cross-source mapping uses matching slice indices. Exact events are reused, not invented. Unsupported layers, source ranges, grid positions, and FX block export; duration approximations are reported before confirmation."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.prepareLearnedBank() }, "Download learned bank\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: () => this.prepareLearnedBank(true) }, "Stage learned bank\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Rendered Chopper patterns \xB7 PVXP v3"), /* @__PURE__ */ React.createElement("p", null, "Render up to eight complete patterns, including uneven or partial slices, overlaps, fractional timing, gates and fades. BASE / Variation / FILL roles remain selectable; individual clips are baked into audio. Existing half-bar PVXP v3 format, up to 32 source bars / 30 seconds. Pattern FX block export. Staging is not hardware transfer; RAM playback is unsupported."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.downloadRenderedChopperBank() }, "Download rendered Chopper WAV\u2026"), /* @__PURE__ */ React.createElement("button", { className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: () => this.downloadRenderedChopperBank(true) }, "Stage Chopper for device\u2026")), /* @__PURE__ */ React.createElement("article", null, /* @__PURE__ */ React.createElement("h3", null, "Reusable Chopper cue bank \xB7 SD"), /* @__PURE__ */ React.createElement("p", null, "Export authored BASE / Variation / FILL events without audio. Choose the source cue grid: 1/4 (up to 16 bars), 1/8 (up to 8 bars), or legacy half-bar (32 bars). Maximum 64 cues; unsupported clips and FX block export. Create patterns in Editor, then send the selected grid directly to slot A or B here. The bank reloads after reboot and can drive compatible BPM-tagged WAVs without manual markers."), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.downloadChopperCueFile("quarter-note-grid-v1") }, "Download 1/4 cue bank\u2026"), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.downloadChopperCueFile("eighth-note-grid-v1") }, "Download 1/8 cue bank\u2026"), /* @__PURE__ */ React.createElement("button", { disabled: !src || this.state.comparisonPreview, onClick: () => this.downloadChopperCueFile() }, "Download half-bar cue bank\u2026"), ["quarter-note-grid-v1", "eighth-note-grid-v1", "half-bar-grid-v1"].map((policy) => /* @__PURE__ */ React.createElement("div", { key: policy }, /* @__PURE__ */ React.createElement("span", null, policy === "quarter-note-grid-v1" ? "1/4" : policy === "eighth-note-grid-v1" ? "1/8" : "Half-bar", " \u2192 "), [0, 1].map((slot) => /* @__PURE__ */ React.createElement("button", { key: slot, className: "primary", disabled: !src || this.state.comparisonPreview || window.parent === window, onClick: () => this.downloadChopperCueFile(policy, slot) }, "Send to ", slot === 0 ? "A" : "B", "\u2026")))), [0, 1].map((slot) => /* @__PURE__ */ React.createElement("div", { key: slot }, /* @__PURE__ */ React.createElement("label", null, "Load .PVXP to ", slot === 0 ? "A" : "B", " ", /* @__PURE__ */ React.createElement("input", { type: "file", accept: ".pvxp,application/octet-stream", disabled: window.parent === window, onChange: (event) => this.installCueFile(event, slot) })), /* @__PURE__ */ React.createElement("button", { disabled: window.parent === window, onClick: () => this.reloadCueFile(slot) }, "Reload ", slot === 0 ? "A" : "B", " from SD"))))), /* @__PURE__ */ React.createElement(SeedSequenceTester, { project: p, sourceId: src?.id, transportPlaying: this.state.playing }), /* @__PURE__ */ React.createElement("div", { className: "delivery-boundary" }, /* @__PURE__ */ React.createElement("strong", null, "Device compatibility is not yet confirmed"), /* @__PURE__ */ React.createElement("p", null, src ? `${src.name} \xB7 ${ranges.length} slices \xB7 ${(src.frames / src.sampleRate).toFixed(2)} s` : "Add a source first to enable these outputs.", " \xB7 editor limit: 64 slices. Transfer may have stricter limits. RAM writes with metadata are blocked; /LOOPS support does not imply Break support."), /* @__PURE__ */ React.createElement("p", null, "Standalone mode supports WAV and ZIP. Transfer is available only inside Studio. SD, RAM, and audio playback require testing on the actual module.")))), /* @__PURE__ */ React.createElement("section", { className: "arrange" }, /* @__PURE__ */ React.createElement(PatternGrid, { sources: p.sources, effects: v.effects, tracks: v.tracks, onSelectSource: (id) => this.setState({ sourceId: id, sliceIndex: 0, cueIndex: 0, armedCue: void 0 }), comparisonPreview: this.state.comparisonPreview, comparisonAvailable, onToggleComparison: this.toggleComparisonPreview, comparisonError: comparison?.error, readOnly: this.state.comparisonPreview, onCreateFX: this.createPatternFX, onChangeFX: this.changePatternFX, onDeleteFX: (id) => this.commit("fx_delete", (p2) => {
         const v2 = currentVariation(p2);
         v2.effects = v2.effects.filter((f) => f.id !== id);
-      }), source: src, slices: ranges, clips: displayClips, bars: v.patternBars || 1, division: v.patternDivision || 8, playhead: this.state.playhead, playing: this.state.playing, selectedSlice: this.state.sliceIndex, selectedClipId: this.state.clipId, onSetStep: this.setPatternStep, onDrawNotes: this.drawPatternNotes, onSelectClip: (clip) => this.setState({ clipId: clip.id, fxId: void 0, playhead: clip.positionBeats }), onRemoveClip: (id) => this.commit("clip_delete", (p2) => {
+      }), source: src, slices: chopperRanges, clips: displayClips, bars: v.patternBars || 1, division: v.patternDivision || 8, playhead: this.state.playhead, playing: this.state.playing, selectedSlice: this.state.cueIndex, selectedClipId: this.state.clipId, armedCue: this.state.armedCue, onPlacedCue: () => this.setState({ armedCue: void 0 }), onSetStep: this.setPatternStep, onDrawNotes: this.drawPatternNotes, onSelectClip: (clip) => this.setState({ clipId: clip.id, fxId: void 0, playhead: this.state.playing ? this.state.playhead : clip.positionBeats }), onRemoveClip: (id) => this.commit("clip_delete", (p2) => {
         const v2 = currentVariation(p2);
         v2.clips = v2.clips.filter((c) => c.id !== id);
       }, { clipId: id }, { clipId: void 0 }), onMoveStep: this.movePatternStep, onResizeClip: this.resizePatternClip, onBarsChange: this.setPatternBars, onDivisionChange: this.setPatternDivision, onPreviewSlice: (range2) => audioEngine.preview(src, range2.startFrame, range2.endFrame).catch((e) => this.setStatus(e.message)), onSelectSlice: (index) => this.setState({ sliceIndex: index }), onFillFromSource: this.fillPatternFromSource, onPreviewStep: (clip) => {
