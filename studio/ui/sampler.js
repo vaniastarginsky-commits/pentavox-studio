@@ -10,7 +10,8 @@ import { createBreakPanel, hasBreakPatterns } from './break_panel.js';
 import { createWaveEditor } from './wave_editor.js';
 import { buildSamplerPlan, mergeSamplerSlots, nextStartNumbers, sliceSummary, validateSamplerPlan } from './sampler_vm.js';
 import { pcm16FromWav, SampleUploadClient } from '../model/sample_upload.js';
-import { beginLinkJob } from '../model/link_jobs.js';
+import { beginLinkJob, activeLinkJob } from '../model/link_jobs.js';
+import { ChopperDeviceService } from '../model/chopper_device.js';
 import { SdFilesClient, describeFsError, describeTransfer } from '../model/sd_files.js';
 import { samplerFolders, cardSummary, formatSize, sortEntries } from './sdcard_vm.js';
 import { LOOP_DIR, LOOP_SLOTS, LoopIoClient, describeLoopError, describeLoopFailure, loopFileName, loopFiles, renumberProblem } from '../model/loop_io.js';
@@ -690,6 +691,8 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   updateHeading(); renderList(); renderEditor(); renderPlan();
   const dispose = () => { ++state.generation; state.upload?.controller.abort(); state.card?.controller.abort(); breakPanel?.destroy(); sliceBar?.destroy(); editor?.destroy(); themeWatch.disconnect(); root.replaceChildren(); };
   dispose.stageArtifact = async file => {if(state.upload||state.card||state.importing)throw new Error('Finish the current sampler operation before staging a snapshot.');const bytes=new Uint8Array(await file.arrayBuffer()),marks=readWavMarkers(bytes);if(!marks||marks.sampleRate!==48000||marks.frames<=0||marks.frames>1440000||marks.slices.length>64)throw new Error('Invalid prepared Samples WAV.');const item=await decodedFile(file);item.normalize=false;item.frozenWav=bytes;item.name=file.name.replace(/\.wav$/i,'');state.items.push(item);state.selected=item;renderEditor();refreshSide();};
+  const chopperDevice=new ChopperDeviceService({getClient,getInfo,getDescriptor,runJob:async(label,job)=>{if(loop.busy||state.card||state.upload||state.importing||activeLinkJob())throw new Error('Another transfer is in progress.');loop.busy=true;const end=beginLinkJob(label);try{return await job();}finally{end();loop.busy=false;refreshSide();}}});
+  dispose.chopperDeviceRequest = request=>chopperDevice.request(request);
   dispose.installCueBank = installCueBank;
   dispose.reloadCueBank = reloadCueBank;
   dispose.show = () => loadCard();

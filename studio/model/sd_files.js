@@ -13,6 +13,17 @@ const IO_MS = 5_000;
 const MAX_PATH_BYTES = 192;
 const MAX_SEGMENT_BYTES = 64;
 const LIST_END = 0xffffffff;
+// A filesystem handle belongs to the underlying HostLink connection, not an
+// individual UI/client instance. Serialize complete handle transactions across
+// ALL SdFilesClient instances sharing that connection.
+const fileTransactions = new WeakMap();
+function exclusiveFiles(client,operation){
+  const previous=fileTransactions.get(client)??Promise.resolve();
+  const result=previous.then(operation);
+  const tail=result.catch(()=>{});fileTransactions.set(client,tail);
+  tail.finally(()=>{if(fileTransactions.get(client)===tail)fileTransactions.delete(client);});
+  return result;
+}
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8');
@@ -66,7 +77,13 @@ export function fatDate(mtime) {
 }
 
 export class SdFilesClient {
-  constructor(client, info, { retries = 3 } = {}) { this.client = client; this.info = info; this.retries = retries; }
+  constructor(client, info, { retries = 3 } = {}) {
+    this.client = client; this.info = info; this.retries = retries;
+    for(const name of ['cardInfo','list','download','upload','rescanLibraries','remove','makeDirectory','rename']){
+      const operation=this[name].bind(this);
+      this[name]=(...args)=>exclusiveFiles(client,()=>operation(...args));
+    }
+  }
 
   /** Card state. Rejects with FS_NO_CARD (status 11) when there is no usable card. */
   async cardInfo() {
@@ -100,15 +117,17 @@ export class SdFilesClient {
     return entries;
   }
 
-  async download(path, { onProgress = () => {}, signal } = {}) {
+  async download(path, { onProgress = () => {}, signal, maxBytes = 64 * 1024 * 1024 } = {}) {
     const startedAt = performance.now();
     const { body: opened } = await this.client.request(FS_COMMAND.OPEN_READ, wireString(path), SLOW_MS);
-    need(opened, 8, 'FS_OPEN_READ');
-    const size = dataView(opened).getUint32(0, true);
-    const bytes = new Uint8Array(size);
-    const chunk = this.info.maxBody - 7;
-    if (chunk <= 0) throw new Error('The module reports a HostLink frame size too small for file transfer');
+    let size,bytes,chunk;
     try {
+      need(opened, 8, 'FS_OPEN_READ');
+      size = dataView(opened).getUint32(0, true);
+      if(!Number.isSafeInteger(maxBytes)||maxBytes<0||size>maxBytes)throw new Error('The file exceeds the supported download size.');
+      bytes = new Uint8Array(size);
+      chunk = this.info.maxBody - 7;
+      if (chunk <= 0) throw new Error('The module reports a HostLink frame size too small for file transfer');
       for (let offset = 0; offset < size;) {
         this.#notAborted(signal, 'Download cancelled');
         const { body } = await this.#retry(() => this.client.request(FS_COMMAND.READ, concat(u32(offset), u16(Math.min(chunk, size - offset))), IO_MS));

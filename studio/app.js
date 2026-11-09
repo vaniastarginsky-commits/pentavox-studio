@@ -14,6 +14,7 @@ import { mountVoice } from './ui/voices.js';
 import { mountSampler } from './ui/sampler.js';
 import { mountSamplesDelivery } from './ui/samples_delivery.js';
 import { mountSamplesBridge } from './ui/samples_bridge.js';
+import { mountChopperDeviceBridge } from './ui/chopper_device_bridge.js';
 import { mountSdCard } from './ui/sdcard.js';
 import { mountPanelSkin } from './ui/panel_skin.js';
 import { mountKnobLocks } from './ui/knob_locks.js';
@@ -199,6 +200,7 @@ samplerMount = mountSampler(document.querySelector('#sampler-root'), {
 });
 
 mountSamplesBridge({frame:document.querySelector('.slice-lab-frame'),stage:file=>samplerMount.stageArtifact(file),installCue:(file,slot)=>samplerMount.installCueBank(file,slot),reloadCue:slot=>samplerMount.reloadCueBank(slot),navigate:()=>samplesDelivery.open()});
+mountChopperDeviceBridge({frame:document.querySelector('.slice-lab-frame'),request:request=>samplerMount.chopperDeviceRequest(request)});
 
 locksMount = mountKnobLocks(document.querySelector('#locks-root'), {
   getSession: () => connectionStatus.dataset.state === 'on' ? session : null,
