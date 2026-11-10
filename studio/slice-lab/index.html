@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 204542)
+Total output lines: 12782
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1706,6 +1709,134 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
     padding: 8px;
     font-size: 12px;
   }
+}
+
+
+/* Independent analysis layers and per-loop preview effects. */
+.ch-analysis {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.ch-marker-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.ch-marker-controls > label,
+.ch-marker-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ch-marker-controls small {
+  flex-basis: 100%;
+  color: var(--ch-muted);
+}
+.ch-marker-toggle[data-kind="kick"] { color: #ef7979; }
+.ch-marker-toggle[data-kind="snare"] { color: #e8b16d; }
+.ch-marker-toggle[data-kind="hat"] { color: #76c9ad; }
+.ch-marker-toggle[data-kind="other"] { color: #b6a0ea; }
+.ch-drum-marker {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  cursor: pointer;
+}
+.ch-drum-marker::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 18px;
+  left: -1px;
+  border-left: 2px solid var(--marker-color, #b6a0ea);
+  opacity: .85;
+}
+.ch-drum-marker span {
+  position: absolute;
+  bottom: 0;
+  left: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: #10202b;
+  color: var(--marker-color, #b6a0ea);
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 700;
+}
+.ch-drum-marker[data-kind="kick"] { --marker-color: #ef7979; }
+.ch-drum-marker[data-kind="snare"] { --marker-color: #e8b16d; }
+.ch-drum-marker[data-kind="hat"] { --marker-color: #76c9ad; }
+.ch-drum-marker[data-kind="other"] { --marker-color: #b6a0ea; }
+.ch-loop-effects {
+  --loop-accent: #a7cedd;
+  margin: 0 20px 12px;
+  border: 1px solid color-mix(in srgb, var(--loop-accent) 48%, #2b3e4c);
+  border-left: 4px solid var(--loop-accent);
+  border-radius: 7px;
+  background: #172833;
+  color: var(--ch-ink);
+}
+.ch-loop-effects[data-slot="1"] { --loop-accent: #e4a46a; }
+.ch-loop-effects > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px 12px;
+  cursor: pointer;
+  list-style-position: inside;
+}
+.ch-loop-effects > summary strong { color: var(--loop-accent); }
+.ch-loop-effects > summary span { color: var(--ch-muted); }
+.ch-loop-effects > summary small { margin-left: auto; color: var(--ch-muted); }
+.ch-loop-effects > p {
+  margin: 0;
+  padding: 0 12px 10px;
+  color: var(--ch-muted);
+  font-size: 12px;
+}
+.ch-fx-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+.ch-fx-grid fieldset {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #344958;
+  border-radius: 6px;
+}
+.ch-fx-grid legend { color: var(--loop-accent); font-weight: 700; }
+.ch-fx-grid label { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 5px; font-size: 12px; }
+.ch-fx-grid label:has(input[type="checkbox"]) { display: flex; }
+.ch-fx-grid output { color: var(--ch-muted); font-variant-numeric: tabular-nums; }
+.ch-fx-grid input[type="range"] { grid-column: 1 / -1; width: 100%; min-width: 0; }
+.ch-fx-grid input:disabled { opacity: .45; }
+@media (max-width: 1050px) {
+  .ch-fx-grid { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
+}
+@media (max-width: 640px) {
+  .ch-loop-effects { margin: 0 12px 10px; }
+  .ch-loop-effects > summary { flex-wrap: wrap; gap: 4px 8px; }
+  .ch-loop-effects > summary small { margin-left: 0; }
+  .ch-fx-grid { grid-template-columns: minmax(0, 1fr); }
+  .ch-analysis { align-items: flex-start; }
 }
 </style>
 </head>
@@ -5161,393 +5292,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     } else if (kind === "stutter332") {
       clear(8);
       const srcs = [v.K.next(), v.S.next(), v.H.next()];
-      [[8, 3], [11, 3], [14, 2]].forEach(([s, len], i) => bar.set(s, ev(s, { src: srcs[i], len, reps: len === 3 ? rng.pick([1, 3]) : 2, roll: ROLL.EVEN, amp0: 1, amp1: 0.7 })));
-    }
-  }
-  function pickFill(groove2, rng, density) {
-    return rng.weighted(groove2.fills.map((f) => f[0]), groove2.fills.map((f) => f[1] * (0.4 + density)));
-  }
-  function groove(kind, ctx, rng, h) {
-    const g = GROOVES[kind];
-    const bars = Math.max(1, ctx.steps >> 4);
-    const v = voices(ctx, rng, h);
-    const density = clamp01(ctx.density);
-    let bar = buildBar(ctx, rng, v, g, density);
-    const events = [];
-    const fillChance = density === 0 ? 0 : bars === 1 ? 0.5 * density : 0.35 + 0.6 * density;
-    for (let b = 0; b < bars; b += 1) {
-      if (b > 0 && density > 0) bar = mutate(ctx, rng, v, g, density, bar);
-      const out = new Map([...bar].map(([k, e]) => [k, { ...e }]));
-      const last = b === bars - 1;
-      const mid = bars >= 4 && b === (bars >> 1) - 1;
-      if (last && rng.chance(fillChance) || mid && rng.chance(fillChance * 0.4)) applyFill(pickFill(g, rng, density), ctx, rng, v, out, density);
-      for (const e of out.values()) events.push({ ...e, step: e.step + b * 16 });
-    }
-    events.sort((a, b) => a.step - b.step);
-    return events;
-  }
-  var GROUPINGS = [[3, 3, 2, 3, 3, 2], [3, 3, 3, 3, 2, 2], [5, 3, 5, 3], [4, 4, 3, 3, 2], [2, 3, 3, 2, 3, 3], [5, 5, 3, 3], [3, 2, 3, 2, 3, 3]];
-  function idm(ctx, rng, h) {
-    const v = voices(ctx, rng, h);
-    const density = clamp01(ctx.density);
-    const events = [];
-    const bars = Math.max(1, ctx.steps >> 4);
-    const grouping = rng.pick(GROUPINGS);
-    const free = h.candidates(ctx);
-    const bag = h.makeBag(rng, free.length ? free : ctx.sliceStarts.map((_, i) => i));
-    for (let b = 0; b < bars; b += 1) {
-      const rot = b % grouping.length;
-      const groups = grouping.slice(rot).concat(grouping.slice(0, rot));
-      let at = 0;
-      let total = 0;
-      const bar = [];
-      for (const len of groups) {
-        if (total + len > 16) {
-          bar.push(16 - total);
-          total = 16;
-          break;
-        }
-        bar.push(len);
-        total += len;
-      }
-      if (total < 16) bar.push(16 - total);
-      at = 0;
-      bar.forEach((len, i) => {
-        const step = b * 16 + at;
-        at += len;
-        const covers = (s) => at - len <= s && s < at;
-        const role = i === 0 ? "K" : covers(4) || covers(12) ? "S" : null;
-        const src = role ? v[role].list.length ? rng.chance(0.7) ? v[role].main : v[role].next() : HOME : bag();
-        const repeats = len >= 3 && rng.chance(0.15 + 0.7 * density);
-        events.push(ev(step, {
-          src,
-          len,
-          reps: repeats ? rng.pick(len >= 5 ? [3, 4] : [2, 3]) : 1,
-          roll: repeats ? rng.pick([ROLL.EVEN, ROLL.ACCEL, ROLL.RITARD]) : ROLL.EVEN,
-          amp0: role ? 1 : 0.75 + 0.25 * rng.next(),
-          amp1: repeats ? 0.35 + 0.3 * rng.next() : 1,
-          pitch1: repeats && rng.chance(0.3 * density) ? rng.pick([-5, 5, 7, 12]) : 0
-        }));
-      });
-    }
-    if (density > 0 && rng.chance(0.4 + 0.5 * density)) {
-      const at = ctx.steps - 4;
-      const keep = events.filter((e) => e.step < at);
-      const tail = events.filter((e) => e.step < at && e.step + e.len > at).pop();
-      if (tail) tail.len = at - tail.step;
-      keep.push(ev(at, { src: v.S.main, len: 4, reps: 8, roll: rng.pick([ROLL.ACCEL, ROLL.RITARD]), amp0: 0.4, amp1: 1, pitch1: rng.pick([0, 5, 7]) }));
-      return keep;
-    }
-    return events;
-  }
-
-  // ../../studio/model/break_embed.js
-  init_break_engine();
-  var clamp012 = (v) => Math.min(1, Math.max(0, Number(v) || 0));
-  var ev2 = (step, over) => ({ ...defaultEvent(step), ...over });
-  var roleOf = (label) => /kick/.test(label ?? "") ? "K" : /snare/.test(label ?? "") ? "S" : /hat/.test(label ?? "") ? "H" : "O";
-  function ornamentCount(ctx) {
-    if (ctx.count != null) return Math.max(0, Math.min(ctx.steps, Math.trunc(Number(ctx.count)) || 0));
-    return Math.round(clamp012(ctx.density) * ctx.steps / 3);
-  }
-  function fileHits(ctx) {
-    const hits = /* @__PURE__ */ new Map();
-    ctx.sliceStarts.forEach((start, i) => hits.set((Math.round(start) % ctx.fileSteps + ctx.fileSteps) % ctx.fileSteps, roleOf(ctx.labels?.[i])));
-    return hits;
-  }
-  function barFactor(bar, bars) {
-    if (bars === 1) return 1;
-    if (bars === 2) return bar === 1 ? 1.6 : 0.7;
-    const g = bar % 4;
-    return g === 3 ? 2 : g === 1 ? 1.2 : g === 0 ? 0.5 : 1;
-  }
-  function placePool(kind, ctx, hits) {
-    const slots = (GROOVES[kind] ?? GROOVES.breakcore).slots;
-    const bars = ctx.steps / 16;
-    const pool = [];
-    for (let bar = 0; bar < bars; bar += 1) {
-      const base = bar * 16;
-      const weight = /* @__PURE__ */ new Map();
-      const add = (step, w) => {
-        if (step >= base && step < base + 16 && !hits.has(step % ctx.fileSteps)) weight.set(step, (weight.get(step) ?? 0.6) + w);
-      };
-      for (let step = base; step < base + 16; step += 1) if (!hits.has(step % ctx.fileSteps)) weight.set(step, 0.6);
-      for (const [slot, role] of slots) if (role === "G" || role === "H") add(base + slot, 4);
-      for (let step = base; step < base + 16; step += 1) {
-        if (hits.get((step + 1) % ctx.fileSteps) === "S") add(step, 6);
-        if (hits.get((step + 2) % ctx.fileSteps) === "S") add(step, 3);
-        if (step % 4 === 3) add(step, 2);
-        if (step % 8 === 5) add(step, 2);
-        if (step % 2 === 0 && hits.get((step - 2 + ctx.fileSteps) % ctx.fileSteps) === "K") add(step, 1);
-      }
-      add(base + 15, 3);
-      for (const [step, w] of weight) pool.push({ step, weight: w * barFactor(bar, bars) });
-    }
-    return pool;
-  }
-  function sourceChoices(ctx, v) {
-    const have = { K: false, S: false, H: false };
-    for (const label of ctx.labels ?? []) {
-      const role = roleOf(label);
-      if (role in have) have[role] = true;
-    }
-    const unlabelled = !ctx.labels?.length && ctx.sliceStarts.length > 0;
-    return {
-      kick: have.K ? () => v.K.next() : null,
-      snare: have.S ? () => v.G.next() : null,
-      hat: have.H || unlabelled ? () => v.H.next() : null
-    };
-  }
-  function make(kind, step, room, last, sources, rng) {
-    if (kind === "snare") {
-      const amp = 0.3 + 0.15 * rng.next();
-      return ev2(step, { src: sources.snare(), len: 1, amp0: amp, amp1: amp });
-    }
-    if (kind === "hat") {
-      const amp = 0.5 + 0.2 * rng.next();
-      return ev2(step, { src: sources.hat(), len: 1, amp0: amp, amp1: amp });
-    }
-    if (kind === "kick") return ev2(step, { src: sources.kick(), len: 1, amp0: 0.35, amp1: 0.35 });
-    if (kind === "roll") return ev2(step, { src: sources.snare(), len: 1, reps: rng.pick([3, 4]), roll: ROLL.ACCEL, amp0: 0.45, amp1: 0.85 });
-    if (kind === "reverse") return ev2(step, { src: (sources.snare ?? sources.hat)(), len: Math.min(2, room), rev: true, amp0: 0.8, amp1: 0.8 });
-    return ev2(step, { src: CONTINUE, len: Math.min(room, rng.pick([1, 2])), gate: false });
-  }
-  function kindsFor(sources, local, last, dense) {
-    const kinds = [];
-    const offer = (kind, weight, yes) => {
-      if (yes) kinds.push([kind, weight]);
-    };
-    offer("snare", 4, Boolean(sources.snare));
-    offer("hat", 4, Boolean(sources.hat));
-    offer("kick", 2, Boolean(sources.kick));
-    offer("roll", 3, Boolean(sources.snare) && local >= 6);
-    offer("reverse", 3, last && local >= 13 && Boolean(sources.snare || sources.hat));
-    offer("dropout", 2, dense && local >= 10);
-    return kinds;
-  }
-  function embed(kind, ctx, rng, helpers2) {
-    const count = ornamentCount(ctx);
-    if (count <= 0 || !ctx.steps || !ctx.fileSteps || !ctx.sliceStarts?.length) return [];
-    const hits = fileHits(ctx);
-    const v = voices(ctx, rng, helpers2);
-    const sources = sourceChoices(ctx, v);
-    if (!sources.snare && !sources.hat && !sources.kick) return [];
-    const steps = ctx.steps;
-    const bars = steps / 16;
-    const dense = count > steps * 0.2;
-    const pool = placePool(kind, ctx, hits);
-    const taken = /* @__PURE__ */ new Set();
-    const chosen = /* @__PURE__ */ new Map();
-    const recent = [];
-    const room = (step) => {
-      let n = 1;
-      while (step + n < steps && !hits.has((step + n) % ctx.fileSteps) && !taken.has(step + n) && n < 2) n += 1;
-      return n;
-    };
-    const place = (e) => {
-      chosen.set(e.step, e);
-      for (let s = e.step; s < e.step + e.len; s += 1) taken.add(s);
-    };
-    const neighbours = (step) => [step - 16, step + 16].some((s) => chosen.has(s));
-    let guard = 0;
-    while (chosen.size < count && guard++ < steps * 8) {
-      const open = pool.filter((p) => !taken.has(p.step));
-      if (!open.length) break;
-      const pick = rng.weighted(open, open.map((p) => p.weight * (neighbours(p.step) ? 0.15 : 1)));
-      const bar = Math.floor(pick.step / 16);
-      const local = pick.step % 16;
-      const offers = kindsFor(sources, local, bar === bars - 1, dense);
-      if (!offers.length) {
-        pool.splice(pool.indexOf(pick), 1);
-        continue;
-      }
-      const choice = rng.weighted(offers.map((o) => o[0]), offers.map(([k, w]) => recent.length === 2 && recent[0] === k && recent[1] === k ? w * 0.2 : w));
-      const e = make(choice, pick.step, room(pick.step), bar === bars - 1, sources, rng);
-      place(e);
-      recent.push(choice);
-      if (recent.length > 2) recent.shift();
-      const answer = pick.step + 32;
-      if (bars >= 4 && chosen.size < count && choice !== "dropout" && answer < steps && !taken.has(answer) && !hits.has(answer % ctx.fileSteps) && rng.chance(0.3)) {
-        place(make(choice, answer, room(answer), answer >= (bars - 1) * 16, sources, rng));
-      }
-    }
-    const events = new Map(chosen);
-    for (const e of chosen.values()) {
-      const end = e.step + e.len;
-      if (end < steps && !events.has(end)) events.set(end, ev2(end, { src: HOME, len: 1 }));
-    }
-    return [...events.values()].sort((a, b) => a.step - b.step);
-  }
-
-  // ../../studio/model/break_repeat.js
-  init_break_engine();
-  var ev3 = (step, over) => ({ ...defaultEvent(step), ...over });
-  var roleOf2 = (label) => /kick/.test(label ?? "") ? "K" : /snare/.test(label ?? "") ? "S" : /hat/.test(label ?? "") ? "H" : "O";
-  var SHAPES = [[1, 2], [1, 4], [2, 2], [2, 4], [3, 3], [4, 4], [4, 8], [2, 8]];
-  var LONG_AT_END = /* @__PURE__ */ new Set([[4, 4].join(), [4, 8].join(), [2, 8].join()]);
-  function sliceAt(sliceStarts, pos) {
-    let best = 0;
-    sliceStarts.forEach((s, i) => {
-      if (s <= pos + 1e-6) best = i;
-    });
-    return best;
-  }
-  function beatRepeat(pattern, ctx, { count = 2, seed = 1 } = {}) {
-    const p = normalizePattern(pattern);
-    const n = Math.max(0, Math.min(p.steps, Math.trunc(Number(count)) || 0));
-    if (n === 0 || !ctx.sliceStarts?.length || !ctx.fileSteps) return p;
-    const rng = makeRng(seed);
-    const steps = p.steps;
-    const bars = steps / 16;
-    const labels = ctx.labels ?? [];
-    const hitAt = /* @__PURE__ */ new Map();
-    ctx.sliceStarts.forEach((s, i) => hitAt.set((Math.round(s) % ctx.fileSteps + ctx.fileSteps) % ctx.fileSteps, roleOf2(labels[i])));
-    const byStep = new Map(p.events.map((e) => [e.step, { ...e }]));
-    const heavy = (step) => hitAt.get(step % ctx.fileSteps) === "K" || hitAt.get(step % ctx.fileSteps) === "S" || byStep.has(step) && byStep.get(step).src >= 0 && /K|S/.test(roleOf2(labels[byStep.get(step).src])) && byStep.get(step).amp0 > 0.6;
-    const { grains } = renderPattern(p, { sliceStarts: ctx.sliceStarts, fileSteps: ctx.fileSteps, head: 0 });
-    const soundingAt = (step) => grains.find((g) => g.t <= step + 1e-9 && step < g.t + g.dur - 1e-9) ?? grains[grains.length - 1];
-    const weight = (step) => {
-      const local = step % 16;
-      const bar = Math.floor(step / 16);
-      const g = bar % 4;
-      let w = 0.4;
-      if (local === 15 || local === 14) w += 4;
-      else if (local === 7 || local === 11) w += 2.5;
-      else if (local % 4 === 3) w += 1.5;
-      if (hitAt.get((step + 1) % ctx.fileSteps) === "S") w += 3;
-      const f = bars >= 4 ? g === 3 ? 2 : g === 1 ? 1.2 : g === 0 ? 0.5 : 1 : bars === 2 ? bar === 1 ? 1.5 : 0.7 : 1;
-      return w * f;
-    };
-    const taken = /* @__PURE__ */ new Set();
-    const chosen = [];
-    const free = (step) => step < steps && !taken.has(step) && !heavy(step);
-    let guard = 0;
-    while (chosen.length < n && guard++ < steps * 6) {
-      const open = Array.from({ length: steps }, (_, i) => i).filter(free);
-      if (!open.length) break;
-      const step = rng.weighted(open, open.map((s) => weight(s) * ([s - 16, s + 16].some((x) => chosen.some((c) => c.step === x)) ? 0.2 : 1)));
-      const local = step % 16;
-      const atEnd = local >= 12;
-      const last = Math.floor(step / 16) === bars - 1;
-      const fits = SHAPES.filter(([len2]) => {
-        for (let s = step; s < step + len2; s += 1) if (s >= steps || taken.has(s) || s > step && heavy(s)) return false;
-        return true;
-      });
-      if (!fits.length) {
-        taken.add(step);
-        continue;
-      }
-      const [len, reps] = rng.weighted(fits, fits.map((sh) => LONG_AT_END.has(sh.join()) ? atEnd ? 3 : 0.5 : atEnd ? 1 : 2.5));
-      const roll = rng.pick([ROLL.EVEN, ROLL.ACCEL, ROLL.RITARD]);
-      const build = last && atEnd && rng.chance(0.3);
-      const amp0 = build ? 0.4 : 1;
-      const amp1 = build ? 1 : 0.25 + 0.35 * rng.next();
-      let pitch1 = 0;
-      if (!build && rng.chance(0.2)) pitch1 = rng.pick([-5, -7, -12]);
-      else if (last && atEnd && rng.chance(0.4)) pitch1 = rng.pick([7, 12]);
-      const sounding = soundingAt(step);
-      const src = sliceAt(ctx.sliceStarts, (sounding.src % ctx.fileSteps + ctx.fileSteps) % ctx.fileSteps);
-      chosen.push({ step, len, reps, roll, amp0, amp1, pitch1, src, rev: rng.chance(0.1), stop: rng.chance(0.1) });
-      for (let s = step; s < step + len + 1; s += 1) taken.add(s);
-    }
-    for (const c of chosen) {
-      for (let s = c.step; s < c.step + c.len; s += 1) if (s > c.step) byStep.delete(s);
-      byStep.set(c.step, ev3(c.step, { src: c.src, len: c.len, reps: c.reps, roll: c.roll, amp0: c.amp0, amp1: c.amp1, pitch1: c.pitch1, rev: c.rev }));
-      const end = c.step + c.len;
-      if (end < steps) {
-        if (c.stop && !heavy(end)) byStep.set(end, ev3(end, { src: CONTINUE, len: 1, gate: false }));
-        else if (!byStep.has(end)) byStep.set(end, ev3(end, { src: HOME, len: 1 }));
-      }
-    }
-    return normalizePattern({ steps, events: [...byStep.values()] });
-  }
-
-  // ../../studio/model/break_generators.js
-  var GENERATORS = ["jungle", "dnb", "halftime", "funk", "breakcore", "idm", "cutproc", "warp", "squarepusher", "campanology", "recursive", "euclid"];
-  function makeRng(seed) {
-    let a = Math.trunc(seed) >>> 0 || 1;
-    const next = () => {
-      a = a + 1831565813 >>> 0;
-      let t = a;
-      t = Math.imul(t ^ t >>> 15, t | 1);
-      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
-    const rng = { next, int: (n) => Math.floor(next() * n), chance: (p) => next() < p, pick: (list) => list[Math.floor(next() * list.length)] };
-    rng.weighted = (items, weights) => {
-      let r = next() * weights.reduce((x, y) => x + y, 0);
-      for (let i = 0; i < items.length; i += 1) {
-        r -= weights[i];
-        if (r < 0) return items[i];
-      }
-      return items[items.length - 1];
-    };
-    return rng;
-  }
-  var isAnchor = (label) => /kick|snare/.test(label ?? "");
-  var ev4 = (step, over) => ({ ...defaultEvent(step), ...over });
-  function sliceAt2(ctx, step) {
-    const pos = step % ctx.fileSteps;
-    return ctx.sliceStarts.findIndex((s) => Math.round(s) === pos);
-  }
-  function makeBag(rng, items) {
-    let bag = [];
-    let last = -1;
-    return () => {
-      if (!items.length) return CONTINUE;
-      if (!bag.length) bag = items.slice().sort(() => rng.next() - 0.5);
-      let i = bag.findIndex((x) => x !== last);
-      if (i < 0) i = 0;
-      last = bag.splice(i, 1)[0];
-      return last;
-    };
-  }
-  function protectAnchors(pattern, ctx) {
-    const events = pattern.events.slice();
-    let off = false;
-    for (let step = 0; step < pattern.steps; step += 1) {
-      const at = events.findIndex((e) => e.step === step);
-      const k = sliceAt2(ctx, step);
-      const anchor = k >= 0 && isAnchor(ctx.labels?.[k]);
-      if (anchor && (at >= 0 || off)) {
-        const spanEnd = Math.round(ctx.sliceStarts[k + 1] ?? ctx.fileSteps);
-        const keep = at >= 0 && (events[at].src === k || events[at].src === HOME) ? events[at] : null;
-        const e = keep ?? ev4(step, { src: k, len: Math.max(1, Math.min(spanEnd - step, 4)) });
-        if (at >= 0) events[at] = e;
-        else events.push(e);
-        off = false;
-      } else if (at >= 0) {
-        const e = events[at];
-        if (e.src !== HOME || e.rev) off = true;
-      }
-    }
-    return normalizePattern({ steps: pattern.steps, events });
-  }
-  function candidates(ctx) {
-    const all = ctx.sliceStarts.map((_, i) => i);
-    const free = all.filter((i) => !isAnchor(ctx.labels?.[i]));
-    return free.length >= 2 ? free : all;
-  }
-  function cutproc(ctx, rng) {
-    const events = [];
-    const pick = makeBag(rng, candidates(ctx));
-    const energy = [0, 0.3, 0, 0.5, 0.7, 0.8, 0.9, 0.6];
-    const fill = ctx.steps >= 8 && rng.chance(0.9 * ctx.density);
-    const limit = fill ? ctx.steps - 4 : ctx.steps;
-    let step = 0;
-    while (step < limit) {
-      const len = Math.min(limit - step, rng.weighted([1, 2, 3, 4], [2, 4, 1.5, 2]));
-      const jump = rng.chance(ctx.density * (0.35 + 0.65 * energy[step % 16 >> 1]));
-      if (jump) events.push(ev4(step, { src: pick(), len }));
-      else if (rng.chance(0.12 * ctx.density)) events.push(ev4(step, { src: CONTINUE, len, rev: true }));
-      step += len;
-    }
-    if (fill) {
-      const reps = rng.pick([4, 4, 6, 8]);
-      events.push(ev4(limit, { src: rng.chance(0.5) ? HOME : pick(), len: 4, reps, roll: rng.pick([ROLL.EVEN, ROLL.ACCEL, ROLL.ACCEL]), amp0: 1, amp1: 0.5 + 0.5 * rng.next(), pitch1: rng.chance(0.6) ? rng.pick([3, 5, 7]) : 0 }));
-    }
-    const snares = ctx.sliceStarts.map((s, i) => /snare/.test(ctx.labels?.[i] ?? "") ? Math.round(s) : -1).filter((s) => s >= 0);
-    for (let bar = 0; bar < ctx.steps; bar += ctx.fileSteps) for (const s of snares) {
+      [[8, 3], [11, 3], [14, 2]].forEach(([s, len], i) => bar.set(s, ev(s, { src: srcs[i], len, reps: len === 3 ? rng.pick([1, 3]) : 2, roll: ROLL.EVEN,…4542 tokens truncated…Steps) for (const s of snares) {
       const at = bar + s - 1;
       if (at < 0 || at >= ctx.steps || events.some((e) => at >= e.step && at < e.step + e.len)) continue;
       if (rng.chance(0.55 * ctx.density)) events.push(ev4(at, { src: HOME, len: 1, amp0: 0.4, amp1: 0.4 }));
@@ -9385,6 +9130,91 @@ ${error.message}`);
     }
   };
 
+  // src/chopper/loop-effects.ts
+  var defaultLoopEffects = () => ({
+    filter: { enabled: false, cutoffHz: 12e3 },
+    delay: { enabled: false, timeMs: 280, feedback: 0.28, mix: 0.22 },
+    reverb: { enabled: false, decay: 0.55, mix: 0.2 },
+    drive: { enabled: false, amount: 0.25 }
+  });
+  function validateLoopEffects(value) {
+    if (!value || typeof value !== "object") throw Error("Invalid loop effects.");
+    const v = value;
+    if (!v.filter || typeof v.filter.enabled !== "boolean" || !Number.isFinite(v.filter.cutoffHz) || v.filter.cutoffHz < 80 || v.filter.cutoffHz > 16e3 || !v.delay || typeof v.delay.enabled !== "boolean" || !Number.isFinite(v.delay.timeMs) || v.delay.timeMs < 20 || v.delay.timeMs > 1200 || !Number.isFinite(v.delay.feedback) || v.delay.feedback < 0 || v.delay.feedback > 0.88 || !Number.isFinite(v.delay.mix) || v.delay.mix < 0 || v.delay.mix > 1 || !v.reverb || typeof v.reverb.enabled !== "boolean" || !Number.isFinite(v.reverb.decay) || v.reverb.decay < 0.1 || v.reverb.decay > 0.92 || !Number.isFinite(v.reverb.mix) || v.reverb.mix < 0 || v.reverb.mix > 1 || !v.drive || typeof v.drive.enabled !== "boolean" || !Number.isFinite(v.drive.amount) || v.drive.amount < 0 || v.drive.amount > 1)
+      throw Error("Invalid loop effects.");
+    return {
+      filter: { enabled: v.filter.enabled, cutoffHz: v.filter.cutoffHz },
+      delay: { enabled: v.delay.enabled, timeMs: v.delay.timeMs, feedback: v.delay.feedback, mix: v.delay.mix },
+      reverb: { enabled: v.reverb.enabled, decay: v.reverb.decay, mix: v.reverb.mix },
+      drive: { enabled: v.drive.enabled, amount: v.drive.amount }
+    };
+  }
+  var LoopFxProcessor = class {
+    constructor(rate) {
+      this.rate = rate;
+      this.settings = defaultLoopEffects();
+      this.lowpass = [0, 0];
+      this.delayIndices = [0, 0];
+      const length = Math.max(2, Math.ceil(rate * 1.25));
+      this.delayBuffers = [new Float32Array(length), new Float32Array(length)];
+      const sizes = [0.029, 0.037, 0.041, 0.043].map((seconds) => Math.max(17, Math.round(rate * seconds)));
+      this.reverbBuffers = [sizes.map((n) => new Float32Array(n)), sizes.map((n) => new Float32Array(n))];
+      this.reverbIndices = [sizes.map(() => 0), sizes.map(() => 0)];
+    }
+    set(settings) {
+      const next = validateLoopEffects(settings), old = this.settings;
+      if (old.filter.enabled && !next.filter.enabled) this.lowpass = [0, 0];
+      if (old.delay.enabled && !next.delay.enabled) {
+        for (const line of this.delayBuffers) line.fill(0);
+        this.delayIndices = [0, 0];
+      }
+      if (old.reverb.enabled && !next.reverb.enabled) {
+        for (const channel of this.reverbBuffers) for (const line of channel) line.fill(0);
+        this.reverbIndices = this.reverbBuffers.map((channel) => channel.map(() => 0));
+      }
+      this.settings = next;
+    }
+    reset() {
+      this.lowpass = [0, 0];
+      for (const line of this.delayBuffers) line.fill(0);
+      this.delayIndices = [0, 0];
+      for (const channel of this.reverbBuffers) for (const line of channel) line.fill(0);
+      this.reverbIndices = this.reverbBuffers.map((channel) => channel.map(() => 0));
+    }
+    process(input, channel) {
+      const ch = channel & 1, s = this.settings;
+      let value = input;
+      if (s.filter.enabled) {
+        const cutoff = Math.min(s.filter.cutoffHz, this.rate * 0.45);
+        const alpha = 1 - Math.exp(-2 * Math.PI * cutoff / this.rate);
+        this.lowpass[ch] += alpha * (value - this.lowpass[ch]);
+        value = this.lowpass[ch];
+      }
+      if (s.drive.enabled) {
+        const amount = s.drive.amount;
+        value = value * (1 - amount) + Math.tanh(value * (1 + amount * 10)) * amount;
+      }
+      const delay = this.delayBuffers[ch], delayAt = this.delayIndices[ch];
+      const delayFrames = Math.max(1, Math.min(delay.length - 1, Math.round(this.rate * s.delay.timeMs / 1e3)));
+      const delayed = delay[(delayAt - delayFrames + delay.length) % delay.length];
+      delay[delayAt] = value + (s.delay.enabled ? delayed * s.delay.feedback : 0);
+      this.delayIndices[ch] = (delayAt + 1) % delay.length;
+      if (s.delay.enabled) value = value * (1 - s.delay.mix) + delayed * s.delay.mix;
+      if (s.reverb.enabled) {
+        const buffers = this.reverbBuffers[ch], indices = this.reverbIndices[ch];
+        let sum = 0;
+        for (let i = 0; i < buffers.length; i++) {
+          const line = buffers[i], at = indices[i], tap = line[at];
+          line[at] = value + tap * s.reverb.decay * 0.72;
+          indices[i] = (at + 1) % line.length;
+          sum += tap;
+        }
+        value = value * (1 - s.reverb.mix) + sum / buffers.length * s.reverb.mix;
+      }
+      return value;
+    }
+  };
+
   // src/chopper/pair.ts
   var ChopperPair = class {
     constructor(slots, rate, mode = "A") {
@@ -9407,6 +9237,7 @@ ${error.message}`);
       this.mix = [0, 0];
       this.pendingBpm = null;
       this.tempoBoundary = 0;
+      this.loopEffects = [new LoopFxProcessor(rate), new LoopFxProcessor(rate)];
       this.mode = mode;
       this.bpm = (slots[0] ?? slots[1]).plan.bpm;
       for (let slot = 0; slot < 2; slot++) {
@@ -9414,6 +9245,7 @@ ${error.message}`);
         if (audio) {
           this.kernels[slot] = new ChopperKernel(audio.plan, rate);
           this.channels[slot] = audio.channels;
+          this.loopEffects[slot].set(audio.effects ?? defaultLoopEffects());
         }
       }
     }
@@ -9428,6 +9260,9 @@ ${error.message}`);
     }
     removalBoundary(slot) {
       return this.removal[slot];
+    }
+    setEffects(slot, effects) {
+      this.loopEffects[slot].set(effects);
     }
     setMode(mode) {
       this.pendingMode = mode;
@@ -9518,7 +9353,10 @@ ${error.message}`);
           )
         );
         if (k && channels.length && this.beat >= this.activation[slot])
-          value += k.sample(channels[Math.min(channel, channels.length - 1)]) * this.mix[slot] * fade;
+          value += this.loopEffects[slot].process(
+            k.sample(channels[Math.min(channel, channels.length - 1)]),
+            channel
+          ) * this.mix[slot] * fade;
       }
       return value;
     }
@@ -9545,6 +9383,7 @@ ${error.message}`);
           this.channels[slot] = [];
           this.pendingChannels[slot] = null;
           this.pendingSource[slot] = void 0;
+          this.loopEffects[slot].reset();
           this.activation[slot] = 0;
           this.removal[slot] = null;
         }
@@ -9578,6 +9417,7 @@ ${error.message}`);
             this.pair?.queue(m.slot, m.plan, m.revision, m.channels);
           else if (m.type === "plans") this.pair?.queueMany(m.entries);
           else if (m.type === "mode") this.pair?.setMode(m.mode);
+          else if (m.type === "effects") this.pair?.setEffects(m.slot, m.effects);
           else if (m.type === "parameter")
             this.pair?.kernels[m.slot]?.parameter(
               m.id,
@@ -9680,7 +9520,7 @@ ${error.message}`);
         const url = URL.createObjectURL(
           new Blob(
             [
-              `const ChopperKernel=${ChopperKernel.toString()};const ChopperPair=${ChopperPair.toString()};(${workletModule.toString()})();`
+              `const defaultLoopEffects=${defaultLoopEffects.toString()};const validateLoopEffects=${validateLoopEffects.toString()};const LoopFxProcessor=${LoopFxProcessor.toString()};const ChopperKernel=${ChopperKernel.toString()};const ChopperPair=${ChopperPair.toString()};(${workletModule.toString()})();`
             ],
             { type: "application/javascript" }
           )
@@ -9746,7 +9586,11 @@ ${error.message}`);
         const binding = bindings[slot];
         if (!binding) continue;
         const channels = this.channels(binding.buffer);
-        slots[slot] = { plan: binding.plan, channels };
+        slots[slot] = {
+          plan: binding.plan,
+          channels,
+          effects: binding.effects ?? defaultLoopEffects()
+        };
         for (const channel of channels)
           transfer.push(channel.buffer);
         this.plans[slot].set(0, structuredClone(binding.plan));
@@ -9779,6 +9623,9 @@ ${error.message}`);
     }
     setMode(mode) {
       this.node?.port.postMessage({ type: "mode", mode });
+    }
+    setEffects(slot, effects) {
+      this.node?.port.postMessage({ type: "effects", slot, effects });
     }
     parameter(id, key, value, patternId) {
       if (!Number.isFinite(value) || value < 0 || value > (key === "gain" ? 2 : 1))
@@ -10088,6 +9935,10 @@ ${error.message}`);
     windowStart,
     windowBeats,
     bindingStatus,
+    markerKind,
+    markerVisibility,
+    onMarkerAdd,
+    onMarkerRemove,
     onCue,
     onArm
   }) {
@@ -10197,8 +10048,15 @@ ${error.message}`);
           "aria-label": `Audition source cue ${cue + 1}${cue % 4 === 0 ? ` \xB7 position ${cue / 4 + 1}.1` : ""}`,
           draggable: true,
           className: (cue === selected ? "selected " : "") + (cue === playingCue ? "sounding" : ""),
-          onClick: () => {
-            if (!pinch.current) onCue(cue);
+          onClick: (e) => {
+            if (pinch.current) return;
+            if (markerKind) {
+              const rect = e.currentTarget.closest(".ch-wave")?.getBoundingClientRect();
+              if (rect && rect.width > 0) {
+                const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                onMarkerAdd(Math.min(source.frames - 1, Math.round(fraction * source.frames)), markerKind);
+              }
+            } else onCue(cue);
           },
           onDragStart: (e) => {
             onArm(cue);
@@ -10218,6 +10076,23 @@ ${error.message}`);
           key: frame,
           style: { left: `${frame / source.frames * 100}%` }
         }
+      )),
+      (source.drumMarkers ?? []).filter((marker) => markerVisibility[marker.kind]).map((marker) => /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          className: "ch-drum-marker",
+          "data-kind": marker.kind,
+          key: marker.id,
+          style: { left: `${marker.frame / source.frames * 100}%` },
+          "aria-label": `Remove ${marker.kind} marker at ${(marker.frame / source.sampleRate).toFixed(3)} seconds`,
+          title: `${marker.kind} \xB7 ${(marker.frame / source.sampleRate).toFixed(3)} s \xB7 click to remove`,
+          onClick: (e) => {
+            e.stopPropagation();
+            onMarkerRemove(marker.id);
+          }
+        },
+        /* @__PURE__ */ React.createElement("span", null, { kick: "K", snare: "S", hat: "H", other: "O" }[marker.kind])
       ))
     )), /* @__PURE__ */ React.createElement("p", { className: "ch-hint" }, /* @__PURE__ */ React.createElement("span", { className: "ch-desktop-hint" }, "Tap a cue to hear it. Drag it to the pattern, or tap an empty cell. Preview does not move the transport."), /* @__PURE__ */ React.createElement("span", { className: "ch-mobile-hint" }, "Tap cue \u2192 tap grid. Preview leaves transport running.")));
   }
@@ -10738,6 +10613,33 @@ ${error.message}`);
     }) }, "Download legacy pattern ", slot)), !caps && /* @__PURE__ */ React.createElement("p", null, "No compatible device capabilities confirmed. Standalone exports do not require a module."));
   }
 
+  // src/chopper/components/LoopEffectsPanel.tsx
+  function LoopEffectsPanel({ slot, value, onChange }) {
+    const [draft, setDraft] = React.useState(value);
+    const dirty = React.useRef(false);
+    React.useEffect(() => {
+      setDraft(value);
+      dirty.current = false;
+    }, [value]);
+    const update = (patch) => {
+      const next = { ...draft, ...patch };
+      setDraft(next);
+      onChange(next);
+    };
+    const adjust = (patch) => {
+      dirty.current = true;
+      setDraft({ ...draft, ...patch });
+    };
+    const commit = () => {
+      if (!dirty.current) return;
+      dirty.current = false;
+      onChange(draft);
+    };
+    const active = [draft.filter.enabled, draft.delay.enabled, draft.reverb.enabled, draft.drive.enabled].filter(Boolean).length;
+    const name = slot === 0 ? "A" : "B";
+    return /* @__PURE__ */ React.createElement("details", { className: "ch-loop-effects", "data-slot": slot }, /* @__PURE__ */ React.createElement("summary", null, /* @__PURE__ */ React.createElement("strong", null, "Loop ", name, " \xB7 Effects"), /* @__PURE__ */ React.createElement("span", null, active ? `${active} active` : "No effects"), /* @__PURE__ */ React.createElement("small", null, "Studio preview")), /* @__PURE__ */ React.createElement("p", null, "Effects are independent for each loop. Current firmware upload does not carry this FX chain."), /* @__PURE__ */ React.createElement("div", { className: "ch-fx-grid" }, /* @__PURE__ */ React.createElement("fieldset", null, /* @__PURE__ */ React.createElement("legend", null, "Filter"), /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: draft.filter.enabled, onChange: (e) => update({ filter: { ...draft.filter, enabled: e.target.checked } }) }), " On"), /* @__PURE__ */ React.createElement("label", null, "Cutoff ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.filter.cutoffHz), " Hz"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} filter cutoff`, type: "range", min: "80", max: "16000", step: "10", value: draft.filter.cutoffHz, disabled: !draft.filter.enabled, onChange: (e) => adjust({ filter: { ...draft.filter, cutoffHz: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit }))), /* @__PURE__ */ React.createElement("fieldset", null, /* @__PURE__ */ React.createElement("legend", null, "Delay"), /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: draft.delay.enabled, onChange: (e) => update({ delay: { ...draft.delay, enabled: e.target.checked } }) }), " On"), /* @__PURE__ */ React.createElement("label", null, "Time ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.delay.timeMs), " ms"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} delay time`, type: "range", min: "20", max: "1200", step: "5", value: draft.delay.timeMs, disabled: !draft.delay.enabled, onChange: (e) => adjust({ delay: { ...draft.delay, timeMs: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit })), /* @__PURE__ */ React.createElement("label", null, "Feedback ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.delay.feedback * 100), "%"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} delay feedback`, type: "range", min: "0", max: ".88", step: ".01", value: draft.delay.feedback, disabled: !draft.delay.enabled, onChange: (e) => adjust({ delay: { ...draft.delay, feedback: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit })), /* @__PURE__ */ React.createElement("label", null, "Mix ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.delay.mix * 100), "%"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} delay mix`, type: "range", min: "0", max: "1", step: ".01", value: draft.delay.mix, disabled: !draft.delay.enabled, onChange: (e) => adjust({ delay: { ...draft.delay, mix: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit }))), /* @__PURE__ */ React.createElement("fieldset", null, /* @__PURE__ */ React.createElement("legend", null, "Reverb"), /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: draft.reverb.enabled, onChange: (e) => update({ reverb: { ...draft.reverb, enabled: e.target.checked } }) }), " On"), /* @__PURE__ */ React.createElement("label", null, "Decay ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.reverb.decay * 100), "%"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} reverb decay`, type: "range", min: ".1", max: ".92", step: ".01", value: draft.reverb.decay, disabled: !draft.reverb.enabled, onChange: (e) => adjust({ reverb: { ...draft.reverb, decay: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit })), /* @__PURE__ */ React.createElement("label", null, "Mix ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.reverb.mix * 100), "%"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} reverb mix`, type: "range", min: "0", max: "1", step: ".01", value: draft.reverb.mix, disabled: !draft.reverb.enabled, onChange: (e) => adjust({ reverb: { ...draft.reverb, mix: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit }))), /* @__PURE__ */ React.createElement("fieldset", null, /* @__PURE__ */ React.createElement("legend", null, "Drive"), /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: draft.drive.enabled, onChange: (e) => update({ drive: { ...draft.drive, enabled: e.target.checked } }) }), " On"), /* @__PURE__ */ React.createElement("label", null, "Amount ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.drive.amount * 100), "%"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} drive amount`, type: "range", min: "0", max: "1", step: ".01", value: draft.drive.amount, disabled: !draft.drive.enabled, onChange: (e) => adjust({ drive: { ...draft.drive, amount: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit })))));
+  }
+
   // src/chopper/ChopperApp.tsx
   var ChopperApp = class extends React.Component {
     constructor(props) {
@@ -10751,7 +10653,8 @@ ${error.message}`);
         patterns: this.state.patterns,
         bindings: this.state.bindings,
         patternBindings: this.state.patternBindings,
-        patternId: this.state.patternId
+        patternId: this.state.patternId,
+        loopEffects: this.state.loopEffects
       });
       this.remember = () => {
         this.undo.push(this.snapshot());
@@ -10915,6 +10818,51 @@ ${error.message}`);
         );
       };
       this.report = (error) => this.setState({ message: error?.message || String(error), error: true });
+      this.updateLoopEffects = (settings) => {
+        try {
+          const checked = validateLoopEffects(settings), next = [...this.state.loopEffects];
+          this.remember();
+          next[this.state.slot] = checked;
+          this.setState({ loopEffects: next }, () => {
+            if (this.state.playing) this.audio.setEffects(this.state.slot, checked);
+          });
+        } catch (error) {
+          this.report(error);
+        }
+      };
+      this.addDrumMarker = (frame, kind) => {
+        const source = this.source;
+        if (!source || !Number.isSafeInteger(frame) || frame < 0 || frame >= source.frames) return;
+        const markers = source.drumMarkers ?? [];
+        if (markers.some((m) => m.frame === frame && m.kind === kind)) {
+          this.setState({ message: kind + " marker already exists at this position.", error: false });
+          return;
+        }
+        if (markers.length >= 4096) return this.report(Error("A source supports at most 4096 drum markers."));
+        this.remember();
+        const marker = { id: crypto.randomUUID(), frame, kind };
+        this.setState({
+          sources: this.state.sources.map(
+            (item) => item.id === source.id ? { ...item, drumMarkers: [...markers, marker].sort((a, b) => a.frame - b.frame) } : item
+          ),
+          cue: null,
+          armed: false,
+          message: "Added " + kind + " marker at " + (frame / source.sampleRate).toFixed(3) + " s. It does not change the Chopper cue grid.",
+          error: false
+        });
+      };
+      this.removeDrumMarker = (id) => {
+        const source = this.source;
+        if (!source || !(source.drumMarkers ?? []).some((marker) => marker.id === id)) return;
+        this.remember();
+        this.setState({
+          sources: this.state.sources.map(
+            (item) => item.id === source.id ? { ...item, drumMarkers: (item.drumMarkers ?? []).filter((marker) => marker.id !== id) } : item
+          ),
+          message: "Drum marker removed. Chopper cues and patterns are unchanged.",
+          error: false
+        });
+      };
       this.plan = (pattern = this.pattern, source = this.source, patterns = this.state.patterns) => {
         if (!source) throw Error("Import a source first.");
         const plan = {
@@ -11105,7 +11053,7 @@ ${error.message}`);
             ) ?? this.pattern;
             const audio = audioLibrary.get(source.id);
             if (!audio) throw Error("Bound source audio unavailable.");
-            bindings[slot] = { plan: this.plan(pattern, source), buffer: audio };
+            bindings[slot] = { plan: this.plan(pattern, source), buffer: audio, effects: this.state.loopEffects[slot] };
           }
           if (this.state.mode === "A" && !bindings[0] || this.state.mode === "B" && !bindings[1])
             throw Error(
@@ -11356,6 +11304,13 @@ ${error.message}`);
               "Workspace format supports at most 64 sources / 128 patterns; current data preserved, not truncated."
             );
           const state = structuredClone(this.state), files = new Map(this.projectExtras), originals2 = new Map(audioLibrary.files), paths = /* @__PURE__ */ new Set();
+          let previousVersion = 4;
+          try {
+            previousVersion = JSON.parse(this.projectText)?.version ?? 4;
+          } catch {
+          }
+          const extendedData = state.sources.some((source) => (source.drumMarkers?.length ?? 0) > 0) || JSON.stringify(state.loopEffects) !== JSON.stringify([defaultLoopEffects(), defaultLoopEffects()]);
+          const projectVersion = extendedData || previousVersion >= 5 ? 5 : 4;
           if (state.legacy && !files.has(state.legacy.archivePath))
             throw Error("Original legacy archive missing; save cancelled.");
           files.set(
@@ -11363,8 +11318,9 @@ ${error.message}`);
             new TextEncoder().encode(
               mergeJson(this.projectText, {
                 format: "pentavox-chopper-project",
-                version: 4,
+                version: projectVersion,
                 slot: state.slot,
+                ...projectVersion >= 5 ? { loopEffects: state.loopEffects } : {},
                 bindings: state.bindings,
                 patternBindings: state.patternBindings,
                 mode: state.mode,
@@ -11442,6 +11398,7 @@ ${error.message}`);
           legacy: staged.document,
           legacyNotices: staged.notices,
           sources: staged.sources,
+          loopEffects: [defaultLoopEffects(), defaultLoopEffects()],
           sourceId: source?.id ?? "",
           bindings: [source?.id ?? "", ""],
           patterns: [base],
@@ -11491,7 +11448,8 @@ ${error.message}`);
               "bpm",
               "seed",
               "sequence",
-              "probability"
+              "probability",
+              "loopEffects"
             ].some((key) => this.state[key] !== before[key]))
               throw Error(
                 "Working project changed during import; staged import cancelled, current project preserved."
@@ -11522,7 +11480,10 @@ ${error.message}`);
               "Duplicate native project keys; current project preserved."
             );
           const paired = value.version >= 3;
-          if (value.format !== "pentavox-chopper-project" || ![1, 2, 3, 4].includes(value.version) || value.version >= 2 && (typeof value.sequence !== "boolean" || !Number.isFinite(value.probability) || value.probability < 0 || value.probability > 1) || !Array.isArray(value.sources) || value.sources.length > 64 || !Number.isFinite(value.bpm) || value.bpm < 20 || value.bpm > 400 || !Number.isInteger(value.seed) || value.seed < 0 || value.seed > 4294967295)
+          const loopEffects = value.loopEffects === void 0 ? [defaultLoopEffects(), defaultLoopEffects()] : Array.isArray(value.loopEffects) && value.loopEffects.length === 2 ? [validateLoopEffects(value.loopEffects[0]), validateLoopEffects(value.loopEffects[1])] : (() => {
+            throw Error("Invalid per-loop effects.");
+          })();
+          if (value.format !== "pentavox-chopper-project" || ![1, 2, 3, 4, 5].includes(value.version) || value.version >= 2 && (typeof value.sequence !== "boolean" || !Number.isFinite(value.probability) || value.probability < 0 || value.probability > 1) || !Array.isArray(value.sources) || value.sources.length > 64 || !Number.isFinite(value.bpm) || value.bpm < 20 || value.bpm > 400 || !Number.isInteger(value.seed) || value.seed < 0 || value.seed > 4294967295)
             throw Error("Invalid Chopper project.");
           parsePatterns(
             JSON.stringify({
@@ -11537,6 +11498,14 @@ ${error.message}`);
           for (const s of value.sources) {
             if (!s || typeof s.id !== "string" || ids.has(s.id) || typeof s.assetPath !== "string" || typeof s.name !== "string" || !Array.isArray(s.markers) || !Number.isInteger(s.frames) || s.frames < 1 || !Number.isFinite(s.sampleRate) || s.sampleRate < 1 || !Number.isInteger(s.channels) || s.channels < 1 || s.channels > 32 || !Number.isFinite(s.bpm) || s.bpm <= 0)
               throw Error("Invalid source.");
+            const markerIds = /* @__PURE__ */ new Set();
+            if (s.drumMarkers !== void 0 && (!Array.isArray(s.drumMarkers) || s.drumMarkers.length > 4096))
+              throw Error("Invalid drum marker layer.");
+            for (const marker of s.drumMarkers ?? []) {
+              if (!marker || typeof marker.id !== "string" || markerIds.has(marker.id) || !Number.isSafeInteger(marker.frame) || marker.frame < 0 || marker.frame >= s.frames || !["kick", "snare", "hat", "other"].includes(marker.kind))
+                throw Error("Invalid drum marker.");
+              markerIds.add(marker.id);
+            }
             if (!Number.isSafeInteger(s.frames) || !Number.isSafeInteger(s.sampleRate) || !safeArchivePath(s.assetPath) || s.assetPath === "chopper.json" || !s.id)
               throw Error("Invalid native source provenance/path.");
             decodedBudget += s.frames * s.channels * 4;
@@ -11596,7 +11565,7 @@ ${error.message}`);
                 });
             }
           let legacy = null, legacyNotices = [], legacyFiles = /* @__PURE__ */ new Map(), legacyBuffers = /* @__PURE__ */ new Map();
-          if (value.version === 4 && value.legacy !== null && value.legacy !== void 0) {
+          if (value.version >= 4 && value.legacy !== null && value.legacy !== void 0) {
             const attachment = value.legacy;
             if (attachment.version !== 1 || typeof attachment.documentText !== "string" || typeof attachment.archivePath !== "string" || !safeArchivePath(attachment.archivePath) || attachment.archivePath === "chopper.json" || value.sources.some(
               (source) => source.assetPath === attachment.archivePath
@@ -11691,6 +11660,7 @@ ${error.message}`);
             legacy,
             legacyNotices,
             sources: value.sources,
+            loopEffects,
             sourceId: value.sourceId,
             patterns: value.patterns,
             patternId: value.patternId,
@@ -11716,7 +11686,7 @@ ${error.message}`);
         const from = redo ? this.redo : this.undo, to = redo ? this.undo : this.redo, snapshot = from[from.length - 1];
         if (!snapshot) return;
         try {
-          const { patterns, bindings, sources, legacy } = snapshot, patternBindings = snapshot.patternBindings.map(
+          const { patterns, bindings, sources, legacy, loopEffects } = snapshot, patternBindings = snapshot.patternBindings.map(
             (id) => patterns.some((p) => p.id === id) ? id : patterns[0].id
           );
           const selected = patterns.find((p) => p.id === patternBindings[this.state.slot]) ?? patterns[0], source = sources.find((s) => s.id === bindings[this.state.slot]);
@@ -11737,6 +11707,11 @@ ${error.message}`);
               };
             });
             this.audio.publishMany(entries);
+            if (typeof this.audio.setEffects === "function") {
+              const restored = loopEffects ?? [defaultLoopEffects(), defaultLoopEffects()];
+              this.audio.setEffects(0, restored[0]);
+              this.audio.setEffects(1, restored[1]);
+            }
           }
           from.pop();
           to.push(this.snapshot());
@@ -11744,6 +11719,7 @@ ${error.message}`);
           this.setState({
             sources,
             legacy,
+            loopEffects,
             patterns,
             bindings,
             patternBindings,
@@ -11810,6 +11786,9 @@ ${error.message}`);
         sourceBpm: "174",
         bars: "1",
         transients: false,
+        markerKind: null,
+        markerVisibility: { kick: true, snare: true, hat: true, other: true },
+        loopEffects: [defaultLoopEffects(), defaultLoopEffects()],
         compatibility: false,
         legacy: null,
         legacyNotices: []
@@ -12132,7 +12111,7 @@ ${error.message}`);
             /* @__PURE__ */ React.createElement("span", null, boundPattern?.name ?? "No pattern", " \xB7 ", boundPattern?.events.length ?? 0, " events"),
             /* @__PURE__ */ React.createElement("small", null, slot === s.slot ? "Editing" : audible ? "Audible" : bound ? "Ready" : "Empty", audible ? " \xB7 playing" : "")
           );
-        }), /* @__PURE__ */ React.createElement("p", null, "Choose a loop to edit. Set Listen to Both to play A and B together.")), s.legacy && /* @__PURE__ */ React.createElement(
+        }), /* @__PURE__ */ React.createElement("p", null, "Choose a loop to edit. Set Listen to Both to play A and B together.")), /* @__PURE__ */ React.createElement(LoopEffectsPanel, { slot: s.slot, value: s.loopEffects[s.slot], onChange: this.updateLoopEffects }), s.legacy && /* @__PURE__ */ React.createElement(
           LegacyArrangement,
           {
             document: s.legacy,
@@ -12197,17 +12176,34 @@ ${error.message}`);
             selected: s.cue,
             playingCue: s.playingCue ?? (s.playing && s.activeSourceId === source.id ? s.sourceCue : null),
             transients: s.transients,
+            markerKind: s.markerKind,
+            markerVisibility: s.markerVisibility,
+            onMarkerAdd: this.addDrumMarker,
+            onMarkerRemove: this.removeDrumMarker,
             onCue: this.audition,
-            onArm: (cue) => this.setState({ cue })
+            onArm: (cue) => {
+              this.legacyPreviewGeneration++;
+              this.audio.cancelPreview();
+              if (this.state.cue !== cue) this.setState({ cue });
+            }
           }
-        ), /* @__PURE__ */ React.createElement("div", { className: "ch-context" }, /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement(
+        ), /* @__PURE__ */ React.createElement("div", { className: "ch-context ch-analysis" }, /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement(
           "input",
           {
             type: "checkbox",
             checked: s.transients,
             onChange: (e) => this.setState({ transients: e.target.checked })
           }
-        ), " ", "Transient layer (independent)"), /* @__PURE__ */ React.createElement("span", null, s.cue === null ? "Select a cue" : `Selected physical cue ${s.cue + 1}`), s.armed && s.cue !== null && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("span", null, "Place", " ", s.placementMode === "relative" ? `REL ${s.cue % pattern.beats + 1}` : `ABS ${s.cue + 1}`, " ", "\u2192 source cue", " ", s.placementMode === "absolute" ? s.cue + 1 : resolveCue(
+        ), " ", "Transients"), /* @__PURE__ */ React.createElement("div", { className: "ch-marker-controls", "aria-label": "Independent drum marker layers" }, ["kick", "snare", "hat", "other"].map((kind) => /* @__PURE__ */ React.createElement("label", { key: kind, className: "ch-marker-toggle", "data-kind": kind }, /* @__PURE__ */ React.createElement(
+          "input",
+          {
+            type: "checkbox",
+            checked: s.markerVisibility[kind],
+            onChange: (e) => this.setState({
+              markerVisibility: { ...s.markerVisibility, [kind]: e.target.checked }
+            })
+          }
+        ), " ", kind[0].toUpperCase() + kind.slice(1))), /* @__PURE__ */ React.createElement("label", null, "Place", /* @__PURE__ */ React.createElement("select", { "aria-label": "Drum marker tool", value: s.markerKind ?? "", onChange: (e) => this.setState({ markerKind: e.target.value ? e.target.value : null, cue: null, armed: false }) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Off \xB7 audition cues"), /* @__PURE__ */ React.createElement("option", { value: "kick" }, "Kick"), /* @__PURE__ */ React.createElement("option", { value: "snare" }, "Snare"), /* @__PURE__ */ React.createElement("option", { value: "hat" }, "Hat"), /* @__PURE__ */ React.createElement("option", { value: "other" }, "Other"))), s.markerKind && /* @__PURE__ */ React.createElement("small", null, "Click waveform to add ", s.markerKind, "; click a marker to remove it. Cue grid stays independent.")), /* @__PURE__ */ React.createElement("span", null, s.cue === null ? "Select a cue" : `Selected physical cue ${s.cue + 1}`), s.armed && s.cue !== null && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("span", null, "Place", " ", s.placementMode === "relative" ? `REL ${s.cue % pattern.beats + 1}` : `ABS ${s.cue + 1}`, " ", "\u2192 source cue", " ", s.placementMode === "absolute" ? s.cue + 1 : resolveCue(
           s.cue % pattern.beats,
           "relative",
           s.beat,
