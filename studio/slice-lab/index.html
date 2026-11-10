@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 204542)
-Total output lines: 12782
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5292,7 +5289,393 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     } else if (kind === "stutter332") {
       clear(8);
       const srcs = [v.K.next(), v.S.next(), v.H.next()];
-      [[8, 3], [11, 3], [14, 2]].forEach(([s, len], i) => bar.set(s, ev(s, { src: srcs[i], len, reps: len === 3 ? rng.pick([1, 3]) : 2, roll: ROLL.EVEN,…4542 tokens truncated…Steps) for (const s of snares) {
+      [[8, 3], [11, 3], [14, 2]].forEach(([s, len], i) => bar.set(s, ev(s, { src: srcs[i], len, reps: len === 3 ? rng.pick([1, 3]) : 2, roll: ROLL.EVEN, amp0: 1, amp1: 0.7 })));
+    }
+  }
+  function pickFill(groove2, rng, density) {
+    return rng.weighted(groove2.fills.map((f) => f[0]), groove2.fills.map((f) => f[1] * (0.4 + density)));
+  }
+  function groove(kind, ctx, rng, h) {
+    const g = GROOVES[kind];
+    const bars = Math.max(1, ctx.steps >> 4);
+    const v = voices(ctx, rng, h);
+    const density = clamp01(ctx.density);
+    let bar = buildBar(ctx, rng, v, g, density);
+    const events = [];
+    const fillChance = density === 0 ? 0 : bars === 1 ? 0.5 * density : 0.35 + 0.6 * density;
+    for (let b = 0; b < bars; b += 1) {
+      if (b > 0 && density > 0) bar = mutate(ctx, rng, v, g, density, bar);
+      const out = new Map([...bar].map(([k, e]) => [k, { ...e }]));
+      const last = b === bars - 1;
+      const mid = bars >= 4 && b === (bars >> 1) - 1;
+      if (last && rng.chance(fillChance) || mid && rng.chance(fillChance * 0.4)) applyFill(pickFill(g, rng, density), ctx, rng, v, out, density);
+      for (const e of out.values()) events.push({ ...e, step: e.step + b * 16 });
+    }
+    events.sort((a, b) => a.step - b.step);
+    return events;
+  }
+  var GROUPINGS = [[3, 3, 2, 3, 3, 2], [3, 3, 3, 3, 2, 2], [5, 3, 5, 3], [4, 4, 3, 3, 2], [2, 3, 3, 2, 3, 3], [5, 5, 3, 3], [3, 2, 3, 2, 3, 3]];
+  function idm(ctx, rng, h) {
+    const v = voices(ctx, rng, h);
+    const density = clamp01(ctx.density);
+    const events = [];
+    const bars = Math.max(1, ctx.steps >> 4);
+    const grouping = rng.pick(GROUPINGS);
+    const free = h.candidates(ctx);
+    const bag = h.makeBag(rng, free.length ? free : ctx.sliceStarts.map((_, i) => i));
+    for (let b = 0; b < bars; b += 1) {
+      const rot = b % grouping.length;
+      const groups = grouping.slice(rot).concat(grouping.slice(0, rot));
+      let at = 0;
+      let total = 0;
+      const bar = [];
+      for (const len of groups) {
+        if (total + len > 16) {
+          bar.push(16 - total);
+          total = 16;
+          break;
+        }
+        bar.push(len);
+        total += len;
+      }
+      if (total < 16) bar.push(16 - total);
+      at = 0;
+      bar.forEach((len, i) => {
+        const step = b * 16 + at;
+        at += len;
+        const covers = (s) => at - len <= s && s < at;
+        const role = i === 0 ? "K" : covers(4) || covers(12) ? "S" : null;
+        const src = role ? v[role].list.length ? rng.chance(0.7) ? v[role].main : v[role].next() : HOME : bag();
+        const repeats = len >= 3 && rng.chance(0.15 + 0.7 * density);
+        events.push(ev(step, {
+          src,
+          len,
+          reps: repeats ? rng.pick(len >= 5 ? [3, 4] : [2, 3]) : 1,
+          roll: repeats ? rng.pick([ROLL.EVEN, ROLL.ACCEL, ROLL.RITARD]) : ROLL.EVEN,
+          amp0: role ? 1 : 0.75 + 0.25 * rng.next(),
+          amp1: repeats ? 0.35 + 0.3 * rng.next() : 1,
+          pitch1: repeats && rng.chance(0.3 * density) ? rng.pick([-5, 5, 7, 12]) : 0
+        }));
+      });
+    }
+    if (density > 0 && rng.chance(0.4 + 0.5 * density)) {
+      const at = ctx.steps - 4;
+      const keep = events.filter((e) => e.step < at);
+      const tail = events.filter((e) => e.step < at && e.step + e.len > at).pop();
+      if (tail) tail.len = at - tail.step;
+      keep.push(ev(at, { src: v.S.main, len: 4, reps: 8, roll: rng.pick([ROLL.ACCEL, ROLL.RITARD]), amp0: 0.4, amp1: 1, pitch1: rng.pick([0, 5, 7]) }));
+      return keep;
+    }
+    return events;
+  }
+
+  // ../../studio/model/break_embed.js
+  init_break_engine();
+  var clamp012 = (v) => Math.min(1, Math.max(0, Number(v) || 0));
+  var ev2 = (step, over) => ({ ...defaultEvent(step), ...over });
+  var roleOf = (label) => /kick/.test(label ?? "") ? "K" : /snare/.test(label ?? "") ? "S" : /hat/.test(label ?? "") ? "H" : "O";
+  function ornamentCount(ctx) {
+    if (ctx.count != null) return Math.max(0, Math.min(ctx.steps, Math.trunc(Number(ctx.count)) || 0));
+    return Math.round(clamp012(ctx.density) * ctx.steps / 3);
+  }
+  function fileHits(ctx) {
+    const hits = /* @__PURE__ */ new Map();
+    ctx.sliceStarts.forEach((start, i) => hits.set((Math.round(start) % ctx.fileSteps + ctx.fileSteps) % ctx.fileSteps, roleOf(ctx.labels?.[i])));
+    return hits;
+  }
+  function barFactor(bar, bars) {
+    if (bars === 1) return 1;
+    if (bars === 2) return bar === 1 ? 1.6 : 0.7;
+    const g = bar % 4;
+    return g === 3 ? 2 : g === 1 ? 1.2 : g === 0 ? 0.5 : 1;
+  }
+  function placePool(kind, ctx, hits) {
+    const slots = (GROOVES[kind] ?? GROOVES.breakcore).slots;
+    const bars = ctx.steps / 16;
+    const pool = [];
+    for (let bar = 0; bar < bars; bar += 1) {
+      const base = bar * 16;
+      const weight = /* @__PURE__ */ new Map();
+      const add = (step, w) => {
+        if (step >= base && step < base + 16 && !hits.has(step % ctx.fileSteps)) weight.set(step, (weight.get(step) ?? 0.6) + w);
+      };
+      for (let step = base; step < base + 16; step += 1) if (!hits.has(step % ctx.fileSteps)) weight.set(step, 0.6);
+      for (const [slot, role] of slots) if (role === "G" || role === "H") add(base + slot, 4);
+      for (let step = base; step < base + 16; step += 1) {
+        if (hits.get((step + 1) % ctx.fileSteps) === "S") add(step, 6);
+        if (hits.get((step + 2) % ctx.fileSteps) === "S") add(step, 3);
+        if (step % 4 === 3) add(step, 2);
+        if (step % 8 === 5) add(step, 2);
+        if (step % 2 === 0 && hits.get((step - 2 + ctx.fileSteps) % ctx.fileSteps) === "K") add(step, 1);
+      }
+      add(base + 15, 3);
+      for (const [step, w] of weight) pool.push({ step, weight: w * barFactor(bar, bars) });
+    }
+    return pool;
+  }
+  function sourceChoices(ctx, v) {
+    const have = { K: false, S: false, H: false };
+    for (const label of ctx.labels ?? []) {
+      const role = roleOf(label);
+      if (role in have) have[role] = true;
+    }
+    const unlabelled = !ctx.labels?.length && ctx.sliceStarts.length > 0;
+    return {
+      kick: have.K ? () => v.K.next() : null,
+      snare: have.S ? () => v.G.next() : null,
+      hat: have.H || unlabelled ? () => v.H.next() : null
+    };
+  }
+  function make(kind, step, room, last, sources, rng) {
+    if (kind === "snare") {
+      const amp = 0.3 + 0.15 * rng.next();
+      return ev2(step, { src: sources.snare(), len: 1, amp0: amp, amp1: amp });
+    }
+    if (kind === "hat") {
+      const amp = 0.5 + 0.2 * rng.next();
+      return ev2(step, { src: sources.hat(), len: 1, amp0: amp, amp1: amp });
+    }
+    if (kind === "kick") return ev2(step, { src: sources.kick(), len: 1, amp0: 0.35, amp1: 0.35 });
+    if (kind === "roll") return ev2(step, { src: sources.snare(), len: 1, reps: rng.pick([3, 4]), roll: ROLL.ACCEL, amp0: 0.45, amp1: 0.85 });
+    if (kind === "reverse") return ev2(step, { src: (sources.snare ?? sources.hat)(), len: Math.min(2, room), rev: true, amp0: 0.8, amp1: 0.8 });
+    return ev2(step, { src: CONTINUE, len: Math.min(room, rng.pick([1, 2])), gate: false });
+  }
+  function kindsFor(sources, local, last, dense) {
+    const kinds = [];
+    const offer = (kind, weight, yes) => {
+      if (yes) kinds.push([kind, weight]);
+    };
+    offer("snare", 4, Boolean(sources.snare));
+    offer("hat", 4, Boolean(sources.hat));
+    offer("kick", 2, Boolean(sources.kick));
+    offer("roll", 3, Boolean(sources.snare) && local >= 6);
+    offer("reverse", 3, last && local >= 13 && Boolean(sources.snare || sources.hat));
+    offer("dropout", 2, dense && local >= 10);
+    return kinds;
+  }
+  function embed(kind, ctx, rng, helpers2) {
+    const count = ornamentCount(ctx);
+    if (count <= 0 || !ctx.steps || !ctx.fileSteps || !ctx.sliceStarts?.length) return [];
+    const hits = fileHits(ctx);
+    const v = voices(ctx, rng, helpers2);
+    const sources = sourceChoices(ctx, v);
+    if (!sources.snare && !sources.hat && !sources.kick) return [];
+    const steps = ctx.steps;
+    const bars = steps / 16;
+    const dense = count > steps * 0.2;
+    const pool = placePool(kind, ctx, hits);
+    const taken = /* @__PURE__ */ new Set();
+    const chosen = /* @__PURE__ */ new Map();
+    const recent = [];
+    const room = (step) => {
+      let n = 1;
+      while (step + n < steps && !hits.has((step + n) % ctx.fileSteps) && !taken.has(step + n) && n < 2) n += 1;
+      return n;
+    };
+    const place = (e) => {
+      chosen.set(e.step, e);
+      for (let s = e.step; s < e.step + e.len; s += 1) taken.add(s);
+    };
+    const neighbours = (step) => [step - 16, step + 16].some((s) => chosen.has(s));
+    let guard = 0;
+    while (chosen.size < count && guard++ < steps * 8) {
+      const open = pool.filter((p) => !taken.has(p.step));
+      if (!open.length) break;
+      const pick = rng.weighted(open, open.map((p) => p.weight * (neighbours(p.step) ? 0.15 : 1)));
+      const bar = Math.floor(pick.step / 16);
+      const local = pick.step % 16;
+      const offers = kindsFor(sources, local, bar === bars - 1, dense);
+      if (!offers.length) {
+        pool.splice(pool.indexOf(pick), 1);
+        continue;
+      }
+      const choice = rng.weighted(offers.map((o) => o[0]), offers.map(([k, w]) => recent.length === 2 && recent[0] === k && recent[1] === k ? w * 0.2 : w));
+      const e = make(choice, pick.step, room(pick.step), bar === bars - 1, sources, rng);
+      place(e);
+      recent.push(choice);
+      if (recent.length > 2) recent.shift();
+      const answer = pick.step + 32;
+      if (bars >= 4 && chosen.size < count && choice !== "dropout" && answer < steps && !taken.has(answer) && !hits.has(answer % ctx.fileSteps) && rng.chance(0.3)) {
+        place(make(choice, answer, room(answer), answer >= (bars - 1) * 16, sources, rng));
+      }
+    }
+    const events = new Map(chosen);
+    for (const e of chosen.values()) {
+      const end = e.step + e.len;
+      if (end < steps && !events.has(end)) events.set(end, ev2(end, { src: HOME, len: 1 }));
+    }
+    return [...events.values()].sort((a, b) => a.step - b.step);
+  }
+
+  // ../../studio/model/break_repeat.js
+  init_break_engine();
+  var ev3 = (step, over) => ({ ...defaultEvent(step), ...over });
+  var roleOf2 = (label) => /kick/.test(label ?? "") ? "K" : /snare/.test(label ?? "") ? "S" : /hat/.test(label ?? "") ? "H" : "O";
+  var SHAPES = [[1, 2], [1, 4], [2, 2], [2, 4], [3, 3], [4, 4], [4, 8], [2, 8]];
+  var LONG_AT_END = /* @__PURE__ */ new Set([[4, 4].join(), [4, 8].join(), [2, 8].join()]);
+  function sliceAt(sliceStarts, pos) {
+    let best = 0;
+    sliceStarts.forEach((s, i) => {
+      if (s <= pos + 1e-6) best = i;
+    });
+    return best;
+  }
+  function beatRepeat(pattern, ctx, { count = 2, seed = 1 } = {}) {
+    const p = normalizePattern(pattern);
+    const n = Math.max(0, Math.min(p.steps, Math.trunc(Number(count)) || 0));
+    if (n === 0 || !ctx.sliceStarts?.length || !ctx.fileSteps) return p;
+    const rng = makeRng(seed);
+    const steps = p.steps;
+    const bars = steps / 16;
+    const labels = ctx.labels ?? [];
+    const hitAt = /* @__PURE__ */ new Map();
+    ctx.sliceStarts.forEach((s, i) => hitAt.set((Math.round(s) % ctx.fileSteps + ctx.fileSteps) % ctx.fileSteps, roleOf2(labels[i])));
+    const byStep = new Map(p.events.map((e) => [e.step, { ...e }]));
+    const heavy = (step) => hitAt.get(step % ctx.fileSteps) === "K" || hitAt.get(step % ctx.fileSteps) === "S" || byStep.has(step) && byStep.get(step).src >= 0 && /K|S/.test(roleOf2(labels[byStep.get(step).src])) && byStep.get(step).amp0 > 0.6;
+    const { grains } = renderPattern(p, { sliceStarts: ctx.sliceStarts, fileSteps: ctx.fileSteps, head: 0 });
+    const soundingAt = (step) => grains.find((g) => g.t <= step + 1e-9 && step < g.t + g.dur - 1e-9) ?? grains[grains.length - 1];
+    const weight = (step) => {
+      const local = step % 16;
+      const bar = Math.floor(step / 16);
+      const g = bar % 4;
+      let w = 0.4;
+      if (local === 15 || local === 14) w += 4;
+      else if (local === 7 || local === 11) w += 2.5;
+      else if (local % 4 === 3) w += 1.5;
+      if (hitAt.get((step + 1) % ctx.fileSteps) === "S") w += 3;
+      const f = bars >= 4 ? g === 3 ? 2 : g === 1 ? 1.2 : g === 0 ? 0.5 : 1 : bars === 2 ? bar === 1 ? 1.5 : 0.7 : 1;
+      return w * f;
+    };
+    const taken = /* @__PURE__ */ new Set();
+    const chosen = [];
+    const free = (step) => step < steps && !taken.has(step) && !heavy(step);
+    let guard = 0;
+    while (chosen.length < n && guard++ < steps * 6) {
+      const open = Array.from({ length: steps }, (_, i) => i).filter(free);
+      if (!open.length) break;
+      const step = rng.weighted(open, open.map((s) => weight(s) * ([s - 16, s + 16].some((x) => chosen.some((c) => c.step === x)) ? 0.2 : 1)));
+      const local = step % 16;
+      const atEnd = local >= 12;
+      const last = Math.floor(step / 16) === bars - 1;
+      const fits = SHAPES.filter(([len2]) => {
+        for (let s = step; s < step + len2; s += 1) if (s >= steps || taken.has(s) || s > step && heavy(s)) return false;
+        return true;
+      });
+      if (!fits.length) {
+        taken.add(step);
+        continue;
+      }
+      const [len, reps] = rng.weighted(fits, fits.map((sh) => LONG_AT_END.has(sh.join()) ? atEnd ? 3 : 0.5 : atEnd ? 1 : 2.5));
+      const roll = rng.pick([ROLL.EVEN, ROLL.ACCEL, ROLL.RITARD]);
+      const build = last && atEnd && rng.chance(0.3);
+      const amp0 = build ? 0.4 : 1;
+      const amp1 = build ? 1 : 0.25 + 0.35 * rng.next();
+      let pitch1 = 0;
+      if (!build && rng.chance(0.2)) pitch1 = rng.pick([-5, -7, -12]);
+      else if (last && atEnd && rng.chance(0.4)) pitch1 = rng.pick([7, 12]);
+      const sounding = soundingAt(step);
+      const src = sliceAt(ctx.sliceStarts, (sounding.src % ctx.fileSteps + ctx.fileSteps) % ctx.fileSteps);
+      chosen.push({ step, len, reps, roll, amp0, amp1, pitch1, src, rev: rng.chance(0.1), stop: rng.chance(0.1) });
+      for (let s = step; s < step + len + 1; s += 1) taken.add(s);
+    }
+    for (const c of chosen) {
+      for (let s = c.step; s < c.step + c.len; s += 1) if (s > c.step) byStep.delete(s);
+      byStep.set(c.step, ev3(c.step, { src: c.src, len: c.len, reps: c.reps, roll: c.roll, amp0: c.amp0, amp1: c.amp1, pitch1: c.pitch1, rev: c.rev }));
+      const end = c.step + c.len;
+      if (end < steps) {
+        if (c.stop && !heavy(end)) byStep.set(end, ev3(end, { src: CONTINUE, len: 1, gate: false }));
+        else if (!byStep.has(end)) byStep.set(end, ev3(end, { src: HOME, len: 1 }));
+      }
+    }
+    return normalizePattern({ steps, events: [...byStep.values()] });
+  }
+
+  // ../../studio/model/break_generators.js
+  var GENERATORS = ["jungle", "dnb", "halftime", "funk", "breakcore", "idm", "cutproc", "warp", "squarepusher", "campanology", "recursive", "euclid"];
+  function makeRng(seed) {
+    let a = Math.trunc(seed) >>> 0 || 1;
+    const next = () => {
+      a = a + 1831565813 >>> 0;
+      let t = a;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+    const rng = { next, int: (n) => Math.floor(next() * n), chance: (p) => next() < p, pick: (list) => list[Math.floor(next() * list.length)] };
+    rng.weighted = (items, weights) => {
+      let r = next() * weights.reduce((x, y) => x + y, 0);
+      for (let i = 0; i < items.length; i += 1) {
+        r -= weights[i];
+        if (r < 0) return items[i];
+      }
+      return items[items.length - 1];
+    };
+    return rng;
+  }
+  var isAnchor = (label) => /kick|snare/.test(label ?? "");
+  var ev4 = (step, over) => ({ ...defaultEvent(step), ...over });
+  function sliceAt2(ctx, step) {
+    const pos = step % ctx.fileSteps;
+    return ctx.sliceStarts.findIndex((s) => Math.round(s) === pos);
+  }
+  function makeBag(rng, items) {
+    let bag = [];
+    let last = -1;
+    return () => {
+      if (!items.length) return CONTINUE;
+      if (!bag.length) bag = items.slice().sort(() => rng.next() - 0.5);
+      let i = bag.findIndex((x) => x !== last);
+      if (i < 0) i = 0;
+      last = bag.splice(i, 1)[0];
+      return last;
+    };
+  }
+  function protectAnchors(pattern, ctx) {
+    const events = pattern.events.slice();
+    let off = false;
+    for (let step = 0; step < pattern.steps; step += 1) {
+      const at = events.findIndex((e) => e.step === step);
+      const k = sliceAt2(ctx, step);
+      const anchor = k >= 0 && isAnchor(ctx.labels?.[k]);
+      if (anchor && (at >= 0 || off)) {
+        const spanEnd = Math.round(ctx.sliceStarts[k + 1] ?? ctx.fileSteps);
+        const keep = at >= 0 && (events[at].src === k || events[at].src === HOME) ? events[at] : null;
+        const e = keep ?? ev4(step, { src: k, len: Math.max(1, Math.min(spanEnd - step, 4)) });
+        if (at >= 0) events[at] = e;
+        else events.push(e);
+        off = false;
+      } else if (at >= 0) {
+        const e = events[at];
+        if (e.src !== HOME || e.rev) off = true;
+      }
+    }
+    return normalizePattern({ steps: pattern.steps, events });
+  }
+  function candidates(ctx) {
+    const all = ctx.sliceStarts.map((_, i) => i);
+    const free = all.filter((i) => !isAnchor(ctx.labels?.[i]));
+    return free.length >= 2 ? free : all;
+  }
+  function cutproc(ctx, rng) {
+    const events = [];
+    const pick = makeBag(rng, candidates(ctx));
+    const energy = [0, 0.3, 0, 0.5, 0.7, 0.8, 0.9, 0.6];
+    const fill = ctx.steps >= 8 && rng.chance(0.9 * ctx.density);
+    const limit = fill ? ctx.steps - 4 : ctx.steps;
+    let step = 0;
+    while (step < limit) {
+      const len = Math.min(limit - step, rng.weighted([1, 2, 3, 4], [2, 4, 1.5, 2]));
+      const jump = rng.chance(ctx.density * (0.35 + 0.65 * energy[step % 16 >> 1]));
+      if (jump) events.push(ev4(step, { src: pick(), len }));
+      else if (rng.chance(0.12 * ctx.density)) events.push(ev4(step, { src: CONTINUE, len, rev: true }));
+      step += len;
+    }
+    if (fill) {
+      const reps = rng.pick([4, 4, 6, 8]);
+      events.push(ev4(limit, { src: rng.chance(0.5) ? HOME : pick(), len: 4, reps, roll: rng.pick([ROLL.EVEN, ROLL.ACCEL, ROLL.ACCEL]), amp0: 1, amp1: 0.5 + 0.5 * rng.next(), pitch1: rng.chance(0.6) ? rng.pick([3, 5, 7]) : 0 }));
+    }
+    const snares = ctx.sliceStarts.map((s, i) => /snare/.test(ctx.labels?.[i] ?? "") ? Math.round(s) : -1).filter((s) => s >= 0);
+    for (let bar = 0; bar < ctx.steps; bar += ctx.fileSteps) for (const s of snares) {
       const at = bar + s - 1;
       if (at < 0 || at >= ctx.steps || events.some((e) => at >= e.step && at < e.step + e.len)) continue;
       if (rng.chance(0.55 * ctx.density)) events.push(ev4(at, { src: HOME, len: 1, amp0: 0.4, amp1: 0.4 }));
