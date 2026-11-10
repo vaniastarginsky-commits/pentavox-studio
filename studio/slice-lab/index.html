@@ -171,13 +171,14 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 
 /* Chopper bench tokens: approved specialist design, native offline type fallback. */
 .ch-workspace {
-  --ch-canvas: #18232d;
-  --ch-surface: #243440;
-  --ch-line: #637785;
-  --ch-ink: #edf3f5;
-  --ch-focus: #c7b7ff;
-  --ch-pending: #f2c078;
-  --ch-muted: #b7c9d3;
+  --ch-canvas: #14212b;
+  --ch-surface: #1b2c39;
+  --ch-line: #2b3e4c;
+  --ch-ink: #f2f5fa;
+  --ch-focus: #c4b2ff;
+  --ch-pending: #f0aa53;
+  --ch-muted: #b5c6d3;
+  --ch-waveform: #a7cedd;
   display: grid;
   grid-template-columns: 216px minmax(0, 1fr) 250px;
   grid-template-rows: auto 1fr auto;
@@ -222,10 +223,10 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-workspace select,
 .ch-return {
   font: inherit;
-  border: 1px solid var(--ch-line, #637785);
+  border: 1px solid var(--ch-line, #2b3e4c);
   border-radius: 4px;
-  background: var(--ch-surface, #243440);
-  color: var(--ch-ink, #edf3f5);
+  background: var(--ch-surface, #1b2c39);
+  color: var(--ch-ink, #f2f5fa);
   min-height: 36px;
   padding: 6px 10px;
 }
@@ -281,7 +282,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 .ch-transport .ch-play {
   background: var(--ch-focus);
-  color: #18232d;
+  color: #14212b;
   min-width: 72px;
   font-weight: 650;
 }
@@ -379,7 +380,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-wave {
   height: 230px;
   position: relative;
-  background: #20313e;
+  background: #1b2c39;
 }
 .ch-wave canvas {
   display: block;
@@ -397,7 +398,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   min-width: 0;
   border-radius: 0;
   border-width: 0 1px 0 0;
-  border-color: #63778580;
+  border-color: #2b3e4c80;
   background: transparent;
   position: relative;
   padding: 0;
@@ -411,19 +412,19 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   color: var(--ch-muted);
 }
 .ch-cues button.selected {
-  background: #c7b7ff22;
+  background: #c4b2ff22;
   outline: 2px solid var(--ch-focus);
   outline-offset: -2px;
 }
 .ch-cues button.sounding {
-  background: #edf3f530;
+  background: #f2f5fa30;
   border-left: 3px solid white;
 }
 .ch-transient {
   position: absolute;
   top: 36px;
   bottom: 10px;
-  border-left: 1px dashed #f2c078;
+  border-left: 1px dashed #f0aa53;
   pointer-events: none;
 }
 .ch-hint {
@@ -454,8 +455,8 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
     to right,
     transparent 0,
     transparent calc(var(--step) - 1px),
-    #63778555 calc(var(--step) - 1px),
-    #63778555 var(--step)
+    #2b3e4c55 calc(var(--step) - 1px),
+    #2b3e4c55 var(--step)
   );
   touch-action: pan-x pan-y;
 }
@@ -477,7 +478,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   left: 0;
   right: 0;
   height: 32px;
-  background: #425963;
+  background: #2b3e4c;
   color: var(--ch-ink);
   padding: 6px 10px;
   pointer-events: none;
@@ -492,7 +493,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   align-items: flex-start;
   justify-content: center;
   overflow: hidden;
-  background: #425365;
+  background: #2b3e4c;
   border: 1px solid var(--ch-focus);
   border-radius: 2px;
   padding: 8px 6px;
@@ -504,9 +505,9 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   position: absolute;
   top: 76px;
   height: 136px;
-  border: 1px solid #edf3f5;
-  background: #18232d88;
-  color: #edf3f5;
+  border: 1px solid #f2f5fa;
+  background: #14212b88;
+  color: #f2f5fa;
   font-size: 10px;
   pointer-events: none;
   overflow: hidden;
@@ -540,7 +541,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #18232d88;
+  background: #14212b88;
   cursor: ew-resize;
   touch-action: none;
 }
@@ -811,7 +812,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   position: relative;
   margin: 0 20px 12px;
   overflow: hidden;
-  background: #20313e;
+  background: #1b2c39;
 }
 .ch-source-overview canvas {
   display: block;
@@ -823,7 +824,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   top: 0;
   bottom: 0;
   border: 1px solid var(--ch-focus);
-  background: #c7b7ff22;
+  background: #c4b2ff22;
   pointer-events: none;
 }
 .ch-source-overview b {
@@ -873,7 +874,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-audible-strip i {
   position: absolute;
   height: 100%;
-  background: #637785;
+  background: #2b3e4c;
   min-width: 2px;
 }
 .ch-audible-strip b {
@@ -1272,7 +1273,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   top: 0;
   bottom: 0;
   border: 2px solid var(--ch-focus);
-  background: #c7b7ff22;
+  background: #c4b2ff22;
 }
 .ch-legacy-wave b {
   position: absolute;
@@ -1376,6 +1377,257 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 @media (prefers-reduced-motion: reduce) {
   .ch-workspace * {
     scroll-behavior: auto;
+  }
+}
+
+
+/* Product polish: clearer hierarchy, mobile controls, and no floating inspector. */
+.ch-wave,
+.ch-source-overview {
+  background: var(--ch-surface);
+}
+.ch-region-title h2 {
+  font-size: 18px;
+}
+.ch-region-title span,
+.ch-region-title label,
+.ch-context,
+.ch-hint,
+.ch-pattern-controls label,
+.ch-ruler span,
+.ch-base,
+.ch-clocks,
+.ch-inspector label,
+.ch-inspector-body label,
+.ch-boundary {
+  font-size: 14px;
+}
+.ch-ruler span,
+.ch-cues button span {
+  font-size: 13px;
+  color: var(--ch-muted);
+}
+.ch-library p,
+.ch-inspector p {
+  font-size: 14px;
+  line-height: 1.45;
+}
+.ch-event strong {
+  font-size: 16px;
+}
+.ch-event small {
+  font-size: 12px;
+}
+.ch-transport .ch-operation-feedback {
+  font-size: 14px;
+}
+.ch-library > button[title*="REL/ABS cannot be encoded"] + p {
+  display: block;
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px solid var(--ch-pending);
+  border-left: 4px solid var(--ch-pending);
+  border-radius: 4px;
+  background: #f0aa5318;
+  color: var(--ch-ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.ch-library > button[title*="REL/ABS cannot be encoded"] + p::before {
+  content: "Studio preview only";
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ch-pending);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+@media (max-width: 1199px) {
+  .ch-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto;
+    padding-bottom: 0;
+  }
+  .ch-center {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .ch-event-dock,
+  .ch-inspector {
+    grid-column: 1;
+    grid-row: 3;
+    position: static;
+    inset: auto;
+    max-height: none;
+    overflow: visible;
+    z-index: auto;
+    box-shadow: none;
+    margin: 0 16px 16px;
+  }
+  .ch-event-dock {
+    justify-self: stretch;
+    width: auto;
+  }
+  .ch-inspector {
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    border-left: 0;
+    border-top: 2px solid var(--ch-focus);
+    background: var(--ch-surface);
+  }
+  .ch-inspector-head {
+    position: static;
+  }
+  .ch-inspector-body {
+    overflow: visible;
+    padding-bottom: 12px;
+  }
+  .ch-workspace.inspector-open {
+    padding-bottom: 0;
+  }
+}
+@media (max-width: 767px) {
+  .ch-workspace {
+    font-size: 14px;
+  }
+  .ch-transport {
+    display: grid;
+    grid-template-columns:
+      minmax(88px, 1.15fr)
+      minmax(88px, 1.15fr)
+      minmax(60px, 0.8fr)
+      minmax(84px, 1.1fr);
+    grid-template-areas:
+      "edit listen play bpm"
+      "undo library project more"
+      "feedback feedback feedback feedback";
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .ch-transport h1 {
+    grid-area: title;
+  }
+  .ch-transport > label.ch-secondary:has(select[aria-label="Edit slot"]) {
+    grid-area: edit;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(36px, auto);
+    gap: 4px;
+    font-size: 14px;
+  }
+  .ch-transport > label.ch-secondary:has(select[aria-label="Listen mode"]) {
+    grid-area: listen;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(36px, auto);
+    gap: 4px;
+    font-size: 14px;
+  }
+  .ch-transport .ch-play {
+    grid-area: play;
+    min-width: 0;
+    width: 100%;
+  }
+  .ch-transport > label:has(input[aria-label="Transport BPM"]) {
+    grid-area: bpm;
+    gap: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .ch-transport > button.ch-secondary:nth-of-type(3) {
+    grid-area: undo;
+    display: inline-flex;
+  }
+  .ch-transport .ch-library-toggle {
+    grid-area: library;
+  }
+  .ch-transport .ch-project-menu {
+    grid-area: project;
+    justify-self: stretch;
+  }
+  .ch-transport .ch-more {
+    grid-area: more;
+    display: block;
+  }
+  .ch-transport .ch-operation-feedback {
+    grid-area: feedback;
+    line-height: 1.35;
+  }
+  .ch-transport select[aria-label="Edit slot"],
+  .ch-transport select[aria-label="Listen mode"] {
+    min-width: 36px;
+    width: 42px;
+    padding: 6px 4px;
+  }
+  .ch-transport input[aria-label="Transport BPM"] {
+    width: 52px;
+    padding: 6px 4px;
+  }
+  .ch-transport button,
+  .ch-transport select,
+  .ch-transport input {
+    min-height: 44px;
+  }
+  .ch-transport button {
+    padding: 6px 8px;
+  }
+  .ch-transport .ch-more,
+  .ch-project-menu > summary {
+    font-size: 14px;
+  }
+  .ch-project-menu > summary {
+    min-height: 44px;
+    padding: 10px 6px;
+  }
+  .ch-transport:not(.more-open) > label.ch-secondary:has(select[aria-label="Edit slot"]),
+  .ch-transport:not(.more-open) > label.ch-secondary:has(select[aria-label="Listen mode"]) {
+    display: grid;
+  }
+  .ch-transport:not(.more-open) > button.ch-secondary:nth-of-type(3) {
+    display: inline-flex;
+  }
+  .ch-inspector,
+  .ch-event-dock {
+    margin: 0 12px 12px;
+  }
+  .ch-inspector-body {
+    overflow: visible;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ch-inspector label {
+    font-size: 14px;
+  }
+  .ch-inspector-body label {
+    font-size: 14px;
+  }
+  .ch-inspector > button {
+    min-height: 44px;
+  }
+  .ch-event-dock {
+    position: static;
+    min-height: 44px;
+    width: calc(100% - 24px);
+  }
+  .ch-workspace.inspector-open {
+    padding-bottom: 0;
+  }
+}
+@media (max-width: 359px) {
+  .ch-transport {
+    grid-template-columns:
+      minmax(80px, 1.15fr)
+      minmax(80px, 1.15fr)
+      minmax(64px, 0.9fr);
+    grid-template-areas:
+      "edit listen play"
+      "bpm undo library"
+      "project more more"
+      "feedback feedback feedback";
+  }
+  .ch-inspector-body {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>
@@ -9775,7 +10027,7 @@ ${error.message}`);
         if (!ctx) return;
         const data = buffer.getChannelData(0), stride = Math.max(1, Math.floor(data.length / node.width));
         ctx.clearRect(0, 0, node.width, node.height);
-        ctx.fillStyle = "#b9d6e5";
+        ctx.fillStyle = "#a7cedd";
         for (let x = 0; x < node.width; x++) {
           let low = 1, high = -1;
           for (let j = x * stride; j < Math.min(data.length, (x + 1) * stride); j++) {
@@ -9805,7 +10057,7 @@ ${error.message}`);
         if (!ctx) return;
         const data = buffer.getChannelData(0);
         ctx.clearRect(0, 0, node.width, node.height);
-        ctx.fillStyle = "#b9d6e5";
+        ctx.fillStyle = "#a7cedd";
         for (let x = 0; x < node.width; x++) {
           const from2 = Math.floor(x / node.width * data.length), to = Math.ceil((x + 1) / node.width * data.length);
           let peak = 0;
