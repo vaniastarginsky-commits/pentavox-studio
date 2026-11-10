@@ -1630,6 +1630,83 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* Loop identity: keep A/B legible across the source and pattern workflow. */
+.ch-loop-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 20px 4px;
+}
+.ch-loop-card {
+  --loop-accent: #a7cedd;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--loop-accent) 55%, #2b3e4c);
+  border-left: 4px solid var(--loop-accent);
+  border-radius: 7px;
+  background: #1b2c39;
+  color: var(--ch-ink);
+  text-align: left;
+}
+.ch-loop-card[data-slot="1"] {
+  --loop-accent: #e4a46a;
+}
+.ch-loop-card[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--loop-accent) 14%, #1b2c39);
+  box-shadow: inset 0 0 0 1px var(--loop-accent);
+}
+.ch-loop-card-title {
+  color: var(--loop-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.ch-loop-card strong,
+.ch-loop-card > span:not(.ch-loop-card-title),
+.ch-loop-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ch-loop-card small {
+  color: var(--ch-muted);
+}
+.ch-loop-overview > p {
+  grid-column: 1 / -1;
+  color: var(--ch-muted);
+  font-size: 11px;
+}
+.ch-pattern[data-slot="0"] {
+  --ch-pattern-accent: #a7cedd;
+}
+.ch-pattern[data-slot="1"] {
+  --ch-pattern-accent: #e4a46a;
+}
+.ch-pattern[data-slot] .ch-event {
+  border-color: color-mix(in srgb, var(--ch-pattern-accent) 82%, #2b3e4c);
+  background: color-mix(in srgb, var(--ch-pattern-accent) 19%, #2b3e4c);
+}
+.ch-pattern[data-slot] .ch-event[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--ch-pattern-accent);
+}
+.ch-pattern[data-slot="1"] .ch-ruler span:first-child {
+  color: #e4a46a;
+}
+@media (max-width: 560px) {
+  .ch-loop-overview {
+    padding: 10px 12px 4px;
+    gap: 6px;
+  }
+  .ch-loop-card {
+    padding: 8px;
+    font-size: 12px;
+  }
+}
 </style>
 </head>
 <body>
@@ -10148,6 +10225,7 @@ ${error.message}`);
   // src/chopper/components/PatternTimeline.tsx
   function PatternTimeline({
     pattern,
+    slot,
     selected,
     beat,
     pending,
@@ -10203,7 +10281,7 @@ ${error.message}`);
       ...event,
       length: Math.min(maxLength(event), Math.max(1, event.length + delta))
     });
-    return /* @__PURE__ */ React.createElement("section", { className: "ch-pattern", "aria-label": "Chopper pattern" }, /* @__PURE__ */ React.createElement("div", { className: "ch-region-title" }, /* @__PURE__ */ React.createElement("h2", null, "Editing ", pattern.name), /* @__PURE__ */ React.createElement("span", null, pattern.beats / 4, " bars \xB7 snap 1/16"), /* @__PURE__ */ React.createElement("label", null, "Zoom", " ", /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("section", { className: "ch-pattern", "aria-label": `Chopper pattern for loop ${slot === 0 ? "A" : "B"}`, "data-slot": slot }, /* @__PURE__ */ React.createElement("div", { className: "ch-region-title" }, /* @__PURE__ */ React.createElement("h2", null, "Editing ", pattern.name), /* @__PURE__ */ React.createElement("span", null, pattern.beats / 4, " bars \xB7 snap 1/16"), /* @__PURE__ */ React.createElement("label", null, "Zoom", " ", /* @__PURE__ */ React.createElement(
       "input",
       {
         "aria-label": "Pattern zoom",
@@ -10790,6 +10868,23 @@ ${error.message}`);
           this.report(error);
         }
       };
+      this.selectSlot = (slot) => {
+        const state = this.state;
+        this.audio.editSlot = slot;
+        this.setState({
+          slot,
+          sourceId: state.bindings[slot],
+          patternId: state.patternBindings[slot] && state.patterns.some((p) => p.id === state.patternBindings[slot]) ? state.patternBindings[slot] : state.patterns[0].id,
+          selected: null,
+          cue: null,
+          armed: false,
+          pending: 0,
+          activePattern: null,
+          activeSourceId: "",
+          activeSourceBeats: 0,
+          library: !state.bindings[slot]
+        });
+      };
       this.addPattern = (role) => {
         if (this.state.patterns.length >= 8) return;
         const pattern = {
@@ -10927,7 +11022,7 @@ ${error.message}`);
           this.windowOrigin()
         );
         this.setState({
-          armed: false,
+          armed: true,
           inspector: innerWidth >= 1200,
           message: resolved === physical ? `${event.mode === "relative" ? "REL" : "ABS"} cue ${cue + 1} \u2192 physical cue ${resolved + 1} in this window.` : `Auditioned physical cue ${physical + 1}; REL ${cue + 1} resolves to physical cue ${resolved + 1} now. Pin auditioned cue (ABS) to keep cue ${physical + 1}.`,
           error: false
@@ -11045,6 +11140,7 @@ ${error.message}`);
                 bindings: this.state.bindings.map(
                   (id, slot) => slot === this.state.slot ? source.id : id
                 ),
+                library: false,
                 prepare: true,
                 sourceBpm: String(source.bpm),
                 bars: String(
@@ -11787,7 +11883,8 @@ ${error.message}`);
         "main",
         {
           className: "ch-workspace " + (s.library ? "library-open " : "") + (s.inspector ? "inspector-open" : ""),
-          hidden: s.compatibility
+          hidden: s.compatibility,
+          "data-slot": s.slot
         },
         /* @__PURE__ */ React.createElement(
           "header",
@@ -11800,22 +11897,7 @@ ${error.message}`);
             {
               "aria-label": "Edit slot",
               value: s.slot,
-              onChange: (e) => {
-                const slot = +e.target.value;
-                this.audio.editSlot = slot;
-                this.setState({
-                  slot,
-                  sourceId: s.bindings[slot],
-                  patternId: s.patternBindings[slot] && s.patterns.some((p) => p.id === s.patternBindings[slot]) ? s.patternBindings[slot] : s.patterns[0].id,
-                  selected: null,
-                  cue: null,
-                  armed: false,
-                  pending: 0,
-                  activePattern: null,
-                  activeSourceId: "",
-                  activeSourceBeats: 0
-                });
-              }
+              onChange: (e) => this.selectSlot(+e.target.value)
             },
             /* @__PURE__ */ React.createElement("option", { value: "0" }, "A"),
             /* @__PURE__ */ React.createElement("option", { value: "1" }, "B")
@@ -12030,7 +12112,27 @@ ${error.message}`);
           },
           "Open legacy workspace"
         ), /* @__PURE__ */ React.createElement("p", null, "Legacy files retain their original meaning. This action opens the preserved editor, not a migration."))),
-        /* @__PURE__ */ React.createElement("div", { className: "ch-center" }, s.legacy && /* @__PURE__ */ React.createElement(
+        /* @__PURE__ */ React.createElement("div", { className: "ch-center" }, /* @__PURE__ */ React.createElement("div", { className: "ch-loop-overview", role: "group", "aria-label": "Loop slots" }, [0, 1].map((slot) => {
+          const loopName = slot === 0 ? "A" : "B";
+          const bound = s.sources.find((item) => item.id === s.bindings[slot]);
+          const boundPattern = s.patterns.find((item) => item.id === s.patternBindings[slot]) ?? s.patterns[0];
+          const audible = s.playing && (s.audibleMode === "Both" || s.audibleMode === (slot === 0 ? "A" : "B"));
+          return /* @__PURE__ */ React.createElement(
+            "button",
+            {
+              key: loopName,
+              type: "button",
+              className: "ch-loop-card",
+              "data-slot": slot,
+              "aria-pressed": slot === s.slot,
+              onClick: () => this.selectSlot(slot)
+            },
+            /* @__PURE__ */ React.createElement("span", { className: "ch-loop-card-title" }, "Loop ", loopName),
+            /* @__PURE__ */ React.createElement("strong", null, bound?.name ?? (slot === 1 ? "Add second loop" : "No sample bound")),
+            /* @__PURE__ */ React.createElement("span", null, boundPattern?.name ?? "No pattern", " \xB7 ", boundPattern?.events.length ?? 0, " events"),
+            /* @__PURE__ */ React.createElement("small", null, slot === s.slot ? "Editing" : audible ? "Audible" : bound ? "Ready" : "Empty", audible ? " \xB7 playing" : "")
+          );
+        }), /* @__PURE__ */ React.createElement("p", null, "Choose a loop to edit. Set Listen to Both to play A and B together.")), s.legacy && /* @__PURE__ */ React.createElement(
           LegacyArrangement,
           {
             document: s.legacy,
@@ -12112,7 +12214,7 @@ ${error.message}`);
           pattern.beats,
           beats,
           this.windowOrigin()
-        ) + 1), /* @__PURE__ */ React.createElement(
+        ) + 1, s.placementMode === "relative" ? " \xB7 follows current window" : " \xB7 pinned to this source position"), /* @__PURE__ */ React.createElement(
           "button",
           {
             disabled: s.cue >= 64 && s.placementMode === "relative",
@@ -12154,13 +12256,14 @@ ${error.message}`);
           PatternTimeline,
           {
             pattern,
+            slot: s.slot,
             selected: s.selected,
             beat: s.beat,
             pending: Boolean(s.pending),
             boundary: s.boundary,
             describeEvent: (event2) => `${event2.mode === "relative" ? "REL" : "ABS"} ${event2.cue + 1} \u2192 source cue ${beats ? resolveCue(event2.cue, event2.mode, s.beat, pattern.beats, beats, this.windowOrigin()) + 1 : "unavailable"}`,
             onInspect: this.inspectEvent,
-            placement: s.cue === null ? "choose a cue" : s.placementMode === "absolute" ? `ABS ${s.cue + 1} \u2192 source cue ${s.cue + 1}` : `REL ${s.cue % pattern.beats + 1} \u2192 source cue ${beats ? resolveCue(s.cue % pattern.beats, "relative", s.beat, pattern.beats, beats, this.windowOrigin()) + 1 : "unknown"}`,
+            placement: s.cue === null ? "choose a cue" : s.placementMode === "absolute" ? `ABS ${s.cue + 1} \u2192 source cue ${s.cue + 1} \xB7 pinned to this position` : `REL ${s.cue % pattern.beats + 1} \u2192 source cue ${beats ? resolveCue(s.cue % pattern.beats, "relative", s.beat, pattern.beats, beats, this.windowOrigin()) + 1 : "unknown"} \xB7 follows current window`,
             activePattern: s.activePattern,
             activeStart: s.patternStart,
             playing: s.playing,
