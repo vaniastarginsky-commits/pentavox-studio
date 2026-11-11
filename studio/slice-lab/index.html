@@ -1852,6 +1852,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 .ch-matrix-ruler-track {
   position: relative;
+  overflow: clip;
   height: 36px;
   background:
     repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) * 4 - 1px), #52657488 calc(var(--step) * 4 - 1px), #52657488 calc(var(--step) * 4)),
@@ -2303,16 +2304,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-workspace {
     grid-template-columns: 216px minmax(0, 1fr) 282px;
   }
-  .ch-workspace:not(.inspector-open) {
-    grid-template-columns: 216px minmax(0, 1fr) 282px;
-  }
-  .ch-event-dock {
-    grid-column: 3;
-    grid-row: 2;
-    align-self: start;
-    position: static;
-    margin: 12px;
-  }
   .ch-inspector-body label {
     font-size: 13px;
   }
@@ -2589,6 +2580,32 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-workspace[data-slot="1"] .ch-play-edited-pattern {
   border-color: var(--ch-b);
   color: var(--ch-b);
+}
+
+
+.ch-center > .ch-event-dock {
+  position: static;
+  margin: 0 20px 8px;
+}
+.ch-pattern-zoom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ch-pattern-zoom label {
+  gap: 4px;
+  font-size: 12px;
+}
+.ch-pattern-zoom input[type="range"] {
+  width: clamp(52px, 7vw, 100px);
+}
+.ch-pattern-zoom button {
+  white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .ch-center > .ch-event-dock {
+    margin-inline: 12px;
+  }
 }
 </style>
 </head>
@@ -11261,9 +11278,43 @@ ${error.message}`);
     onPatternBeatsChange,
     onFillCueOrder
   }) {
-    const [zoom, setZoom] = React.useState(1), [tool, setTool] = React.useState("pencil"), [ghost, setGhost] = React.useState(null), [cursor, setCursor] = React.useState(0), [dragged, setDragged] = React.useState(null), [dragCopy, setDragCopy] = React.useState(false), [resizeDraft, setResizeDraft] = React.useState(null);
-    const down = React.useRef(null), body = React.useRef(null), scroll = React.useRef(null), draggedCueRef = React.useRef(0), pointerDrag = React.useRef(null), suppressEventClick = React.useRef(false), nativeDrag = React.useRef(false), resizePointer = React.useRef(null);
-    const unit = (innerWidth < 768 ? 22 : 32) * zoom, cueColumn = innerWidth < 768 ? 58 : 76, rowHeight = innerWidth < 768 ? 36 : 28, total = pattern.beats * 4, chosen = pattern.events.find((e) => e.id === selected), maxCue = pattern.events.reduce((max, event) => Math.max(max, event.cue), -1), addressCount = placementMode === "absolute" ? Math.min(64, Math.max(4, cueCount)) : Math.min(64, Math.max(pattern.beats, cueCount)), rowCount = Math.min(64, Math.max(addressCount, maxCue + 1));
+    const [manualZoom, setManualZoom] = React.useState(1), [fit, setFit] = React.useState(false), [viewportWidth, setViewportWidth] = React.useState(0), [tool, setTool] = React.useState("pencil"), [ghost, setGhost] = React.useState(null), [cursor, setCursor] = React.useState(0), [dragged, setDragged] = React.useState(null), [dragCopy, setDragCopy] = React.useState(false), [resizeDraft, setResizeDraft] = React.useState(null);
+    const down = React.useRef(null), body = React.useRef(null), scroll = React.useRef(null), wheelAnchor = React.useRef(null), draggedCueRef = React.useRef(0), pointerDrag = React.useRef(null), suppressEventClick = React.useRef(false), nativeDrag = React.useRef(false), resizePointer = React.useRef(null);
+    const baseUnit = innerWidth < 768 ? 22 : 32, cueColumn = innerWidth < 768 ? 58 : 76, rowHeight = innerWidth < 768 ? 36 : 28, resizeWidth = innerWidth < 768 ? 44 : 30, total = pattern.beats * 4, fitZoom = viewportWidth > cueColumn ? (viewportWidth - cueColumn) / total / baseUnit : 1, minZoom = Math.min(0.5, fitZoom), maxZoom = Math.max(3, fitZoom), zoom = fit ? fitZoom : Math.max(minZoom, Math.min(maxZoom, manualZoom)), unit = baseUnit * zoom, barStride = Math.max(1, Math.ceil(42 / (16 * unit))), chosen = pattern.events.find((e) => e.id === selected), maxCue = pattern.events.reduce((max, event) => Math.max(max, event.cue), -1), addressCount = placementMode === "absolute" ? Math.min(64, Math.max(4, cueCount)) : Math.min(64, Math.max(pattern.beats, cueCount)), rowCount = Math.min(64, Math.max(addressCount, maxCue + 1));
+    const setZoom = (value) => {
+      setFit(false);
+      setManualZoom(value);
+    };
+    React.useLayoutEffect(() => {
+      const area = scroll.current;
+      const measure = () => setViewportWidth(area.clientWidth);
+      const observer = new ResizeObserver(measure);
+      measure();
+      observer.observe(area);
+      return () => observer.disconnect();
+    }, []);
+    React.useLayoutEffect(() => {
+      const area = scroll.current;
+      if (fit) area.scrollLeft = 0;
+      else if (wheelAnchor.current !== null) area.scrollLeft = wheelAnchor.current;
+      wheelAnchor.current = null;
+    }, [fit, unit]);
+    React.useEffect(() => {
+      const area = scroll.current;
+      const wheel = (event) => {
+        const ruler = event.target.closest(".ch-matrix-ruler");
+        if (!event.ctrlKey && !event.metaKey && !ruler || !event.deltaY) return;
+        event.preventDefault();
+        const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? area.clientHeight : 1);
+        const next = Math.max(minZoom, Math.min(maxZoom, zoom * Math.exp(-delta * 3e-3)));
+        if (next === zoom) return;
+        const x = Math.max(0, event.clientX - area.getBoundingClientRect().left - area.clientLeft - cueColumn);
+        wheelAnchor.current = (area.scrollLeft + x) * next / zoom - x;
+        setZoom(next);
+      };
+      area.addEventListener("wheel", wheel, { passive: false });
+      return () => area.removeEventListener("wheel", wheel);
+    }, [cueColumn, minZoom, maxZoom, zoom]);
     const touchMove = useTouchEventMove(
       body,
       unit,
@@ -11394,7 +11445,7 @@ ${error.message}`);
         document.removeEventListener("pointercancel", cancel, true);
       };
     }, [unit, total, onChange]);
-    const pinch = useMusicalPinch(scroll, zoom, setZoom, 0.5, 3, () => {
+    const pinch = useMusicalPinch(scroll, zoom, setZoom, minZoom, maxZoom, () => {
       down.current = null;
       touchMove.cancel?.();
       resizePointer.current = null;
@@ -11464,18 +11515,18 @@ ${error.message}`);
             ...pattern.events.map((event) => event.step + event.length)
           )
         ).map((bars) => /* @__PURE__ */ React.createElement("option", { key: bars, value: bars }, bars))
-      )), /* @__PURE__ */ React.createElement("label", { className: "ch-pattern-zoom" }, "Zoom", " ", /* @__PURE__ */ React.createElement(
+      )), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-zoom", title: "Wheel over the ruler, or Ctrl/\u2318 + wheel anywhere in the matrix" }, /* @__PURE__ */ React.createElement("button", { type: "button", "aria-label": "Fit to pattern", "aria-pressed": fit, onClick: () => setFit(true) }, "Fit"), /* @__PURE__ */ React.createElement("label", null, "Zoom", " ", /* @__PURE__ */ React.createElement(
         "input",
         {
           "aria-label": "Pattern zoom",
           type: "range",
-          min: ".5",
-          max: "3",
-          step: ".5",
+          min: minZoom,
+          max: maxZoom,
+          step: "any",
           value: zoom,
           onChange: (e) => setZoom(+e.target.value)
         }
-      )), /* @__PURE__ */ React.createElement("div", { className: "ch-tool-toggle", role: "group", "aria-label": "Pattern editing tool" }, /* @__PURE__ */ React.createElement(
+      ))), /* @__PURE__ */ React.createElement("div", { className: "ch-tool-toggle", role: "group", "aria-label": "Pattern editing tool" }, /* @__PURE__ */ React.createElement(
         "button",
         {
           type: "button",
@@ -11551,7 +11602,10 @@ ${error.message}`);
             "--cue-height": `${rowHeight}px`
           }
         },
-        /* @__PURE__ */ React.createElement("div", { className: "ch-matrix-ruler", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("span", { className: "ch-matrix-label ch-matrix-corner" }, slot === 0 ? "LOOP A" : "LOOP B", " \xB7 SLICE"), /* @__PURE__ */ React.createElement("div", { className: "ch-matrix-ruler-track", style: { width: total * unit } }, Array.from({ length: pattern.beats }, (_, beatIndex) => /* @__PURE__ */ React.createElement("span", { key: beatIndex, style: { left: beatIndex * 4 * unit } }, beatIndex % 4 === 0 ? `Bar ${Math.floor(beatIndex / 4) + 1}` : beatIndex % 4 + 1)))),
+        /* @__PURE__ */ React.createElement("div", { className: "ch-matrix-ruler", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("span", { className: "ch-matrix-label ch-matrix-corner" }, slot === 0 ? "LOOP A" : "LOOP B", " \xB7 SLICE"), /* @__PURE__ */ React.createElement("div", { className: "ch-matrix-ruler-track", style: { width: total * unit } }, Array.from({ length: pattern.beats }, (_, beatIndex) => {
+          if (unit * 4 < 35 && beatIndex % (4 * barStride) !== 0) return null;
+          return /* @__PURE__ */ React.createElement("span", { key: beatIndex, style: { left: beatIndex * 4 * unit } }, beatIndex % 4 === 0 ? `Bar ${Math.floor(beatIndex / 4) + 1}` : beatIndex % 4 + 1);
+        }))),
         /* @__PURE__ */ React.createElement(
           "div",
           {
@@ -11769,7 +11823,10 @@ ${error.message}`);
                     "aria-valuetext": `${previewLength ?? chosen.length}/16`,
                     className: "ch-resize ch-external-resize",
                     style: {
-                      left: (chosen.step + (previewLength ?? chosen.length)) * unit - 2
+                      left: Math.max(0, Math.min(
+                        (chosen.step + (previewLength ?? chosen.length)) * unit - 2,
+                        total * unit - resizeWidth
+                      ))
                     },
                     onKeyDown: (e) => {
                       if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
@@ -13830,7 +13887,7 @@ ${error.message}`);
             onPatternBeatsChange: this.changePatternBeats,
             onFillCueOrder: this.fillCueOrder
           }
-        ), /* @__PURE__ */ React.createElement(
+        ), event && !s.inspector && /* @__PURE__ */ React.createElement("button", { className: "ch-event-dock", onClick: this.openInspector }, event.mode === "relative" ? "REL" : "ABS", " cue ", event.cue + 1, " \xB7 Edit event"), /* @__PURE__ */ React.createElement(
           SequenceSettings,
           {
             pattern,
@@ -13860,7 +13917,6 @@ ${error.message}`);
           }
         )),
         /* @__PURE__ */ React.createElement("div", { className: "ch-clocks" }, /* @__PURE__ */ React.createElement("span", null, "Slot ", s.slot === 0 ? "A" : "B", " source", " ", s.playing ? `${this.state.sources.find((source2) => source2.id === s.activeSourceId)?.name ?? "awaiting audio"} \xB7 ${(s.beat % (s.activeSourceBeats || 1) / 4 + 1).toFixed(2)} / ${s.activeSourceBeats / 4} bars` : "stopped"), /* @__PURE__ */ React.createElement("span", null, "Slot ", s.slot === 0 ? "A" : "B", " pattern", " ", s.activePattern?.name ?? "none", " \xB7", " ", ((s.beat - s.patternStart) / 4 + 1).toFixed(2), " /", " ", (s.activePattern?.beats ?? 0) / 4), /* @__PURE__ */ React.createElement("span", null, "Listen ", s.audibleMode, s.pendingMode ? ` \u2192 ${s.pendingMode} pending` : ""), /* @__PURE__ */ React.createElement("span", null, "Seed slot ", s.sequenceSlot + 1, " \xB7 master step", " ", Math.floor(s.beat * 4)), /* @__PURE__ */ React.createElement("strong", { className: s.pending ? "ch-pending" : "" }, s.pending ? `Pending \xB7 ${s.boundary === null ? "waiting for audio boundary" : `bar ${s.boundary / 4 + 1}`}` : `Active \xB7 revision ${s.active}`)),
-        event && !s.inspector && /* @__PURE__ */ React.createElement("button", { className: "ch-event-dock", onClick: this.openInspector }, event.mode === "relative" ? "REL" : "ABS", " cue ", event.cue + 1, " \xB7 Edit event"),
         s.inspector && /* @__PURE__ */ React.createElement(
           EventInspector,
           {
