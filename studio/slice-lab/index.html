@@ -1835,6 +1835,267 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-fx-grid { grid-template-columns: minmax(0, 1fr); }
   .ch-analysis { align-items: flex-start; }
 }
+
+
+
+
+/* Cue matrix: old slice lanes meet the live waveform-first editor. */
+.ch-matrix-heading {
+  align-items: center;
+}
+.ch-matrix-heading > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ch-matrix-heading > label select {
+  min-width: 54px;
+}
+.ch-tool-toggle {
+  display: inline-flex;
+  gap: 0;
+}
+.ch-tool-toggle button {
+  min-height: 36px;
+  border-radius: 0;
+}
+.ch-tool-toggle button:first-child {
+  border-radius: 5px 0 0 5px;
+}
+.ch-tool-toggle button:last-child {
+  border-radius: 0 5px 5px 0;
+}
+.ch-tool-toggle button[aria-pressed="true"] {
+  border-color: var(--ch-pattern-accent, var(--ch-focus));
+  background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 20%, #1b2c39);
+  color: var(--ch-ink);
+}
+.ch-fill-order {
+  min-height: 36px;
+}
+.ch-pattern-scroll {
+  max-height: min(56vh, 520px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border-top: 1px solid var(--ch-line);
+  border-bottom: 1px solid var(--ch-line);
+}
+.ch-matrix {
+  position: relative;
+  min-width: 100%;
+}
+.ch-matrix-ruler {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: var(--cue-column) max-content;
+  height: 36px;
+  background: #1b2c39;
+  border-bottom: 1px solid var(--ch-line);
+}
+.ch-matrix-label {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: var(--cue-column);
+  min-width: var(--cue-column);
+  height: var(--cue-height);
+  padding: 0 8px;
+  border-right: 1px solid var(--ch-line);
+  background: #1b2c39;
+  color: var(--ch-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.ch-matrix-corner {
+  z-index: 7;
+  height: 36px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.ch-matrix-label strong {
+  color: var(--ch-ink);
+}
+.ch-matrix-label small {
+  color: var(--ch-muted);
+  font-size: 10px;
+}
+.ch-matrix-ruler-track {
+  position: relative;
+  height: 36px;
+  background:
+    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) * 4 - 1px), #52657488 calc(var(--step) * 4 - 1px), #52657488 calc(var(--step) * 4)),
+    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) - 1px), #2b3e4c88 calc(var(--step) - 1px), #2b3e4c88 var(--step));
+}
+.ch-matrix-ruler-track span {
+  position: absolute;
+  top: 7px;
+  padding-left: 5px;
+  color: var(--ch-muted);
+  font-size: 11px;
+}
+.ch-matrix-body {
+  position: relative;
+  width: max-content;
+}
+.ch-matrix-row {
+  display: grid;
+  grid-template-columns: var(--cue-column) max-content;
+  min-height: var(--cue-height);
+  height: var(--cue-height);
+}
+.ch-matrix-row.armed-row .ch-matrix-label {
+  color: var(--ch-pattern-accent, var(--ch-focus));
+  background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 16%, #1b2c39);
+}
+.ch-matrix-row.armed-row .ch-matrix-label strong {
+  color: var(--ch-pattern-accent, var(--ch-focus));
+}
+.ch-matrix-track {
+  position: relative;
+  height: var(--cue-height);
+  background-color: #152530;
+  background-image:
+    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) * 4 - 1px), #52657466 calc(var(--step) * 4 - 1px), #52657466 calc(var(--step) * 4)),
+    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) - 1px), #2b3e4c88 calc(var(--step) - 1px), #2b3e4c88 var(--step));
+  border-bottom: 1px solid #2b3e4c;
+  touch-action: pan-x pan-y;
+}
+.ch-matrix-track:focus-visible {
+  outline: 2px solid var(--ch-pattern-accent, var(--ch-focus));
+  outline-offset: -2px;
+}
+.ch-matrix-row.armed-row .ch-matrix-track {
+  background-color: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 6%, #152530);
+}
+.ch-matrix-track .ch-event {
+  top: 2px;
+  height: calc(var(--cue-height) - 4px);
+  min-width: 12px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  align-items: center;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 3px;
+  z-index: 2;
+  cursor: grab;
+}
+.ch-matrix-track .ch-event:active {
+  cursor: grabbing;
+}
+.ch-matrix-track .ch-event strong {
+  font-size: 11px;
+  line-height: 1;
+}
+.ch-matrix-track .ch-event small {
+  overflow: hidden;
+  font-size: 9px;
+  text-overflow: ellipsis;
+}
+.ch-matrix-track .ch-active-event {
+  top: 2px;
+  height: calc(var(--cue-height) - 4px);
+  z-index: 1;
+  padding-left: 3px;
+  border-color: #f2f5fa;
+  background: #65758166;
+  color: var(--ch-ink);
+  font-size: 9px;
+  line-height: 24px;
+}
+.ch-matrix-track .ch-external-resize {
+  top: 0;
+  right: auto;
+  bottom: auto;
+  width: 30px;
+  height: var(--cue-height);
+  border-color: var(--ch-pattern-accent, var(--ch-focus));
+  background: #14212b;
+  font-size: 13px;
+}
+.ch-matrix-ghost {
+  position: absolute;
+  z-index: 5;
+  border: 2px dashed var(--ch-pattern-accent, var(--ch-focus));
+  background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 18%, transparent);
+  pointer-events: none;
+}
+.ch-matrix-ghost span {
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  width: max-content;
+  max-width: min(280px, 60vw);
+  overflow: hidden;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #10202b;
+  color: var(--ch-ink);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ch-matrix-playhead {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  width: 0;
+  border-left: 2px solid white;
+  pointer-events: none;
+}
+.ch-matrix-hint {
+  padding-top: 8px;
+}
+.ch-source[data-slot="0"] {
+  --loop-accent: #a7cedd;
+}
+.ch-source[data-slot="1"] {
+  --loop-accent: #e4a46a;
+}
+.ch-source[data-slot] .ch-source-overview i {
+  border-color: var(--loop-accent);
+  background: color-mix(in srgb, var(--loop-accent) 22%, transparent);
+}
+.ch-source[data-slot] .ch-cues button.selected {
+  background: color-mix(in srgb, var(--loop-accent) 22%, transparent);
+  outline-color: var(--loop-accent);
+}
+.ch-source[data-slot] .ch-cues button.sounding {
+  border-left-color: var(--loop-accent);
+}
+@media (max-width: 767px) {
+  .ch-matrix-heading {
+    gap: 6px;
+  }
+  .ch-matrix-heading h2 {
+    width: 100%;
+  }
+  .ch-matrix-heading > label {
+    margin-left: 0;
+  }
+  .ch-pattern-scroll {
+    max-height: min(48vh, 430px);
+  }
+  .ch-matrix-label {
+    padding: 0 6px;
+  }
+  .ch-tool-toggle button,
+  .ch-fill-order {
+    min-height: 44px;
+  }
+  .ch-matrix-hint {
+    line-height: 1.45;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -10227,7 +10488,7 @@ ${error.message}`);
     }, [min, max]);
     return blocked;
   }
-  function useTouchEventMove(row, unit, total, onMove, onGhost) {
+  function useTouchEventMove(row, unit, total, onMove, onGhost, originOffset = 0) {
     const suppressClick = React.useRef(false), commit = React.useRef(onMove);
     commit.current = onMove;
     React.useEffect(() => {
@@ -10249,7 +10510,7 @@ ${error.message}`);
           suppressClick.current = false;
         }, 300);
       };
-      const step = (clientX) => Math.max(0, Math.min(total - 1, Math.round((clientX - node.getBoundingClientRect().left - offset) / unit)));
+      const step = (clientX) => Math.max(0, Math.min(total - 1, Math.round((clientX - node.getBoundingClientRect().left - originOffset - offset) / unit)));
       const start = (e) => {
         cancel();
         if (e.touches.length !== 1) return;
@@ -10309,6 +10570,7 @@ ${error.message}`);
 
   // src/chopper/components/Waveform.tsx
   function Waveform({
+    slot,
     source,
     buffer,
     beats,
@@ -10338,7 +10600,7 @@ ${error.message}`);
         if (!ctx) return;
         const data = buffer.getChannelData(0), stride = Math.max(1, Math.floor(data.length / node.width));
         ctx.clearRect(0, 0, node.width, node.height);
-        ctx.fillStyle = "#a7cedd";
+        ctx.fillStyle = slot === 0 ? "#a7cedd" : "#e4a46a";
         for (let x = 0; x < node.width; x++) {
           let low = 1, high = -1;
           for (let j = x * stride; j < Math.min(data.length, (x + 1) * stride); j++) {
@@ -10357,7 +10619,7 @@ ${error.message}`);
       const observer = new ResizeObserver(draw);
       observer.observe(node);
       return () => observer.disconnect();
-    }, [buffer, zoom]);
+    }, [buffer, zoom, slot]);
     React.useEffect(() => {
       const node = overview.current;
       if (!node) return;
@@ -10368,7 +10630,7 @@ ${error.message}`);
         if (!ctx) return;
         const data = buffer.getChannelData(0);
         ctx.clearRect(0, 0, node.width, node.height);
-        ctx.fillStyle = "#a7cedd";
+        ctx.fillStyle = slot === 0 ? "#a7cedd" : "#e4a46a";
         for (let x = 0; x < node.width; x++) {
           const from2 = Math.floor(x / node.width * data.length), to = Math.ceil((x + 1) / node.width * data.length);
           let peak = 0;
@@ -10386,9 +10648,9 @@ ${error.message}`);
       const observer = new ResizeObserver(draw);
       observer.observe(node);
       return () => observer.disconnect();
-    }, [buffer]);
+    }, [buffer, slot]);
     const from = windowStart % beats, span3 = Math.min(beats, windowBeats), first = Math.min(span3, beats - from), second = span3 - first;
-    return /* @__PURE__ */ React.createElement("section", { className: "ch-source", "aria-label": "Source waveform" }, /* @__PURE__ */ React.createElement("div", { className: "ch-region-title" }, /* @__PURE__ */ React.createElement("h2", null, source.name), /* @__PURE__ */ React.createElement("span", null, beats / 4, " bars \xB7 ", source.bpm, " BPM \xB7 source cues 1/4 \xB7", " ", bindingStatus), /* @__PURE__ */ React.createElement("label", null, "Zoom", " ", /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("section", { className: "ch-source", "aria-label": "Source waveform", "data-slot": slot }, /* @__PURE__ */ React.createElement("div", { className: "ch-region-title" }, /* @__PURE__ */ React.createElement("h2", null, source.name), /* @__PURE__ */ React.createElement("span", null, beats / 4, " bars \xB7 ", source.bpm, " BPM \xB7 source cues 1/4 \xB7", " ", bindingStatus), /* @__PURE__ */ React.createElement("label", null, "Zoom", " ", /* @__PURE__ */ React.createElement(
       "input",
       {
         "aria-label": "Waveform zoom",
@@ -10493,38 +10755,152 @@ ${error.message}`);
     playing,
     soundingEvent,
     armed,
+    armedCue,
+    placementMode,
+    cueCount,
+    canFill,
     placement,
     describeEvent,
     onPlace,
     onSelect,
     onInspect,
-    onChange
+    onChange,
+    onPatternBeatsChange,
+    onFillCueOrder
   }) {
-    const [zoom, setZoom] = React.useState(1), [ghost, setGhost] = React.useState(null), [cursor, setCursor] = React.useState(0), [dragged, setDragged] = React.useState(null), [dragCopy, setDragCopy] = React.useState(false);
-    const down = React.useRef(null), row = React.useRef(null), scroll = React.useRef(null), placed = React.useRef(false), nativeDrag = React.useRef(false);
-    const unit = (innerWidth < 768 ? 44 : 32) * zoom, total = pattern.beats * 4, chosen = pattern.events.find((e) => e.id === selected);
+    const [zoom, setZoom] = React.useState(1), [tool, setTool] = React.useState("pencil"), [ghost, setGhost] = React.useState(null), [cursor, setCursor] = React.useState(0), [dragged, setDragged] = React.useState(null), [dragCopy, setDragCopy] = React.useState(false);
+    const down = React.useRef(null), body = React.useRef(null), scroll = React.useRef(null), draggedCueRef = React.useRef(0), pointerDrag = React.useRef(null), suppressEventClick = React.useRef(false), placed = React.useRef(false), nativeDrag = React.useRef(false);
+    const unit = (innerWidth < 768 ? 44 : 32) * zoom, cueColumn = 82, rowHeight = 32, total = pattern.beats * 4, chosen = pattern.events.find((e) => e.id === selected), maxCue = pattern.events.reduce((max, event) => Math.max(max, event.cue), -1), addressCount = placementMode === "absolute" ? Math.min(64, Math.max(4, cueCount)) : Math.min(64, pattern.beats), rowCount = Math.min(64, Math.max(addressCount, maxCue + 1));
     const touchMove = useTouchEventMove(
-      row,
+      body,
       unit,
       total,
       (id, step) => {
         const event = pattern.events.find((e) => e.id === id);
         if (event) onChange({ ...event, step });
       },
-      setGhost
+      (step) => setGhost(
+        step === null ? null : { step, cue: draggedCueRef.current }
+      ),
+      cueColumn
     );
+    React.useEffect(() => {
+      const at = (event) => {
+        const target2 = document.elementFromPoint(event.clientX, event.clientY) ?? event.target, track = target2?.closest?.(".ch-matrix-track") ?? event.target?.closest?.(
+          ".ch-matrix-track"
+        ), row = track?.closest(".ch-matrix-row");
+        if (!track || !row || !body.current?.contains(track)) return null;
+        return { track, cue: Number(row.dataset.cueRow ?? 0) };
+      };
+      const over = (event) => {
+        const target2 = at(event);
+        if (!target2) return;
+        event.preventDefault();
+        const rawCue = event.dataTransfer?.getData("application/x-chopper-cue") ?? "", rawEvent = event.dataTransfer?.getData("application/x-chopper-event") ?? "", cue = rawCue !== "" ? cueFromPhysical(Number(rawCue)) : rawEvent ? target2.cue : armed && armedCue !== null ? armedCue : target2.cue;
+        setGhost({ step: stepAt2(event.clientX, target2.track), cue });
+      };
+      const drop = (event) => {
+        const target2 = at(event);
+        if (!target2) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (placed.current) {
+          setGhost(null);
+          return;
+        }
+        const step = stepAt2(event.clientX, target2.track), rawCue = event.dataTransfer?.getData("application/x-chopper-cue") ?? "", rawEvent = event.dataTransfer?.getData("application/x-chopper-event") ?? "";
+        placed.current = true;
+        setGhost(null);
+        if (rawCue !== "") {
+          onPlace(step, Number(rawCue));
+          return;
+        }
+        if (rawEvent) {
+          try {
+            const data = JSON.parse(rawEvent), sourceEvent = pattern.events.find((item) => item.id === data.id);
+            if (sourceEvent) {
+              onChange({
+                ...sourceEvent,
+                id: data.copy ? crypto.randomUUID() : sourceEvent.id,
+                step,
+                cue: target2.cue
+              });
+              return;
+            }
+          } catch {
+          }
+        }
+        if (armed && armedCue !== null) onPlace(step, armedCue);
+      };
+      document.addEventListener("dragover", over, true);
+      document.addEventListener("drop", drop, true);
+      return () => {
+        document.removeEventListener("dragover", over, true);
+        document.removeEventListener("drop", drop, true);
+      };
+    }, [unit, total, pattern.events, placementMode, armed, armedCue, onPlace, onChange]);
+    React.useEffect(() => {
+      const at = (x, y) => {
+        const element = document.elementFromPoint(x, y), track = element?.closest(".ch-matrix-track"), row = track?.closest(".ch-matrix-row");
+        return track && row ? { track, cue: Number(row.dataset.cueRow ?? 0) } : null;
+      };
+      const move = (e) => {
+        const drag = pointerDrag.current;
+        if (!drag || drag.pointerId !== e.pointerId || e.pointerType === "touch")
+          return;
+        if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6)
+          return;
+        drag.moved = true;
+        const target2 = at(e.clientX, e.clientY);
+        setGhost(
+          target2 ? { step: stepAt2(e.clientX, target2.track), cue: target2.cue } : null
+        );
+      };
+      const up = (e) => {
+        const drag = pointerDrag.current;
+        if (!drag || drag.pointerId !== e.pointerId) return;
+        pointerDrag.current = null;
+        if (!drag.moved) return;
+        const target2 = at(e.clientX, e.clientY);
+        if (target2)
+          onChange({
+            ...drag.event,
+            id: drag.copy ? crypto.randomUUID() : drag.event.id,
+            step: stepAt2(e.clientX, target2.track),
+            cue: target2.cue
+          });
+        setDragged(null);
+        setGhost(null);
+        suppressEventClick.current = true;
+        setTimeout(() => suppressEventClick.current = false, 300);
+      };
+      const cancel = (e) => {
+        const drag = pointerDrag.current;
+        if (!drag || drag.pointerId !== e.pointerId) return;
+        pointerDrag.current = null;
+        if (nativeDrag.current) return;
+        setDragged(null);
+        setGhost(null);
+      };
+      document.addEventListener("pointermove", move, true);
+      document.addEventListener("pointerup", up, true);
+      document.addEventListener("pointercancel", cancel, true);
+      return () => {
+        document.removeEventListener("pointermove", move, true);
+        document.removeEventListener("pointerup", up, true);
+        document.removeEventListener("pointercancel", cancel, true);
+      };
+    }, [unit, total, onChange]);
     const pinch = useMusicalPinch(scroll, zoom, setZoom, 0.5, 3, () => {
       down.current = null;
       touchMove.cancel?.();
       setGhost(null);
     });
-    const stepAt2 = (x) => Math.max(
+    const stepAt2 = (x, track) => Math.max(
       0,
       Math.min(
         total - 1,
-        Math.floor(
-          (x - row.current.getBoundingClientRect().left) / unit
-        )
+        Math.floor((x - track.getBoundingClientRect().left) / unit)
       )
     );
     const musical = (step) => `bar ${Math.floor(step / 16) + 1}, beat ${Math.floor(step % 16 / 4) + 1}, sixteenth ${step % 4 + 1}`;
@@ -10539,269 +10915,443 @@ ${error.message}`);
       ...event,
       length: Math.min(maxLength(event), Math.max(1, event.length + delta))
     });
-    return /* @__PURE__ */ React.createElement("section", { className: "ch-pattern", "aria-label": `Chopper pattern for loop ${slot === 0 ? "A" : "B"}`, "data-slot": slot }, /* @__PURE__ */ React.createElement("div", { className: "ch-region-title" }, /* @__PURE__ */ React.createElement("h2", null, "Editing ", pattern.name), /* @__PURE__ */ React.createElement("span", null, pattern.beats / 4, " bars \xB7 snap 1/16"), /* @__PURE__ */ React.createElement("label", null, "Zoom", " ", /* @__PURE__ */ React.createElement(
-      "input",
+    const cueFromPhysical = (cue) => placementMode === "relative" ? cue % pattern.beats : cue;
+    const showRow = (cue) => {
+      const area = scroll.current, row = body.current?.querySelector(
+        `[data-cue-row="${cue}"]`
+      );
+      if (!area || !row) return;
+      const areaRect = area.getBoundingClientRect(), rowRect = row.getBoundingClientRect();
+      if (rowRect.top < areaRect.top + 36)
+        area.scrollTop -= areaRect.top + 36 - rowRect.top;
+      else if (rowRect.bottom > areaRect.bottom)
+        area.scrollTop += rowRect.bottom - areaRect.bottom + 4;
+    };
+    React.useEffect(() => {
+      if (armedCue !== null) showRow(armedCue);
+    }, [armedCue, rowCount, pattern.id]);
+    React.useEffect(() => {
+      setCursor((step) => Math.min(step, total - 1));
+    }, [pattern.id, total]);
+    return /* @__PURE__ */ React.createElement(
+      "section",
       {
-        "aria-label": "Pattern zoom",
-        type: "range",
-        min: ".5",
-        max: "3",
-        step: ".5",
-        value: zoom,
-        onChange: (e) => setZoom(+e.target.value)
-      }
-    )), pending && /* @__PURE__ */ React.createElement("strong", { className: "ch-boundary" }, "Pending", " ", boundary === null ? "\xB7 awaiting audio" : `\xB7 applies at bar ${boundary / 4 + 1}`)), playing && activePattern && /* @__PURE__ */ React.createElement(
-      "div",
-      {
-        className: "ch-audible-strip",
-        role: "group",
-        "aria-label": "Audibly active pattern"
+        className: "ch-pattern",
+        "aria-label": `Chopper pattern for loop ${slot === 0 ? "A" : "B"}`,
+        "data-slot": slot
       },
-      /* @__PURE__ */ React.createElement("span", null, "Playing ", activePattern.name, " \xB7", " ", ((beat - activeStart) / 4 + 1).toFixed(2), " /", " ", activePattern.beats / 4, " bars"),
-      /* @__PURE__ */ React.createElement("div", null, activePattern.events.map((e) => /* @__PURE__ */ React.createElement(
-        "i",
+      /* @__PURE__ */ React.createElement("div", { className: "ch-region-title ch-matrix-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Slice pattern \xB7 ", pattern.name), /* @__PURE__ */ React.createElement("span", null, pattern.beats / 4, " bars \xB7 1/16 steps \xB7 ", rowCount, " cue lanes"), /* @__PURE__ */ React.createElement("label", null, "Bars", " ", /* @__PURE__ */ React.createElement(
+        "select",
         {
-          key: e.id,
-          style: {
-            left: `${e.step / 4 / activePattern.beats * 100}%`,
-            width: `${e.length / 4 / activePattern.beats * 100}%`
-          }
-        }
-      )), /* @__PURE__ */ React.createElement(
-        "b",
+          "aria-label": "Pattern length in bars",
+          value: pattern.beats / 4,
+          onChange: (e) => onPatternBeatsChange(+e.target.value * 4)
+        },
+        [1, 2, 4, 8, 16].filter(
+          (bars) => bars === pattern.beats / 4 || bars * 16 >= Math.max(
+            0,
+            ...pattern.events.map((event) => event.step + event.length)
+          )
+        ).map((bars) => /* @__PURE__ */ React.createElement("option", { key: bars, value: bars }, bars))
+      )), /* @__PURE__ */ React.createElement("label", null, "Zoom", " ", /* @__PURE__ */ React.createElement(
+        "input",
         {
-          style: {
-            left: `${(beat - activeStart) % activePattern.beats / activePattern.beats * 100}%`
-          }
+          "aria-label": "Pattern zoom",
+          type: "range",
+          min: ".5",
+          max: "3",
+          step: ".5",
+          value: zoom,
+          onChange: (e) => setZoom(+e.target.value)
         }
-      ))
-    ), pattern.events.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "ch-event-summary" }, /* @__PURE__ */ React.createElement("label", null, "Event", " ", /* @__PURE__ */ React.createElement(
-      "select",
-      {
-        "aria-label": "Select event",
-        value: selected ?? "",
-        onChange: (e) => {
-          if (e.target.value) onSelect(e.target.value);
-        }
-      },
-      /* @__PURE__ */ React.createElement("option", { value: "" }, "Select an event"),
-      pattern.events.map((e, index) => /* @__PURE__ */ React.createElement("option", { key: e.id, value: e.id }, "#", index + 1, " \xB7 cue ", e.cue + 1, " ", e.mode === "relative" ? "REL" : "ABS", " \xB7 ", musical(e.step)))
-    )), chosen && /* @__PURE__ */ React.createElement("span", null, "Cue ", chosen.cue + 1, " \xB7", " ", chosen.mode === "relative" ? "REL" : "ABS", " \xB7 ", chosen.length, "/16 \xB7 ", musical(chosen.step))), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-scroll", ref: scroll }, /* @__PURE__ */ React.createElement(
-      "div",
-      {
-        className: "ch-timeline",
-        ref: row,
-        style: { width: total * unit, "--step": `${unit}px` },
-        tabIndex: 0,
-        role: "group",
-        "aria-label": "Pattern grid; arrow keys move cursor, Enter places selected cue",
-        onKeyDown: (e) => {
-          if (e.target !== e.currentTarget) return;
-          if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
-            e.preventDefault();
-            const next = e.key === "Home" ? 0 : e.key === "End" ? total - 1 : Math.max(
-              0,
-              Math.min(
-                total - 1,
-                cursor + (e.key === "ArrowRight" ? 1 : -1)
-              )
-            );
-            setCursor(next);
-            setGhost(next);
-            scroll.current.scrollLeft = Math.max(
-              0,
-              next * unit - 100
-            );
-          }
-          if (e.key === "Enter" && armed) {
-            e.preventDefault();
-            onPlace(Math.min(cursor, total - 1));
-          }
-        },
-        onClickCapture: (e) => {
-          if (placed.current) {
-            placed.current = false;
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        },
-        onPointerDown: (e) => {
-          placed.current = false;
-          if (!pinch.current && e.target === e.currentTarget)
-            down.current = { x: e.clientX, y: e.clientY };
-        },
-        onPointerUp: (e) => {
-          const d = down.current;
-          down.current = null;
-          if (!pinch.current && d && e.target === e.currentTarget && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 6 && armed) {
-            placed.current = true;
-            onPlace(stepAt2(e.clientX));
-          }
-        },
-        onPointerCancel: () => {
-          down.current = null;
-        },
-        onDragOver: (e) => {
-          e.preventDefault();
-          setGhost(stepAt2(e.clientX));
-        },
-        onDragLeave: () => setGhost(null),
-        onDrop: (e) => {
-          e.preventDefault();
-          const step = stepAt2(e.clientX), cue = e.dataTransfer.getData("application/x-chopper-cue"), raw = e.dataTransfer.getData("application/x-chopper-event");
-          setGhost(null);
-          if (cue !== "") onPlace(step, Number(cue));
-          else if (raw) {
-            try {
-              const data = JSON.parse(raw), event = pattern.events.find((e2) => e2.id === data.id);
-              if (event)
-                onChange({
-                  ...event,
-                  id: data.copy ? crypto.randomUUID() : event.id,
-                  step
-                });
-            } catch {
-            }
-          }
-        }
-      },
-      /* @__PURE__ */ React.createElement("div", { className: "ch-ruler" }, Array.from({ length: pattern.beats / 4 }, (_, bar) => /* @__PURE__ */ React.createElement("span", { key: bar, style: { left: bar * 16 * unit } }, bar + 1))),
-      /* @__PURE__ */ React.createElement("div", { className: "ch-base" }, "BASE continues through the whole source"),
-      pending && samePattern && activePattern?.events.filter(
-        (e) => !pattern.events.some(
-          (next) => next.id === e.id && JSON.stringify(next) === JSON.stringify(e)
-        )
-      ).map((e) => /* @__PURE__ */ React.createElement(
-        "div",
-        {
-          key: "active-" + e.id,
-          className: "ch-active-event",
-          style: { left: e.step * unit, width: e.length * unit },
-          title: `Active cue ${e.cue + 1}; ${pattern.events.some((next) => next.id === e.id) ? "replacement pending" : "deletion pending"}`
-        },
-        pattern.events.some((next) => next.id === e.id) ? "Was" : "Delete"
-      )),
-      pattern.events.map((event) => /* @__PURE__ */ React.createElement(
+      )), /* @__PURE__ */ React.createElement("div", { className: "ch-tool-toggle", role: "group", "aria-label": "Pattern editing tool" }, /* @__PURE__ */ React.createElement(
         "button",
         {
-          key: event.id,
-          "data-event-id": event.id,
-          "aria-label": `Event at ${musical(event.step)}, cue ${event.cue + 1}, ${event.mode === "relative" ? "REL" : "ABS"}, duration ${event.length} sixteenths`,
-          title: `Cue ${event.cue + 1} \xB7 ${event.mode === "relative" ? "REL" : "ABS"} \xB7 ${musical(event.step)}`,
-          "aria-pressed": event.id === selected,
-          className: "ch-event " + (event.id === selected ? "selected " : "") + (changed(event) ? "pending " : "") + (event.id === soundingEvent ? "sounding" : ""),
-          style: { left: event.step * unit, width: event.length * unit },
-          draggable: true,
-          onPointerDown: () => {
-            nativeDrag.current = false;
-            setDragged(event);
-            setDragCopy(false);
-          },
-          onPointerUp: () => setDragged(null),
-          onPointerCancel: () => {
-            if (!nativeDrag.current) setDragged(null);
-          },
-          onTouchEnd: () => setDragged(null),
-          onDragEnd: () => {
-            nativeDrag.current = false;
-            setDragged(null);
-            setGhost(null);
-          },
-          onClick: (e) => {
-            e.stopPropagation();
-            if (!touchMove.current && !pinch.current) onSelect(event.id);
-          },
-          onContextMenu: (e) => {
-            e.preventDefault();
-            onInspect(event.id);
-          },
-          onKeyDown: (e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              e.stopPropagation();
-              onInspect(event.id);
-            }
-            if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-              e.preventDefault();
-              e.stopPropagation();
-              onChange({
-                ...event,
-                step: Math.max(
-                  0,
-                  Math.min(
-                    total - event.length,
-                    event.step + (e.key === "ArrowRight" ? 1 : -1)
-                  )
-                )
-              });
-            }
-          },
-          onDragStart: (e) => {
-            nativeDrag.current = true;
-            setDragged(event);
-            setDragCopy(e.altKey);
-            e.dataTransfer.setData(
-              "application/x-chopper-event",
-              JSON.stringify({ id: event.id, copy: e.altKey })
-            );
-            e.dataTransfer.effectAllowed = e.altKey ? "copy" : "move";
-          }
+          type: "button",
+          "aria-pressed": tool === "pointer",
+          onClick: () => setTool("pointer")
         },
-        /* @__PURE__ */ React.createElement("strong", null, event.cue + 1),
-        event.length * unit >= 48 && /* @__PURE__ */ React.createElement("small", null, event.mode === "relative" ? "REL" : "ABS", event.reverse ? " \xB7 Rev" : "", event.roll > 1 ? ` \xB7 Roll ${event.roll}` : "")
-      )),
-      chosen && /* @__PURE__ */ React.createElement(
-        "span",
+        "Pointer"
+      ), /* @__PURE__ */ React.createElement(
+        "button",
         {
-          role: "slider",
-          tabIndex: 0,
-          "aria-label": "Event duration",
-          "aria-valuemin": 1,
-          "aria-valuemax": maxLength(chosen),
-          "aria-valuenow": chosen.length,
-          className: "ch-resize ch-external-resize",
-          style: { left: (chosen.step + chosen.length) * unit - 22 },
-          onKeyDown: (e) => {
-            if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-              e.preventDefault();
-              e.stopPropagation();
-              resize(chosen, e.key === "ArrowRight" ? 1 : -1);
-            }
-          },
-          onPointerDown: (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const start = e.clientX, target2 = e.currentTarget;
-            target2.setPointerCapture(e.pointerId);
-            target2.onpointerup = (up) => {
-              resize(chosen, Math.round((up.clientX - start) / unit));
-              target2.onpointerup = null;
-            };
-            target2.onpointercancel = () => {
-              target2.onpointerup = null;
-            };
-          }
+          type: "button",
+          "aria-pressed": tool === "pencil",
+          onClick: () => setTool("pencil")
         },
-        "\u2194"
-      ),
-      ghost !== null && /* @__PURE__ */ React.createElement(
+        "Pencil"
+      )), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          type: "button",
+          className: "ch-fill-order",
+          disabled: !canFill,
+          title: "Replace this pattern with one cue per beat in source order. Undo restores the current pattern.",
+          onClick: onFillCueOrder
+        },
+        "Fill from cue order"
+      ), pending && /* @__PURE__ */ React.createElement("strong", { className: "ch-boundary" }, "Pending", " ", boundary === null ? "\xB7 awaiting audio" : `\xB7 applies at bar ${boundary / 4 + 1}`)),
+      playing && activePattern && /* @__PURE__ */ React.createElement(
         "div",
         {
-          className: "ch-ghost",
-          style: { left: ghost * unit, width: unit }
+          className: "ch-audible-strip",
+          role: "group",
+          "aria-label": "Audibly active pattern"
         },
-        /* @__PURE__ */ React.createElement("span", null, musical(ghost), " \xB7", " ", dragged ? `${dragCopy ? "Copy" : "Move"} ${describeEvent(dragged)}` : placement)
+        /* @__PURE__ */ React.createElement("span", null, "Playing ", activePattern.name, " \xB7", " ", ((beat - activeStart) / 4 + 1).toFixed(2), " /", " ", activePattern.beats / 4, " bars"),
+        /* @__PURE__ */ React.createElement("div", null, activePattern.events.map((event) => /* @__PURE__ */ React.createElement(
+          "i",
+          {
+            key: event.id,
+            style: {
+              left: `${event.step / 4 / activePattern.beats * 100}%`,
+              width: `${event.length / 4 / activePattern.beats * 100}%`
+            }
+          }
+        )), /* @__PURE__ */ React.createElement(
+          "b",
+          {
+            style: {
+              left: `${(beat - activeStart) % activePattern.beats / activePattern.beats * 100}%`
+            }
+          }
+        ))
       ),
-      playing && samePattern && /* @__PURE__ */ React.createElement(
+      pattern.events.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "ch-event-summary" }, /* @__PURE__ */ React.createElement("label", null, "Event", " ", /* @__PURE__ */ React.createElement(
+        "select",
+        {
+          "aria-label": "Select event",
+          value: selected ?? "",
+          onChange: (e) => {
+            if (e.target.value) onSelect(e.target.value);
+          }
+        },
+        /* @__PURE__ */ React.createElement("option", { value: "" }, "Select an event"),
+        pattern.events.map((event, index) => /* @__PURE__ */ React.createElement("option", { key: event.id, value: event.id }, "#", index + 1, " \xB7 cue ", event.cue + 1, " ", event.mode === "relative" ? "REL" : "ABS", " \xB7 ", musical(event.step)))
+      )), chosen && /* @__PURE__ */ React.createElement("span", null, "Cue ", chosen.cue + 1, " \xB7", " ", chosen.mode === "relative" ? "REL" : "ABS", " \xB7 ", chosen.length, "/16 \xB7 ", musical(chosen.step))),
+      /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-scroll", ref: scroll }, /* @__PURE__ */ React.createElement(
         "div",
         {
-          className: "ch-playhead",
+          className: "ch-matrix",
           style: {
-            left: (beat - activeStart) % pattern.beats * 4 * unit
+            width: cueColumn + total * unit,
+            "--step": `${unit}px`,
+            "--cue-column": `${cueColumn}px`,
+            "--cue-height": `${rowHeight}px`
           }
-        }
-      )
-    )), /* @__PURE__ */ React.createElement("p", { className: "ch-hint" }, armed ? `Place: ${placement}. Tap a cell or focus grid and press Enter.` : "Tap a source cue, then a grid cell. Empty time plays BASE.", " ", "Hold an event to move; swipe scrolls, pinch zooms. Right-click opens event controls. Arrows move selected event."));
+        },
+        /* @__PURE__ */ React.createElement("div", { className: "ch-matrix-ruler", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("span", { className: "ch-matrix-label ch-matrix-corner" }, slot === 0 ? "LOOP A" : "LOOP B", " \xB7 SLICE"), /* @__PURE__ */ React.createElement("div", { className: "ch-matrix-ruler-track", style: { width: total * unit } }, Array.from({ length: pattern.beats / 4 }, (_, bar) => /* @__PURE__ */ React.createElement("span", { key: bar, style: { left: bar * 16 * unit } }, bar + 1)))),
+        /* @__PURE__ */ React.createElement(
+          "div",
+          {
+            className: "ch-matrix-body",
+            ref: body,
+            role: "grid",
+            "aria-label": "Slice pattern matrix",
+            onPointerDown: (e) => {
+              if (e.target.closest(".ch-matrix-track")) return;
+              if (!pinch.current)
+                down.current = { x: e.clientX, y: e.clientY };
+            },
+            onPointerUp: (e) => {
+              if (e.target.closest(".ch-matrix-track")) return;
+              const point = down.current;
+              down.current = null;
+              if (pinch.current || !point || Math.hypot(e.clientX - point.x, e.clientY - point.y) >= 6 || tool !== "pencil")
+                return;
+              const track = body.current?.querySelector(
+                ".ch-matrix-track"
+              ), rowElement = e.target.closest(
+                ".ch-matrix-row"
+              );
+              if (!track) return;
+              const cueRow = Number(rowElement?.dataset.cueRow ?? 0), cue = armed && armedCue !== null ? armedCue : cueRow, step = stepAt2(e.clientX, track);
+              setCursor(step);
+              placed.current = true;
+              onPlace(step, cue);
+            },
+            onClickCapture: (e) => {
+              if (!placed.current) return;
+              placed.current = false;
+              e.preventDefault();
+              e.stopPropagation();
+            },
+            onPointerCancel: () => {
+              down.current = null;
+            }
+          },
+          Array.from({ length: rowCount }, (_, cueRow) => {
+            const laneEvents = pattern.events.filter(
+              (event) => event.cue === cueRow
+            );
+            const cueLabel = `Slice ${String(cueRow + 1).padStart(2, "0")}`;
+            const previousLaneEvents = pending && samePattern ? (activePattern?.events ?? []).filter(
+              (event) => event.cue === cueRow && !pattern.events.some(
+                (next) => next.id === event.id && JSON.stringify(next) === JSON.stringify(event)
+              )
+            ) : [];
+            const trackContent = [
+              ...previousLaneEvents.map(() => "Was"),
+              ...laneEvents.map((event) => {
+                const parts = [String(event.cue + 1)];
+                if (event.length * unit >= 48) {
+                  parts.push(event.mode === "relative" ? "REL" : "ABS");
+                  if (event.reverse) parts.push("\xB7 Rev");
+                  if (event.roll > 1) parts.push(`\xB7 Roll ${event.roll}`);
+                }
+                return parts.join("");
+              }),
+              ...chosen?.cue === cueRow ? ["\u2194"] : []
+            ].join("");
+            return /* @__PURE__ */ React.createElement(
+              "div",
+              {
+                key: cueRow,
+                className: "ch-matrix-row " + (cueRow === armedCue ? "armed-row " : ""),
+                "data-cue-row": cueRow,
+                role: "row"
+              },
+              /* @__PURE__ */ React.createElement("span", { className: "ch-matrix-label", title: cueLabel }, /* @__PURE__ */ React.createElement("strong", null, "S", String(cueRow + 1).padStart(2, "0")), /* @__PURE__ */ React.createElement("small", null, laneEvents.length || "\xB7")),
+              /* @__PURE__ */ React.createElement(
+                "div",
+                {
+                  className: "ch-matrix-track",
+                  style: { width: total * unit },
+                  role: "gridcell",
+                  tabIndex: 0,
+                  "aria-label": [cueLabel, `${pattern.beats / 4} bars`, trackContent].filter(Boolean).join(", "),
+                  onKeyDown: (e) => {
+                    if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+                      e.preventDefault();
+                      const next = e.key === "Home" ? 0 : e.key === "End" ? total - 1 : Math.max(
+                        0,
+                        Math.min(
+                          total - 1,
+                          cursor + (e.key === "ArrowRight" ? 1 : -1)
+                        )
+                      );
+                      setCursor(next);
+                      scroll.current.scrollLeft = Math.max(
+                        0,
+                        next * unit - 100
+                      );
+                    } else if (e.key === "Enter" && tool === "pencil") {
+                      e.preventDefault();
+                      if (!armed || armedCue === null || armedCue === cueRow)
+                        onPlace(Math.min(cursor, total - 1), cueRow);
+                    } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                      e.preventDefault();
+                      const nextCue = Math.max(
+                        0,
+                        Math.min(
+                          rowCount - 1,
+                          cueRow + (e.key === "ArrowDown" ? 1 : -1)
+                        )
+                      );
+                      body.current?.querySelector(
+                        `[data-cue-row="${nextCue}"] .ch-matrix-track`
+                      )?.focus();
+                    }
+                  },
+                  onPointerDown: (e) => {
+                    placed.current = false;
+                    if (!pinch.current && e.target === e.currentTarget)
+                      down.current = { x: e.clientX, y: e.clientY };
+                  },
+                  onPointerUp: (e) => {
+                    const point = down.current;
+                    down.current = null;
+                    if (!point) {
+                      if (placed.current) return;
+                      if (!pinch.current && e.target === e.currentTarget && tool === "pencil" && armed && armedCue !== null) {
+                        const step = stepAt2(e.clientX, e.currentTarget);
+                        setCursor(step);
+                        placed.current = true;
+                        onPlace(step, armedCue);
+                      }
+                      return;
+                    }
+                    if (pinch.current || e.target !== e.currentTarget || Math.hypot(e.clientX - point.x, e.clientY - point.y) >= 6)
+                      return;
+                    setCursor(stepAt2(e.clientX, e.currentTarget));
+                    if (tool !== "pencil") return;
+                    if (armed && armedCue !== null && armedCue !== cueRow)
+                      return;
+                    placed.current = true;
+                    onPlace(stepAt2(e.clientX, e.currentTarget), cueRow);
+                  }
+                },
+                pending && samePattern && activePattern?.events.filter(
+                  (event) => event.cue === cueRow && !pattern.events.some(
+                    (next) => next.id === event.id && JSON.stringify(next) === JSON.stringify(event)
+                  )
+                ).map((event) => /* @__PURE__ */ React.createElement(
+                  "div",
+                  {
+                    key: "active-" + event.id,
+                    className: "ch-active-event",
+                    style: {
+                      left: event.step * unit,
+                      width: event.length * unit
+                    },
+                    title: "The previous cue remains active until the pending edit reaches its boundary."
+                  },
+                  "Was"
+                )),
+                laneEvents.map((event) => /* @__PURE__ */ React.createElement(
+                  "button",
+                  {
+                    key: event.id,
+                    type: "button",
+                    "data-event-id": event.id,
+                    "aria-label": `Event at ${musical(event.step)}, cue ${event.cue + 1}, ${event.mode === "relative" ? "REL" : "ABS"}, duration ${event.length} sixteenths`,
+                    title: `Cue ${event.cue + 1} \xB7 ${event.mode === "relative" ? "REL" : "ABS"} \xB7 ${musical(event.step)}`,
+                    "aria-pressed": event.id === selected,
+                    className: "ch-event " + (event.id === selected ? "selected " : "") + (changed(event) ? "pending " : "") + (event.id === soundingEvent ? "sounding" : ""),
+                    style: {
+                      left: event.step * unit,
+                      width: event.length * unit
+                    },
+                    draggable: true,
+                    onPointerDown: (e) => {
+                      draggedCueRef.current = event.cue;
+                      nativeDrag.current = false;
+                      pointerDrag.current = {
+                        event,
+                        pointerId: e.pointerId,
+                        x: e.clientX,
+                        y: e.clientY,
+                        moved: false,
+                        copy: e.altKey
+                      };
+                      setDragged(event);
+                      setDragCopy(e.altKey);
+                    },
+                    onPointerUp: () => setDragged(null),
+                    onPointerCancel: () => {
+                      if (!nativeDrag.current) setDragged(null);
+                    },
+                    onTouchEnd: () => setDragged(null),
+                    onDragEnd: () => {
+                      nativeDrag.current = false;
+                      setDragged(null);
+                      setGhost(null);
+                    },
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      if (suppressEventClick.current) {
+                        e.preventDefault();
+                        return;
+                      }
+                      if (!touchMove.current && !pinch.current)
+                        onSelect(event.id);
+                    },
+                    onContextMenu: (e) => {
+                      e.preventDefault();
+                      onInspect(event.id);
+                    },
+                    onKeyDown: (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onInspect(event.id);
+                      }
+                      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onChange({
+                          ...event,
+                          step: Math.max(
+                            0,
+                            Math.min(
+                              total - event.length,
+                              event.step + (e.key === "ArrowRight" ? 1 : -1)
+                            )
+                          )
+                        });
+                      }
+                    },
+                    onDragStart: (e) => {
+                      nativeDrag.current = true;
+                      setDragged(event);
+                      setDragCopy(e.altKey);
+                      e.dataTransfer.setData(
+                        "application/x-chopper-event",
+                        JSON.stringify({ id: event.id, copy: e.altKey })
+                      );
+                      e.dataTransfer.effectAllowed = e.altKey ? "copy" : "move";
+                    }
+                  },
+                  /* @__PURE__ */ React.createElement("strong", null, event.cue + 1),
+                  event.length * unit >= 48 && /* @__PURE__ */ React.createElement("small", null, event.mode === "relative" ? "REL" : "ABS", event.reverse ? " \xB7 Rev" : "", event.roll > 1 ? ` \xB7 Roll ${event.roll}` : "")
+                )),
+                chosen?.cue === cueRow && /* @__PURE__ */ React.createElement(
+                  "span",
+                  {
+                    role: "slider",
+                    tabIndex: 0,
+                    "aria-label": "Event duration",
+                    "aria-valuemin": 1,
+                    "aria-valuemax": maxLength(chosen),
+                    "aria-valuenow": chosen.length,
+                    className: "ch-resize ch-external-resize",
+                    style: {
+                      left: (chosen.step + chosen.length) * unit - 2
+                    },
+                    onKeyDown: (e) => {
+                      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        resize(chosen, e.key === "ArrowRight" ? 1 : -1);
+                      }
+                    },
+                    onPointerDown: (e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      const start = e.clientX, target2 = e.currentTarget;
+                      target2.setPointerCapture(e.pointerId);
+                      target2.onpointerup = (up) => {
+                        resize(chosen, Math.round((up.clientX - start) / unit));
+                        target2.onpointerup = null;
+                      };
+                      target2.onpointercancel = () => {
+                        target2.onpointerup = null;
+                      };
+                    }
+                  },
+                  "\u2194"
+                )
+              )
+            );
+          }),
+          ghost !== null && ghost.cue < rowCount && /* @__PURE__ */ React.createElement(
+            "div",
+            {
+              className: "ch-matrix-ghost",
+              style: {
+                left: cueColumn + ghost.step * unit,
+                top: ghost.cue * rowHeight,
+                width: unit,
+                height: rowHeight
+              },
+              "aria-hidden": "true"
+            },
+            /* @__PURE__ */ React.createElement("span", null, musical(ghost.step), " \xB7", " ", dragged ? `${dragCopy ? "Copy" : "Move"} ${describeEvent(dragged)}` : armed ? placement : `Cue ${ghost.cue + 1}`)
+          ),
+          playing && samePattern && /* @__PURE__ */ React.createElement(
+            "div",
+            {
+              className: "ch-matrix-playhead",
+              style: {
+                left: cueColumn + ((beat - activeStart) % pattern.beats + pattern.beats) % pattern.beats * 4 * unit,
+                height: rowCount * rowHeight
+              }
+            }
+          )
+        )
+      )),
+      /* @__PURE__ */ React.createElement("p", { className: "ch-hint ch-matrix-hint" }, armed && armedCue !== null ? `Selected cue ${armedCue + 1} \xB7 tap its highlighted row to place at a 1/16 step.` : "Tap an empty cell in a slice row to place it. Drag a waveform cue to a step; drag a pattern event to another row to change its slice.", " ", tool === "pointer" ? "Pointer selects and moves events." : "Pencil places cues. Hold an event to move; Alt-drag copies.", " ", "REL follows the pattern window; ABS pins a source cue. Drum markers stay separate.")
+    );
   }
 
   // src/chopper/components/SequenceSettings.tsx
@@ -11058,8 +11608,17 @@ ${error.message}`);
           `[data-event-id="${CSS.escape(this.state.selected ?? "")}"]`
         );
         if (!selected) return;
-        const scroll = selected.closest(".ch-pattern-scroll"), rect = selected.getBoundingClientRect(), area = scroll.getBoundingClientRect();
-        if (rect.left < area.left) scroll.scrollLeft += rect.left - area.left;
+        const scroll = selected.closest(".ch-pattern-scroll"), rect = selected.getBoundingClientRect(), area = scroll.getBoundingClientRect(), matrix = selected.closest(".ch-matrix"), cueColumn = matrix ? parseFloat(
+          getComputedStyle(matrix).getPropertyValue("--cue-column")
+        ) || 0 : 0, visibleLeft = area.left + cueColumn;
+        if (selected.closest(".ch-matrix-track")) {
+          const eventOffset = selected.offsetLeft, eventRight = cueColumn + eventOffset + selected.offsetWidth;
+          if (rect.left < visibleLeft)
+            scroll.scrollLeft = Math.max(0, eventOffset);
+          else if (rect.right > area.right)
+            scroll.scrollLeft = Math.max(0, eventRight - area.width);
+        } else if (rect.left < area.left)
+          scroll.scrollLeft += rect.left - area.left;
         else if (rect.right > area.right)
           scroll.scrollLeft += rect.right - area.right;
         const limit = this.state.inspector && innerWidth < 1200 ? document.querySelector(".ch-inspector")?.getBoundingClientRect().top ?? innerHeight : innerHeight;
@@ -11074,6 +11633,7 @@ ${error.message}`);
       });
       this.openInspector = () => this.setState({ inspector: true }, this.revealSelection);
       this.closeInspector = () => this.setState({ inspector: false }, () => {
+        this.revealSelection();
         document.querySelector(
           `[data-event-id="${CSS.escape(this.state.selected ?? "")}"]`
         )?.focus({ preventScroll: true });
@@ -11097,6 +11657,8 @@ ${error.message}`);
             const target2 = library ? document.querySelector(".ch-library-toggle") : details ? details.querySelector("summary") : this.state.selected ? document.querySelector(
               `[data-event-id="${CSS.escape(this.state.selected)}"]`
             ) : document.querySelector(".ch-library-toggle");
+            if (!library && !details && this.state.selected)
+              this.revealSelection();
             target2?.focus({ preventScroll: true });
           });
           return;
@@ -11199,6 +11761,53 @@ ${error.message}`);
             }
           }
         );
+      };
+      this.changePatternBeats = (beats) => {
+        const pattern = this.pattern;
+        if (!Number.isInteger(beats) || beats < 4 || beats > 64 || beats % 4)
+          return;
+        const lastStep = Math.max(
+          0,
+          ...pattern.events.map((event) => event.step + event.length)
+        );
+        if (lastStep > beats * 4)
+          return this.report(
+            Error("Move or remove events beyond the new pattern length first.")
+          );
+        this.commit({ ...pattern, beats });
+      };
+      this.fillCueOrder = () => {
+        const source = this.source;
+        if (!source) return;
+        if (!window.confirm(
+          "Replace every event in this pattern with one cue per beat in source order? You can Undo to restore the current pattern."
+        ))
+          return;
+        try {
+          const sourceBeats = sourceTiming(
+            source.frames,
+            source.sampleRate,
+            source.bpm
+          ), cueLimit = Math.min(64, sourceBeats), mode = this.state.placementMode, events = Array.from({ length: this.pattern.beats }, (_, index) => {
+            const cue = index % cueLimit;
+            return {
+              ...newEvent(index * 4, cue),
+              length: 4,
+              mode
+            };
+          });
+          if (this.commit({
+            ...this.pattern,
+            events
+          }))
+            this.setState({
+              selected: null,
+              message: `Filled ${events.length} beats in source cue order. Undo restores the previous pattern.`,
+              error: false
+            });
+        } catch (error) {
+          this.report(error);
+        }
       };
       this.report = (error) => this.setState({ message: error?.message || String(error), error: true });
       this.updateLoopEffects = (settings) => {
@@ -11332,7 +11941,7 @@ ${error.message}`);
           immediate
         ))
           return false;
-        this.setState({ selected: event.id });
+        this.setState({ selected: event.id }, this.revealSelection);
         return true;
       };
       this.place = (step, physical = this.state.cue ?? 0) => {
@@ -12550,6 +13159,7 @@ ${error.message}`);
         ), /* @__PURE__ */ React.createElement("button", { onClick: this.confirmTiming }, "Confirm timing")), source && buffer && beats ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
           Waveform,
           {
+            slot: s.slot,
             windowStart: s.patternStart,
             windowBeats: s.playing && s.activeSourceId === source.id ? s.activePattern?.beats ?? 0 : 0,
             bindingStatus: !s.playing ? "selected" : s.activeSourceId === source.id ? "active binding" : "selected \xB7 binding pending / not audible",
@@ -12648,9 +13258,15 @@ ${error.message}`);
             playing: s.playing,
             soundingEvent: s.playing ? s.eventId : null,
             armed: s.armed,
+            armedCue: !s.armed || s.cue === null ? null : s.placementMode === "absolute" ? s.cue : s.cue % pattern.beats,
+            placementMode: s.placementMode,
+            cueCount: Math.min(64, beats),
+            canFill: Boolean(source && beats),
             onPlace: this.place,
             onSelect: this.selectEvent,
-            onChange: this.change
+            onChange: this.change,
+            onPatternBeatsChange: this.changePatternBeats,
+            onFillCueOrder: this.fillCueOrder
           }
         ), /* @__PURE__ */ React.createElement(
           SequenceSettings,
