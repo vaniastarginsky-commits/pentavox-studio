@@ -171,14 +171,17 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 
 /* Chopper bench tokens: approved specialist design, native offline type fallback. */
 .ch-workspace {
-  --ch-canvas: #14212b;
+  --ch-canvas: #0d151e;
+  --ch-panel: #111d27;
+  --ch-a: #63d4df;
+  --ch-b: #ffad66;
+  --ch-play-color: var(--ch-a);
   --ch-surface: #1b2c39;
   --ch-line: #2b3e4c;
   --ch-ink: #f2f5fa;
   --ch-focus: #c4b2ff;
   --ch-pending: #f0aa53;
   --ch-muted: #b5c6d3;
-  --ch-waveform: #a7cedd;
   display: grid;
   grid-template-columns: 216px minmax(0, 1fr) 250px;
   grid-template-rows: auto 1fr auto;
@@ -281,8 +284,8 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   margin-right: auto;
 }
 .ch-transport .ch-play {
-  background: var(--ch-focus);
-  color: #14212b;
+  background: var(--ch-play-color);
+  color: #0d151e;
   min-width: 72px;
   font-weight: 650;
 }
@@ -971,14 +974,12 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   align-items: center;
   padding: 8px 16px;
 }
-.ch-pattern-focus label,
 .ch-event-summary label {
   display: flex;
   gap: 8px;
   align-items: center;
   min-width: 0;
 }
-.ch-pattern-focus select,
 .ch-event-summary select {
   max-width: 100%;
   min-width: 0;
@@ -1107,32 +1108,27 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-project-menu > summary {
     font-size: 12px;
   }
-  .ch-source .ch-region-title,
-  .ch-pattern .ch-region-title {
+  .ch-source .ch-region-title {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 110px;
     gap: 4px;
   }
-  .ch-source .ch-region-title h2,
-  .ch-pattern .ch-region-title h2 {
+  .ch-source .ch-region-title h2 {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .ch-source .ch-region-title span,
-  .ch-pattern .ch-region-title > span {
+  .ch-source .ch-region-title span {
     grid-column: 1/-1;
     grid-row: 2;
     font-size: 12px;
   }
-  .ch-source .ch-region-title label,
-  .ch-pattern .ch-region-title label {
+  .ch-source .ch-region-title label {
     grid-column: 2;
     grid-row: 1;
     gap: 4px;
   }
-  .ch-source .ch-region-title input,
-  .ch-pattern .ch-region-title input {
+  .ch-source .ch-region-title input {
     width: 64px;
   }
   .ch-desktop-hint {
@@ -1146,16 +1142,10 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
     padding: 4px 12px;
     font-size: 12px;
   }
-  .ch-context > span:first-of-type {
-    display: none;
-  }
   .ch-transport:not(.more-open) ~ .ch-center .ch-context > label {
     display: none;
   }
-  .ch-transport:not(.more-open) ~ .ch-center .ch-context:not(:has(button)) {
-    display: none;
-  }
-  .ch-pattern-focus > button {
+  .ch-pattern-focus > button:not(.ch-play-edited-pattern) {
     display: none;
   }
   .ch-event-summary label {
@@ -1198,12 +1188,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-placement-strip,
   .ch-event-summary {
     padding: 6px 12px;
-  }
-  .ch-pattern-focus label {
-    width: 100%;
-  }
-  .ch-pattern-focus select {
-    flex: 1;
   }
   .ch-sequence-settings {
     margin: 0 12px 6px;
@@ -1536,7 +1520,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
     font-size: 14px;
     white-space: nowrap;
   }
-  .ch-transport > button.ch-secondary:nth-of-type(3) {
+  .ch-transport > .ch-undo {
     grid-area: undo;
     display: inline-flex;
   }
@@ -1581,7 +1565,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
     min-height: 44px;
     padding: 10px 6px;
   }
-  .ch-transport:not(.more-open) > label.ch-secondary:has(select[aria-label="Edit slot"]),
   .ch-transport:not(.more-open) > label.ch-secondary:has(select[aria-label="Listen mode"]) {
     display: grid;
   }
@@ -1641,7 +1624,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   padding: 12px 20px 4px;
 }
 .ch-loop-card {
-  --loop-accent: #a7cedd;
+  --loop-accent: var(--ch-a);
   display: grid;
   gap: 3px;
   min-width: 0;
@@ -1654,7 +1637,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   text-align: left;
 }
 .ch-loop-card[data-slot="1"] {
-  --loop-accent: #e4a46a;
+  --loop-accent: var(--ch-b);
 }
 .ch-loop-card[aria-pressed="true"] {
   background: color-mix(in srgb, var(--loop-accent) 14%, #1b2c39);
@@ -1677,16 +1660,11 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-loop-card small {
   color: var(--ch-muted);
 }
-.ch-loop-overview > p {
-  grid-column: 1 / -1;
-  color: var(--ch-muted);
-  font-size: 11px;
-}
 .ch-pattern[data-slot="0"] {
-  --ch-pattern-accent: #a7cedd;
+  --ch-pattern-accent: var(--ch-a);
 }
 .ch-pattern[data-slot="1"] {
-  --ch-pattern-accent: #e4a46a;
+  --ch-pattern-accent: var(--ch-b);
 }
 .ch-pattern[data-slot] .ch-event {
   border-color: color-mix(in srgb, var(--ch-pattern-accent) 82%, #2b3e4c);
@@ -1696,7 +1674,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   box-shadow: 0 0 0 2px var(--ch-pattern-accent);
 }
 .ch-pattern[data-slot="1"] .ch-ruler span:first-child {
-  color: #e4a46a;
+  color: var(--ch-b);
 }
 @media (max-width: 560px) {
   .ch-loop-overview {
@@ -1777,63 +1755,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-drum-marker[data-kind="snare"] { --marker-color: #e8b16d; }
 .ch-drum-marker[data-kind="hat"] { --marker-color: #76c9ad; }
 .ch-drum-marker[data-kind="other"] { --marker-color: #b6a0ea; }
-.ch-loop-effects {
-  --loop-accent: #a7cedd;
-  margin: 0 20px 12px;
-  border: 1px solid color-mix(in srgb, var(--loop-accent) 48%, #2b3e4c);
-  border-left: 4px solid var(--loop-accent);
-  border-radius: 7px;
-  background: #172833;
-  color: var(--ch-ink);
-}
-.ch-loop-effects[data-slot="1"] { --loop-accent: #e4a46a; }
-.ch-loop-effects > summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 42px;
-  padding: 8px 12px;
-  cursor: pointer;
-  list-style-position: inside;
-}
-.ch-loop-effects > summary strong { color: var(--loop-accent); }
-.ch-loop-effects > summary span { color: var(--ch-muted); }
-.ch-loop-effects > summary small { margin-left: auto; color: var(--ch-muted); }
-.ch-loop-effects > p {
-  margin: 0;
-  padding: 0 12px 10px;
-  color: var(--ch-muted);
-  font-size: 12px;
-}
-.ch-fx-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
-  gap: 8px;
-  padding: 0 12px 12px;
-}
-.ch-fx-grid fieldset {
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  min-width: 0;
-  padding: 8px;
-  border: 1px solid #344958;
-  border-radius: 6px;
-}
-.ch-fx-grid legend { color: var(--loop-accent); font-weight: 700; }
-.ch-fx-grid label { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 5px; font-size: 12px; }
-.ch-fx-grid label:has(input[type="checkbox"]) { display: flex; }
-.ch-fx-grid output { color: var(--ch-muted); font-variant-numeric: tabular-nums; }
-.ch-fx-grid input[type="range"] { grid-column: 1 / -1; width: 100%; min-width: 0; }
-.ch-fx-grid input:disabled { opacity: .45; }
-@media (max-width: 1050px) {
-  .ch-fx-grid { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
-}
 @media (max-width: 640px) {
-  .ch-loop-effects { margin: 0 12px 10px; }
-  .ch-loop-effects > summary { flex-wrap: wrap; gap: 4px 8px; }
-  .ch-loop-effects > summary small { margin-left: 0; }
-  .ch-fx-grid { grid-template-columns: minmax(0, 1fr); }
   .ch-analysis { align-items: flex-start; }
 }
 
@@ -1979,7 +1901,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-matrix-track .ch-event {
   top: 2px;
   height: calc(var(--cue-height) - 4px);
-  min-width: 12px;
+  min-width: 0;
   padding: 1px 3px;
   border-radius: 3px;
   align-items: center;
@@ -2056,10 +1978,10 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   padding-top: 8px;
 }
 .ch-source[data-slot="0"] {
-  --loop-accent: #a7cedd;
+  --loop-accent: var(--ch-a);
 }
 .ch-source[data-slot="1"] {
-  --loop-accent: #e4a46a;
+  --loop-accent: var(--ch-b);
 }
 .ch-source[data-slot] .ch-source-overview i {
   border-color: var(--loop-accent);
@@ -2097,6 +2019,577 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   }
 }
 
+/* Keep the Chopper palette self-contained inside Studio's appearance theme. */
+:root[data-studio-appearance="custom"] .ch-workspace :is(button, input, select) {
+  background-color: var(--ch-surface);
+  border-color: var(--ch-line);
+  border-radius: 4px;
+  color: var(--ch-ink);
+  font-family: inherit;
+}
+:root[data-studio-appearance="custom"] .ch-workspace :is(input:not([type="checkbox"]):not([type="range"]), select) {
+  background-color: var(--ch-canvas);
+}
+:root[data-studio-appearance="custom"] .ch-workspace :is(input[type="checkbox"], input[type="range"]) {
+  background-color: transparent;
+  border-color: transparent;
+}
+:root[data-studio-appearance="custom"] .ch-workspace .ch-transport .ch-play {
+  background-color: var(--ch-play-color);
+  border-color: var(--ch-play-color);
+  color: #0d151e;
+}
+:root[data-studio-appearance="custom"] .ch-workspace .ch-cues button {
+  background-color: transparent;
+}
+:root[data-studio-appearance="custom"] .ch-workspace .ch-source[data-slot] .ch-cues button.selected {
+  background-color: color-mix(in srgb, var(--loop-accent) 22%, transparent);
+}
+:root[data-studio-appearance="custom"] .ch-workspace .ch-cues button.sounding {
+  background-color: #f2f5fa30;
+}
+:root[data-studio-appearance="custom"] .ch-workspace .ch-drum-marker {
+  background-color: transparent;
+  border-color: transparent;
+  border-radius: 0;
+}
+:root[data-studio-appearance="custom"] .ch-workspace .ch-tool-toggle button[aria-pressed="true"] {
+  background-color: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 20%, #1b2c39);
+}
+/* V02 keeps the waveform and the first matrix lanes in the same view. */
+.ch-transport,
+.ch-library,
+.ch-inspector,
+.ch-clocks {
+  background: var(--ch-panel);
+}
+.ch-transport {
+  padding: 10px 16px;
+}
+.ch-transport h1 small {
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+.ch-transport .ch-operation-feedback {
+  font-size: 12px;
+}
+.ch-transport > .ch-mobile-listen {
+  display: none;
+}
+.ch-desktop-listen {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 12px;
+}
+.ch-desktop-listen > span {
+  margin-right: 3px;
+}
+.ch-library {
+  min-width: 0;
+}
+.ch-library > button {
+  white-space: normal;
+}
+.ch-library .ch-sample {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ch-sample-name {
+  min-width: 0;
+}
+.ch-sample-slots {
+  display: flex;
+  gap: 4px;
+}
+.ch-sample-slots span {
+  border-radius: 10px;
+  padding: 0 6px;
+  background: var(--ch-a);
+  color: var(--ch-canvas);
+  font-weight: 700;
+}
+.ch-sample-slots [data-slot="1"] {
+  background: var(--ch-b);
+}
+.ch-center {
+  padding: 0 0 10px;
+}
+.ch-loop-overview {
+  padding-bottom: 10px;
+}
+.ch-workspace .ch-loop-card,
+:root[data-studio-appearance="custom"] .ch-workspace .ch-loop-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--loop-accent) 64%, var(--ch-line));
+  border-left: 4px solid var(--loop-accent);
+  border-radius: 7px;
+  background-color: #172936;
+}
+.ch-workspace .ch-loop-card[aria-pressed="true"],
+:root[data-studio-appearance="custom"] .ch-workspace .ch-loop-card[aria-pressed="true"] {
+  border-color: var(--loop-accent);
+  box-shadow: none;
+  background-color: color-mix(in srgb, var(--loop-accent) 12%, #172936);
+}
+.ch-loop-card-title,
+.ch-loop-card strong,
+.ch-loop-card > span:not(.ch-loop-card-title) {
+  grid-column: 1;
+}
+.ch-loop-card small {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.ch-source .ch-region-title {
+  padding-bottom: 5px;
+}
+.ch-source-overview {
+  height: 16px;
+  margin-bottom: 4px;
+}
+.ch-source-overview canvas {
+  height: 16px;
+}
+.ch-wave-scroll,
+.ch-pattern-scroll {
+  margin-inline: 20px;
+  border: 1px solid var(--ch-line);
+  border-radius: 5px;
+}
+.ch-wave,
+.ch-wave canvas {
+  height: 84px;
+}
+.ch-cues button span {
+  font-size: 10px;
+  left: 2px;
+}
+.ch-source .ch-hint,
+.ch-matrix-hint {
+  padding-block: 5px;
+  font-size: 12px;
+}
+.ch-analysis {
+  padding-block: 3px 8px;
+  gap: 6px;
+  font-size: 12px;
+}
+.ch-cue-layer,
+.ch-workspace .ch-layer-toggle {
+  position: relative;
+  padding: 4px 8px;
+  border: 1px solid var(--ch-line);
+  border-radius: 16px;
+}
+.ch-cue-layer {
+  color: var(--ch-a);
+  background: #16323c;
+}
+.ch-workspace .ch-layer-toggle {
+  cursor: pointer;
+  color: var(--ch-muted);
+}
+.ch-workspace .ch-layer-toggle[data-kind="kick"] { color: #f8a0a0; }
+.ch-workspace .ch-layer-toggle[data-kind="snare"] { color: #d7c1ff; }
+.ch-workspace .ch-layer-toggle[data-kind="hat"] { color: #b9df99; }
+.ch-workspace .ch-layer-toggle:has(input:checked) {
+  border-color: #566f7f;
+  background: var(--ch-surface);
+}
+.ch-layer-toggle:focus-within {
+  outline: 2px solid var(--ch-focus);
+}
+.ch-workspace .ch-layer-toggle input {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.ch-pattern-focus {
+  padding: 6px 20px;
+  border-top: 1px solid var(--ch-line);
+}
+.ch-pattern-bank {
+  display: flex;
+  flex: 1 1 180px;
+  gap: 5px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 3px;
+}
+.ch-pattern-bank button {
+  flex: 0 0 auto;
+  border-radius: 16px;
+  padding-inline: 14px;
+}
+:is(.ch-workspace, :root[data-studio-appearance="custom"] .ch-workspace) .ch-pattern-bank button[aria-pressed="true"] {
+  background-color: var(--ch-a);
+  border-color: var(--ch-a);
+  box-shadow: none;
+  color: var(--ch-canvas);
+}
+:is(.ch-workspace, :root[data-studio-appearance="custom"] .ch-workspace)[data-slot="1"] .ch-pattern-bank button[aria-pressed="true"] {
+  background-color: var(--ch-b);
+  border-color: var(--ch-b);
+}
+.ch-pattern .ch-matrix-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding-bottom: 6px;
+}
+.ch-matrix-heading h2 {
+  font-size: 16px;
+}
+.ch-matrix-heading > label {
+  margin-left: 0;
+  font-size: 12px;
+}
+.ch-matrix-heading > span {
+  margin-right: auto;
+  font-size: 12px;
+}
+.ch-event-summary {
+  padding: 4px 20px 6px;
+}
+.ch-event-summary select {
+  min-height: 30px;
+}
+.ch-pattern-scroll {
+  max-height: min(52vh, 484px);
+}
+.ch-matrix-ruler-track span {
+  padding-left: 4px;
+  white-space: nowrap;
+}
+:is(.ch-workspace, :root[data-studio-appearance="custom"] .ch-workspace) .ch-matrix-track .ch-event {
+  min-height: 0;
+  color: var(--ch-ink);
+  border-color: var(--ch-pattern-accent);
+  background-color: color-mix(in srgb, var(--ch-pattern-accent) 30%, #172833);
+}
+.ch-workspace .ch-matrix-track .ch-event[aria-pressed="true"] {
+  outline: 2px solid #f2f5fa;
+  outline-offset: -2px;
+  box-shadow: none;
+}
+:is(.ch-workspace, :root[data-studio-appearance="custom"] .ch-workspace) .ch-matrix-track .ch-event.pending {
+  border-color: var(--ch-pending);
+}
+.ch-clocks {
+  grid-column: 1/-1;
+  grid-row: 3;
+  padding: 7px 16px;
+  font-size: 12px;
+}
+.ch-inspector {
+  padding: 12px;
+  gap: 8px;
+}
+.ch-inspector-head {
+  background: var(--ch-panel);
+}
+.ch-inspector-body {
+  gap: 7px;
+}
+@media (min-width: 1200px) {
+  .ch-workspace {
+    grid-template-columns: 216px minmax(0, 1fr) 282px;
+  }
+  .ch-workspace:not(.inspector-open) {
+    grid-template-columns: 216px minmax(0, 1fr) 282px;
+  }
+  .ch-event-dock {
+    grid-column: 3;
+    grid-row: 2;
+    align-self: start;
+    position: static;
+    margin: 12px;
+  }
+  .ch-inspector-body label {
+    font-size: 13px;
+  }
+}
+@media (max-width: 1199px) {
+  .ch-workspace {
+    grid-template-rows: auto 1fr auto auto;
+  }
+  .ch-clocks {
+    grid-row: 4;
+  }
+}
+@media (max-width: 767px) {
+  .ch-transport {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-areas:
+      "title title title title"
+      "play bpm undo more"
+      "listen listen library project"
+      "feedback feedback feedback feedback";
+    padding: 6px 10px;
+  }
+  .ch-transport.more-open {
+    grid-template-areas:
+      "title title title title"
+      "play bpm undo more"
+      "edit listen library project"
+      "feedback feedback feedback feedback";
+  }
+  .ch-transport h1 {
+    position: static;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    margin: 0;
+    clip-path: none;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 18px;
+  }
+  .ch-desktop-listen {
+    display: none;
+  }
+  .ch-transport > label.ch-secondary:has(select) {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+  .ch-transport:not(.more-open) > label.ch-secondary:has(select[aria-label="Listen mode"]) {
+    display: flex;
+  }
+  .ch-transport:not(.more-open) > label.ch-secondary:has(select[aria-label="Edit slot"]) {
+    display: none;
+  }
+  .ch-transport select[aria-label="Listen mode"] {
+    width: auto;
+  }
+  .ch-transport input[aria-label="Transport BPM"] {
+    width: 46px;
+  }
+  .ch-transport .ch-operation-feedback {
+    min-width: 0;
+  }
+  .ch-transport:not(.more-open) ~ .ch-center .ch-analysis {
+    display: flex;
+  }
+  .ch-transport:not(.more-open) ~ .ch-center .ch-analysis > .ch-layer-toggle {
+    display: inline-flex;
+  }
+  .ch-marker-controls {
+    gap: 4px;
+  }
+  .ch-workspace .ch-layer-toggle {
+    min-height: 32px;
+    align-items: center;
+  }
+  .ch-source .ch-region-title {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .ch-source .ch-region-title h2 {
+    flex-basis: 100%;
+  }
+  .ch-source .ch-region-title span {
+    width: auto;
+    font-size: 11px;
+  }
+  .ch-source .ch-region-title label {
+    margin-left: auto;
+    min-height: 28px;
+    font-size: 11px;
+  }
+  .ch-source .ch-region-title input {
+    min-height: 28px;
+  }
+  .ch-wave-scroll,
+  .ch-pattern-scroll {
+    margin-inline: 12px;
+  }
+  .ch-wave,
+  .ch-wave canvas {
+    height: 68px;
+  }
+  .ch-loop-card strong,
+  .ch-loop-card > span:not(.ch-loop-card-title) {
+    grid-column: 1/-1;
+  }
+  .ch-loop-card small {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .ch-pattern-focus {
+    padding-block: 2px;
+  }
+  .ch-pattern-focus,
+  .ch-event-summary {
+    padding-inline: 12px;
+  }
+  .ch-pattern .ch-matrix-heading {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "length tool fill"
+      "info info zoom";
+    gap: 4px 6px;
+  }
+  .ch-matrix-heading h2 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .ch-pattern .ch-matrix-heading > span {
+    grid-area: info;
+  }
+  .ch-matrix-heading .ch-boundary {
+    grid-column: 1/-1;
+  }
+  .ch-pattern .ch-matrix-heading .ch-pattern-zoom {
+    grid-area: zoom;
+    justify-self: end;
+    min-height: 28px;
+  }
+  .ch-matrix-heading .ch-pattern-zoom input {
+    min-height: 28px;
+  }
+  .ch-pattern .ch-matrix-heading .ch-pattern-length {
+    grid-area: length;
+  }
+  .ch-matrix-heading .ch-tool-toggle {
+    grid-area: tool;
+  }
+  .ch-matrix-heading .ch-fill-order {
+    grid-area: fill;
+    max-width: 126px;
+  }
+  .ch-matrix-heading label,
+  .ch-matrix-heading button {
+    gap: 4px;
+    font-size: 12px;
+  }
+  .ch-matrix-heading button {
+    padding-inline: 6px;
+  }
+  .ch-matrix-heading .ch-pattern-length select {
+    min-width: 40px;
+    padding-inline: 4px;
+  }
+  .ch-pattern {
+    display: flex;
+    flex-direction: column;
+  }
+  .ch-event-summary {
+    order: 1;
+  }
+  .ch-pattern-scroll {
+    max-height: min(42vh, 324px);
+  }
+  .ch-matrix-track .ch-external-resize {
+    width: 44px;
+  }
+  .ch-clocks {
+    column-gap: 12px;
+    row-gap: 3px;
+  }
+}
+@media (max-width: 379px) {
+  .ch-pattern .ch-matrix-heading {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "length tool tool"
+      "fill fill zoom"
+      "info info info";
+  }
+  .ch-matrix-heading .ch-fill-order {
+    justify-self: start;
+  }
+  .ch-transport,
+  .ch-transport.more-open {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "title title title"
+      "play bpm undo"
+      "listen listen library"
+      "project more more"
+      "feedback feedback feedback";
+  }
+  .ch-transport.more-open {
+    grid-template-areas:
+      "title title title"
+      "play bpm undo"
+      "edit listen library"
+      "project more more"
+      "feedback feedback feedback";
+  }
+}
+
+
+.ch-resize-value {
+  position: absolute;
+  right: calc(100% + 2px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 1px 4px;
+  border: 1px solid var(--ch-pattern-accent);
+  border-radius: 3px;
+  background: var(--ch-canvas);
+  color: var(--ch-ink);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.ch-loop-card[data-drop="true"] {
+  outline: 2px dashed var(--loop-accent);
+  outline-offset: -5px;
+}
+.ch-drum-layers summary {
+  padding: 5px 9px;
+  cursor: pointer;
+}
+.ch-drum-layers[open] {
+  flex-basis: 100%;
+}
+.ch-drum-layers .ch-marker-controls {
+  padding: 4px 8px;
+}
+.ch-event-actions {
+  grid-column: 1/-1;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--ch-line);
+}
+.ch-workspace .ch-event[data-action-marked="true"] {
+  border-top: 3px solid var(--ch-focus);
+}
+.ch-playback-choice {
+  font-size: 12px;
+}
+@media (max-width: 767px) {
+  .ch-transport .ch-play {
+    font-size: 12px;
+    line-height: 1.15;
+  }
+}
+
+.ch-workspace .ch-play-edited-pattern {
+  border-color: var(--ch-a);
+  color: var(--ch-a);
+}
+.ch-workspace[data-slot="1"] .ch-play-edited-pattern {
+  border-color: var(--ch-b);
+  color: var(--ch-b);
+}
 </style>
 </head>
 <body>
@@ -8464,7 +8957,7 @@ ${error.message}`);
     const ids = /* @__PURE__ */ new Set();
     let end = 0;
     for (const e of [...pattern.events].sort((a, b) => a.step - b.step)) {
-      if (!e || typeof e.id !== "string" || ids.has(e.id) || !Number.isInteger(e.step) || e.step < end || !Number.isInteger(e.length) || e.length < 1 || e.step + e.length > pattern.beats * 4 || !Number.isInteger(e.cue) || e.cue < 0 || e.cue > 63 || !["relative", "absolute"].includes(e.mode) || ![e.gain, e.pitch, e.probability].every(Number.isFinite) || e.gain < 0 || e.gain > 2 || e.pitch < -24 || e.pitch > 24 || e.probability < 0 || e.probability > 1 || ![1, 2, 3, 4, 6, 8].includes(e.repeat) || ![1, 2, 4, 8].includes(e.roll) || typeof e.reverse !== "boolean" || typeof e.gate !== "boolean") throw Error("Invalid, overlapping or out-of-range Chopper event.");
+      if (!e || typeof e.id !== "string" || ids.has(e.id) || !Number.isInteger(e.step) || e.step < end || !Number.isInteger(e.length) || e.length < 1 || e.step + e.length > pattern.beats * 4 || !Number.isInteger(e.cue) || e.cue < 0 || e.cue > 63 || !["relative", "absolute"].includes(e.mode) || ![e.gain, e.pitch, e.probability].every(Number.isFinite) || e.gain < 0 || e.gain > 2 || e.pitch < -24 || e.pitch > 24 || e.probability < 0 || e.probability > 1 || ![1, 2, 3, 4, 6, 8].includes(e.repeat) || ![1, 2, 4, 8].includes(e.roll) || e.tapeStop !== void 0 && typeof e.tapeStop !== "boolean" || typeof e.reverse !== "boolean" || typeof e.gate !== "boolean") throw Error("Invalid, overlapping or out-of-range Chopper event.");
       ids.add(e.id);
       end = e.step + e.length;
     }
@@ -9754,7 +10247,8 @@ ${error.message}`);
       if (index >= 0 && this.accepted) {
         const e = p.events[index], elapsed = this.beat - start, span3 = e.length / 4, period = span3 / (e.repeat * e.roll), local = elapsed % period;
         const cue = e.mode === "absolute" ? e.cue : (this.patternStart + e.cue) % plan.sourceBeats;
-        const ratio = Math.pow(2, e.pitch / 12), readBeat = local * ratio;
+        const ratio = Math.pow(2, e.pitch / 12);
+        const readBeat = local * ratio * (e.tapeStop ? 1 - (elapsed - local / 2) / span3 : 1);
         if (!e.gate || readBeat < 1) {
           const pos = (cue + (e.reverse ? 1 - readBeat : readBeat)) % plan.sourceBeats, frame = (pos + plan.sourceBeats) % plan.sourceBeats / plan.sourceBeats * data.length;
           const ramp2 = Math.max(1e-6, plan.bpm / 60 * 3e-3), gateTail = e.gate ? (1 - readBeat) / ratio / ramp2 : 1;
@@ -10162,15 +10656,12 @@ ${error.message}`);
           "Live Chopper requires AudioWorklet support. Open in a current browser using HTTPS or localhost."
         );
       if (!this.loaded) {
-        const url = URL.createObjectURL(
-          new Blob(
-            [
-              `const defaultLoopEffects=${defaultLoopEffects.toString()};const validateLoopEffects=${validateLoopEffects.toString()};const LoopFxProcessor=${LoopFxProcessor.toString()};const ChopperKernel=${ChopperKernel.toString()};const ChopperPair=${ChopperPair.toString()};(${workletModule.toString()})();`
-            ],
-            { type: "application/javascript" }
-          )
-        );
-        this.loaded = ctx.audioWorklet.addModule(url).finally(() => URL.revokeObjectURL(url)).catch((error) => {
+        const source = `const defaultLoopEffects=${defaultLoopEffects.toString()};const validateLoopEffects=${validateLoopEffects.toString()};const LoopFxProcessor=${LoopFxProcessor.toString()};const ChopperKernel=${ChopperKernel.toString()};const ChopperPair=${ChopperPair.toString()};(${workletModule.toString()})();`;
+        const localFile = window.location.protocol === "file:";
+        const url = localFile ? `data:text/javascript,${encodeURIComponent(source)}` : URL.createObjectURL(new Blob([source], { type: "application/javascript" }));
+        this.loaded = ctx.audioWorklet.addModule(url).finally(() => {
+          if (!localFile) URL.revokeObjectURL(url);
+        }).catch((error) => {
           this.loaded = null;
           throw error;
         });
@@ -10596,15 +11087,16 @@ ${error.message}`);
       if (!node) return;
       const draw = () => {
         node.width = Math.max(640, node.clientWidth * devicePixelRatio);
-        node.height = 210 * devicePixelRatio;
+        node.height = Math.max(1, Math.round(node.clientHeight * devicePixelRatio));
         const ctx = node.getContext("2d");
         if (!ctx) return;
-        const data = buffer.getChannelData(0), stride = Math.max(1, Math.floor(data.length / node.width));
+        const data = buffer.getChannelData(0), framesPerPixel = data.length / node.width;
         ctx.clearRect(0, 0, node.width, node.height);
-        ctx.fillStyle = slot === 0 ? "#a7cedd" : "#e4a46a";
+        ctx.fillStyle = slot === 0 ? "#63d4df" : "#ffad66";
         for (let x = 0; x < node.width; x++) {
+          const from2 = Math.floor(x * framesPerPixel), to = Math.min(data.length, Math.ceil((x + 1) * framesPerPixel));
           let low = 1, high = -1;
-          for (let j = x * stride; j < Math.min(data.length, (x + 1) * stride); j++) {
+          for (let j = from2; j < to; j++) {
             low = Math.min(low, data[j]);
             high = Math.max(high, data[j]);
           }
@@ -10626,12 +11118,12 @@ ${error.message}`);
       if (!node) return;
       const draw = () => {
         node.width = Math.max(320, node.clientWidth * devicePixelRatio);
-        node.height = 36 * devicePixelRatio;
+        node.height = Math.max(1, Math.round(node.clientHeight * devicePixelRatio));
         const ctx = node.getContext("2d");
         if (!ctx) return;
         const data = buffer.getChannelData(0);
         ctx.clearRect(0, 0, node.width, node.height);
-        ctx.fillStyle = slot === 0 ? "#a7cedd" : "#e4a46a";
+        ctx.fillStyle = slot === 0 ? "#63d4df" : "#ffad66";
         for (let x = 0; x < node.width; x++) {
           const from2 = Math.floor(x / node.width * data.length), to = Math.ceil((x + 1) / node.width * data.length);
           let peak = 0;
@@ -10684,7 +11176,7 @@ ${error.message}`);
       "div",
       {
         className: "ch-wave",
-        style: { width: `max(100%, ${beats * 38 * zoom}px)` }
+        style: { width: `max(100%, ${beats * (innerWidth < 768 ? 44 : 16) * zoom}px)` }
       },
       /* @__PURE__ */ React.createElement("canvas", { ref: canvas }),
       /* @__PURE__ */ React.createElement("div", { className: "ch-cues" }, Array.from({ length: beats }, (_, cue) => /* @__PURE__ */ React.createElement(
@@ -10692,7 +11184,7 @@ ${error.message}`);
         {
           key: cue,
           "aria-label": `Audition source cue ${cue + 1}${cue % 4 === 0 ? ` \xB7 position ${cue / 4 + 1}.1` : ""}`,
-          draggable: true,
+          draggable: !markerKind,
           className: (cue === selected ? "selected " : "") + (cue === playingCue ? "sounding" : ""),
           onClick: (e) => {
             if (pinch.current) return;
@@ -10707,7 +11199,7 @@ ${error.message}`);
           onDragStart: (e) => {
             onArm(cue);
             e.dataTransfer.setData(
-              "application/x-chopper-cue",
+              `application/x-chopper-cue-${cue}`,
               String(cue)
             );
             e.dataTransfer.effectAllowed = "copy";
@@ -10740,7 +11232,7 @@ ${error.message}`);
         },
         /* @__PURE__ */ React.createElement("span", null, { kick: "K", snare: "S", hat: "H", other: "O" }[marker.kind])
       ))
-    )), /* @__PURE__ */ React.createElement("p", { className: "ch-hint" }, /* @__PURE__ */ React.createElement("span", { className: "ch-desktop-hint" }, "Tap a cue to hear it. Drag it to the pattern, or tap an empty cell. Preview does not move the transport."), /* @__PURE__ */ React.createElement("span", { className: "ch-mobile-hint" }, "Tap cue \u2192 tap grid. Preview leaves transport running.")));
+    )), /* @__PURE__ */ React.createElement("p", { className: "ch-hint" }, /* @__PURE__ */ React.createElement("span", { className: "ch-desktop-hint" }, "Click a cue to hear it. Drag it to a step in the matrix."), /* @__PURE__ */ React.createElement("span", { className: "ch-mobile-hint" }, "Tap a cue to hear it, then tap a step to place it.")));
   }
 
   // src/chopper/components/PatternTimeline.tsx
@@ -10769,9 +11261,9 @@ ${error.message}`);
     onPatternBeatsChange,
     onFillCueOrder
   }) {
-    const [zoom, setZoom] = React.useState(1), [tool, setTool] = React.useState("pencil"), [ghost, setGhost] = React.useState(null), [cursor, setCursor] = React.useState(0), [dragged, setDragged] = React.useState(null), [dragCopy, setDragCopy] = React.useState(false);
-    const down = React.useRef(null), body = React.useRef(null), scroll = React.useRef(null), draggedCueRef = React.useRef(0), pointerDrag = React.useRef(null), suppressEventClick = React.useRef(false), placed = React.useRef(false), nativeDrag = React.useRef(false);
-    const unit = (innerWidth < 768 ? 44 : 32) * zoom, cueColumn = 82, rowHeight = 32, total = pattern.beats * 4, chosen = pattern.events.find((e) => e.id === selected), maxCue = pattern.events.reduce((max, event) => Math.max(max, event.cue), -1), addressCount = placementMode === "absolute" ? Math.min(64, Math.max(4, cueCount)) : Math.min(64, pattern.beats), rowCount = Math.min(64, Math.max(addressCount, maxCue + 1));
+    const [zoom, setZoom] = React.useState(1), [tool, setTool] = React.useState("pencil"), [ghost, setGhost] = React.useState(null), [cursor, setCursor] = React.useState(0), [dragged, setDragged] = React.useState(null), [dragCopy, setDragCopy] = React.useState(false), [resizeDraft, setResizeDraft] = React.useState(null);
+    const down = React.useRef(null), body = React.useRef(null), scroll = React.useRef(null), draggedCueRef = React.useRef(0), pointerDrag = React.useRef(null), suppressEventClick = React.useRef(false), nativeDrag = React.useRef(false), resizePointer = React.useRef(null);
+    const unit = (innerWidth < 768 ? 22 : 32) * zoom, cueColumn = innerWidth < 768 ? 58 : 76, rowHeight = innerWidth < 768 ? 36 : 28, total = pattern.beats * 4, chosen = pattern.events.find((e) => e.id === selected), maxCue = pattern.events.reduce((max, event) => Math.max(max, event.cue), -1), addressCount = placementMode === "absolute" ? Math.min(64, Math.max(4, cueCount)) : Math.min(64, Math.max(pattern.beats, cueCount)), rowCount = Math.min(64, Math.max(addressCount, maxCue + 1));
     const touchMove = useTouchEventMove(
       body,
       unit,
@@ -10793,53 +11285,63 @@ ${error.message}`);
         if (!track || !row || !body.current?.contains(track)) return null;
         return { track, cue: Number(row.dataset.cueRow ?? 0) };
       };
+      const cuePrefix = "application/x-chopper-cue-";
+      const sourceCue = (event) => {
+        const type = event.dataTransfer?.types.find((item) => item.startsWith(cuePrefix));
+        const cue = type ? Number(type.slice(cuePrefix.length)) : NaN;
+        return Number.isSafeInteger(cue) && cue >= 0 ? cue : null;
+      };
+      const eventType = "application/x-chopper-event";
+      const clearGhost = () => setGhost(null);
       const over = (event) => {
         const target2 = at(event);
-        if (!target2) return;
+        const physical = sourceCue(event);
+        const moving = event.dataTransfer?.types.includes(eventType);
+        if (!target2 || physical === null && !moving) {
+          clearGhost();
+          return;
+        }
         event.preventDefault();
-        const rawCue = event.dataTransfer?.getData("application/x-chopper-cue") ?? "", rawEvent = event.dataTransfer?.getData("application/x-chopper-event") ?? "", cue = rawCue !== "" ? cueFromPhysical(Number(rawCue)) : rawEvent ? target2.cue : armed && armedCue !== null ? armedCue : target2.cue;
+        const cue = physical === null ? target2.cue : cueFromPhysical(physical);
+        if (physical !== null && cue < rowCount) showRow(cue);
         setGhost({ step: stepAt2(event.clientX, target2.track), cue });
       };
       const drop = (event) => {
         const target2 = at(event);
-        if (!target2) return;
+        const physical = sourceCue(event);
+        const rawEvent = event.dataTransfer?.getData(eventType);
+        clearGhost();
+        if (!target2 || physical === null && !rawEvent) return;
         event.preventDefault();
         event.stopPropagation();
-        if (placed.current) {
-          setGhost(null);
+        const step = stepAt2(event.clientX, target2.track);
+        if (physical !== null) {
+          onPlace(step, cueFromPhysical(physical), physical);
           return;
         }
-        const step = stepAt2(event.clientX, target2.track), rawCue = event.dataTransfer?.getData("application/x-chopper-cue") ?? "", rawEvent = event.dataTransfer?.getData("application/x-chopper-event") ?? "";
-        placed.current = true;
-        setGhost(null);
-        if (rawCue !== "") {
-          onPlace(step, Number(rawCue));
-          return;
-        }
-        if (rawEvent) {
-          try {
-            const data = JSON.parse(rawEvent), sourceEvent = pattern.events.find((item) => item.id === data.id);
-            if (sourceEvent) {
-              onChange({
-                ...sourceEvent,
-                id: data.copy ? crypto.randomUUID() : sourceEvent.id,
-                step,
-                cue: target2.cue
-              });
-              return;
-            }
-          } catch {
+        try {
+          const data = JSON.parse(rawEvent);
+          const sourceEvent = pattern.events.find((item) => item.id === data.id);
+          if (sourceEvent) {
+            onChange({
+              ...sourceEvent,
+              id: data.copy ? crypto.randomUUID() : sourceEvent.id,
+              step,
+              cue: target2.cue
+            });
           }
+        } catch {
         }
-        if (armed && armedCue !== null) onPlace(step, armedCue);
       };
       document.addEventListener("dragover", over, true);
       document.addEventListener("drop", drop, true);
+      document.addEventListener("dragend", clearGhost, true);
       return () => {
         document.removeEventListener("dragover", over, true);
         document.removeEventListener("drop", drop, true);
+        document.removeEventListener("dragend", clearGhost, true);
       };
-    }, [unit, total, pattern.events, placementMode, armed, armedCue, onPlace, onChange]);
+    }, [unit, total, pattern.events, placementMode, pattern.beats, rowCount, onPlace, onChange]);
     React.useEffect(() => {
       const at = (x, y) => {
         const element = document.elementFromPoint(x, y), track = element?.closest(".ch-matrix-track"), row = track?.closest(".ch-matrix-row");
@@ -10895,6 +11397,8 @@ ${error.message}`);
     const pinch = useMusicalPinch(scroll, zoom, setZoom, 0.5, 3, () => {
       down.current = null;
       touchMove.cancel?.();
+      resizePointer.current = null;
+      setResizeDraft(null);
       setGhost(null);
     });
     const stepAt2 = (x, track) => Math.max(
@@ -10912,10 +11416,16 @@ ${error.message}`);
       total,
       ...pattern.events.filter((e) => e.id !== event.id && e.step > event.step).map((e) => e.step)
     ) - event.step;
-    const resize = (event, delta) => onChange({
-      ...event,
-      length: Math.min(maxLength(event), Math.max(1, event.length + delta))
-    });
+    const resizeLength = (event, delta) => Math.min(maxLength(event), Math.max(1, event.length + delta));
+    const resize = (event, delta) => {
+      const length = resizeLength(event, delta);
+      if (length !== event.length) onChange({ ...event, length });
+    };
+    const previewLength = chosen && resizeDraft?.event === chosen ? resizeDraft.length : null;
+    const clearResize = () => {
+      resizePointer.current = null;
+      setResizeDraft(null);
+    };
     const cueFromPhysical = (cue) => placementMode === "relative" ? cue % pattern.beats : cue;
     const showRow = (cue) => {
       const area = scroll.current, row = body.current?.querySelector(
@@ -10941,7 +11451,7 @@ ${error.message}`);
         "aria-label": `Chopper pattern for loop ${slot === 0 ? "A" : "B"}`,
         "data-slot": slot
       },
-      /* @__PURE__ */ React.createElement("div", { className: "ch-region-title ch-matrix-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Slice pattern \xB7 ", pattern.name), /* @__PURE__ */ React.createElement("span", null, pattern.beats / 4, " bars \xB7 1/16 steps \xB7 ", rowCount, " cue lanes"), /* @__PURE__ */ React.createElement("label", null, "Bars", " ", /* @__PURE__ */ React.createElement(
+      /* @__PURE__ */ React.createElement("div", { className: "ch-region-title ch-matrix-heading" }, /* @__PURE__ */ React.createElement("h2", null, "Slice pattern \xB7 ", pattern.name), /* @__PURE__ */ React.createElement("span", null, "1/16 snap \xB7 ", rowCount, " cues"), /* @__PURE__ */ React.createElement("label", { className: "ch-pattern-length" }, "Bars", " ", /* @__PURE__ */ React.createElement(
         "select",
         {
           "aria-label": "Pattern length in bars",
@@ -10954,7 +11464,7 @@ ${error.message}`);
             ...pattern.events.map((event) => event.step + event.length)
           )
         ).map((bars) => /* @__PURE__ */ React.createElement("option", { key: bars, value: bars }, bars))
-      )), /* @__PURE__ */ React.createElement("label", null, "Zoom", " ", /* @__PURE__ */ React.createElement(
+      )), /* @__PURE__ */ React.createElement("label", { className: "ch-pattern-zoom" }, "Zoom", " ", /* @__PURE__ */ React.createElement(
         "input",
         {
           "aria-label": "Pattern zoom",
@@ -11041,7 +11551,7 @@ ${error.message}`);
             "--cue-height": `${rowHeight}px`
           }
         },
-        /* @__PURE__ */ React.createElement("div", { className: "ch-matrix-ruler", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("span", { className: "ch-matrix-label ch-matrix-corner" }, slot === 0 ? "LOOP A" : "LOOP B", " \xB7 SLICE"), /* @__PURE__ */ React.createElement("div", { className: "ch-matrix-ruler-track", style: { width: total * unit } }, Array.from({ length: pattern.beats / 4 }, (_, bar) => /* @__PURE__ */ React.createElement("span", { key: bar, style: { left: bar * 16 * unit } }, bar + 1)))),
+        /* @__PURE__ */ React.createElement("div", { className: "ch-matrix-ruler", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("span", { className: "ch-matrix-label ch-matrix-corner" }, slot === 0 ? "LOOP A" : "LOOP B", " \xB7 SLICE"), /* @__PURE__ */ React.createElement("div", { className: "ch-matrix-ruler-track", style: { width: total * unit } }, Array.from({ length: pattern.beats }, (_, beatIndex) => /* @__PURE__ */ React.createElement("span", { key: beatIndex, style: { left: beatIndex * 4 * unit } }, beatIndex % 4 === 0 ? `Bar ${Math.floor(beatIndex / 4) + 1}` : beatIndex % 4 + 1)))),
         /* @__PURE__ */ React.createElement(
           "div",
           {
@@ -11049,34 +11559,6 @@ ${error.message}`);
             ref: body,
             role: "grid",
             "aria-label": "Slice pattern matrix",
-            onPointerDown: (e) => {
-              if (e.target.closest(".ch-matrix-track")) return;
-              if (!pinch.current)
-                down.current = { x: e.clientX, y: e.clientY };
-            },
-            onPointerUp: (e) => {
-              if (e.target.closest(".ch-matrix-track")) return;
-              const point = down.current;
-              down.current = null;
-              if (pinch.current || !point || Math.hypot(e.clientX - point.x, e.clientY - point.y) >= 6 || tool !== "pencil")
-                return;
-              const track = body.current?.querySelector(
-                ".ch-matrix-track"
-              ), rowElement = e.target.closest(
-                ".ch-matrix-row"
-              );
-              if (!track) return;
-              const cueRow = Number(rowElement?.dataset.cueRow ?? 0), cue = armed && armedCue !== null ? armedCue : cueRow, step = stepAt2(e.clientX, track);
-              setCursor(step);
-              placed.current = true;
-              onPlace(step, cue);
-            },
-            onClickCapture: (e) => {
-              if (!placed.current) return;
-              placed.current = false;
-              e.preventDefault();
-              e.stopPropagation();
-            },
             onPointerCancel: () => {
               down.current = null;
             }
@@ -11091,6 +11573,11 @@ ${error.message}`);
                 (next) => next.id === event.id && JSON.stringify(next) === JSON.stringify(event)
               )
             ) : [];
+            const actions = (event) => [
+              event.roll > 1 && `Roll ${event.roll}\xD7`,
+              event.repeat > 1 && `Retrigger ${event.repeat}\xD7`,
+              event.tapeStop && "Tape stop"
+            ].filter(Boolean).join(" \xB7 ");
             const trackContent = [
               ...previousLaneEvents.map(() => "Was"),
               ...laneEvents.map((event) => {
@@ -11098,7 +11585,7 @@ ${error.message}`);
                 if (event.length * unit >= 48) {
                   parts.push(event.mode === "relative" ? "REL" : "ABS");
                   if (event.reverse) parts.push("\xB7 Rev");
-                  if (event.roll > 1) parts.push(`\xB7 Roll ${event.roll}`);
+                  if (actions(event)) parts.push(`\xB7 ${actions(event)}`);
                 }
                 return parts.join("");
               }),
@@ -11138,8 +11625,7 @@ ${error.message}`);
                       );
                     } else if (e.key === "Enter" && tool === "pencil") {
                       e.preventDefault();
-                      if (!armed || armedCue === null || armedCue === cueRow)
-                        onPlace(Math.min(cursor, total - 1), cueRow);
+                      onPlace(Math.min(cursor, total - 1), armedCue ?? cueRow);
                     } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
                       e.preventDefault();
                       const nextCue = Math.max(
@@ -11155,31 +11641,15 @@ ${error.message}`);
                     }
                   },
                   onPointerDown: (e) => {
-                    placed.current = false;
-                    if (!pinch.current && e.target === e.currentTarget)
-                      down.current = { x: e.clientX, y: e.clientY };
+                    down.current = !pinch.current && e.isPrimary && e.button === 0 && e.target === e.currentTarget ? { x: e.clientX, y: e.clientY, id: e.pointerId, cueRow } : null;
                   },
                   onPointerUp: (e) => {
                     const point = down.current;
                     down.current = null;
-                    if (!point) {
-                      if (placed.current) return;
-                      if (!pinch.current && e.target === e.currentTarget && tool === "pencil" && armed && armedCue !== null) {
-                        const step = stepAt2(e.clientX, e.currentTarget);
-                        setCursor(step);
-                        placed.current = true;
-                        onPlace(step, armedCue);
-                      }
-                      return;
-                    }
-                    if (pinch.current || e.target !== e.currentTarget || Math.hypot(e.clientX - point.x, e.clientY - point.y) >= 6)
-                      return;
-                    setCursor(stepAt2(e.clientX, e.currentTarget));
-                    if (tool !== "pencil") return;
-                    if (armed && armedCue !== null && armedCue !== cueRow)
-                      return;
-                    placed.current = true;
-                    onPlace(stepAt2(e.clientX, e.currentTarget), cueRow);
+                    if (!point || point.id !== e.pointerId || point.cueRow !== cueRow || pinch.current || e.target !== e.currentTarget || Math.hypot(e.clientX - point.x, e.clientY - point.y) >= 6) return;
+                    const step = stepAt2(e.clientX, e.currentTarget);
+                    setCursor(step);
+                    if (tool === "pencil") onPlace(step, armedCue ?? cueRow);
                   }
                 },
                 pending && samePattern && activePattern?.events.filter(
@@ -11205,13 +11675,14 @@ ${error.message}`);
                     key: event.id,
                     type: "button",
                     "data-event-id": event.id,
-                    "aria-label": `Event at ${musical(event.step)}, cue ${event.cue + 1}, ${event.mode === "relative" ? "REL" : "ABS"}, duration ${event.length} sixteenths`,
-                    title: `Cue ${event.cue + 1} \xB7 ${event.mode === "relative" ? "REL" : "ABS"} \xB7 ${musical(event.step)}`,
+                    "aria-label": `Event at ${musical(event.step)}, cue ${event.cue + 1}, ${event.mode === "relative" ? "REL" : "ABS"}, duration ${event.length} sixteenths${actions(event) ? `, ${actions(event)}` : ""}`,
+                    title: `Cue ${event.cue + 1} \xB7 ${event.mode === "relative" ? "REL" : "ABS"} \xB7 ${musical(event.step)}${actions(event) ? ` \xB7 ${actions(event)}` : ""}`,
+                    "data-action-marked": Boolean(actions(event)),
                     "aria-pressed": event.id === selected,
                     className: "ch-event " + (event.id === selected ? "selected " : "") + (changed(event) ? "pending " : "") + (event.id === soundingEvent ? "sounding" : ""),
                     style: {
                       left: event.step * unit,
-                      width: event.length * unit
+                      width: (event === chosen ? previewLength ?? event.length : event.length) * unit
                     },
                     draggable: true,
                     onPointerDown: (e) => {
@@ -11284,7 +11755,7 @@ ${error.message}`);
                     }
                   },
                   /* @__PURE__ */ React.createElement("strong", null, event.cue + 1),
-                  event.length * unit >= 48 && /* @__PURE__ */ React.createElement("small", null, event.mode === "relative" ? "REL" : "ABS", event.reverse ? " \xB7 Rev" : "", event.roll > 1 ? ` \xB7 Roll ${event.roll}` : "")
+                  event.length * unit >= 48 && /* @__PURE__ */ React.createElement("small", null, event.mode === "relative" ? "REL" : "ABS", event.reverse ? " \xB7 Rev" : "", actions(event) ? ` \xB7 ${actions(event)}` : "")
                 )),
                 chosen?.cue === cueRow && /* @__PURE__ */ React.createElement(
                   "span",
@@ -11294,10 +11765,11 @@ ${error.message}`);
                     "aria-label": "Event duration",
                     "aria-valuemin": 1,
                     "aria-valuemax": maxLength(chosen),
-                    "aria-valuenow": chosen.length,
+                    "aria-valuenow": previewLength ?? chosen.length,
+                    "aria-valuetext": `${previewLength ?? chosen.length}/16`,
                     className: "ch-resize ch-external-resize",
                     style: {
-                      left: (chosen.step + chosen.length) * unit - 2
+                      left: (chosen.step + (previewLength ?? chosen.length)) * unit - 2
                     },
                     onKeyDown: (e) => {
                       if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
@@ -11307,20 +11779,33 @@ ${error.message}`);
                       }
                     },
                     onPointerDown: (e) => {
+                      if (!e.isPrimary || e.button !== 0 || pinch.current) return;
                       e.stopPropagation();
                       e.preventDefault();
-                      const start = e.clientX, target2 = e.currentTarget;
-                      target2.setPointerCapture(e.pointerId);
-                      target2.onpointerup = (up) => {
-                        resize(chosen, Math.round((up.clientX - start) / unit));
-                        target2.onpointerup = null;
-                      };
-                      target2.onpointercancel = () => {
-                        target2.onpointerup = null;
-                      };
-                    }
+                      e.currentTarget.setPointerCapture(e.pointerId);
+                      resizePointer.current = { id: e.pointerId, x: e.clientX, event: chosen, unit };
+                      setResizeDraft({ event: chosen, length: chosen.length });
+                    },
+                    onPointerMove: (e) => {
+                      const drag = resizePointer.current;
+                      if (!drag || drag.id !== e.pointerId || drag.event !== chosen) return;
+                      setResizeDraft({
+                        event: chosen,
+                        length: resizeLength(chosen, Math.round((e.clientX - drag.x) / drag.unit))
+                      });
+                    },
+                    onPointerUp: (e) => {
+                      const drag = resizePointer.current;
+                      if (!drag || drag.id !== e.pointerId) return;
+                      clearResize();
+                      if (drag.event === chosen)
+                        resize(chosen, Math.round((e.clientX - drag.x) / drag.unit));
+                    },
+                    onPointerCancel: clearResize,
+                    onLostPointerCapture: clearResize
                   },
-                  "\u2194"
+                  "\u2194",
+                  previewLength !== null && /* @__PURE__ */ React.createElement("span", { className: "ch-resize-value" }, previewLength, "/16")
                 )
               )
             );
@@ -11332,7 +11817,7 @@ ${error.message}`);
               style: {
                 left: cueColumn + ghost.step * unit,
                 top: ghost.cue * rowHeight,
-                width: unit,
+                width: (dragged?.length ?? 1) * unit,
                 height: rowHeight
               },
               "aria-hidden": "true"
@@ -11351,7 +11836,7 @@ ${error.message}`);
           )
         )
       )),
-      /* @__PURE__ */ React.createElement("p", { className: "ch-hint ch-matrix-hint" }, armed && armedCue !== null ? `Selected cue ${armedCue + 1} \xB7 tap its highlighted row to place at a 1/16 step.` : "Tap an empty cell in a slice row to place it. Drag a waveform cue to a step; drag a pattern event to another row to change its slice.", " ", tool === "pointer" ? "Pointer selects and moves events." : "Pencil places cues. Hold an event to move; Alt-drag copies.", " ", "REL follows the pattern window; ABS pins a source cue. Drum markers stay separate.")
+      /* @__PURE__ */ React.createElement("p", { className: "ch-hint ch-matrix-hint" }, tool === "pointer" ? "Pointer selects and moves events. Drag from the waveform to place a cue." : armed && armedCue !== null ? `Cue ${armedCue + 1} armed \xB7 tap a step to place it in the highlighted row.` : "Tap a cell to place a cue. Hold an event to move it.")
     );
   }
 
@@ -11366,16 +11851,7 @@ ${error.message}`);
     onPattern,
     onFill
   }) {
-    return /* @__PURE__ */ React.createElement("details", { className: "ch-sequence-settings" }, /* @__PURE__ */ React.createElement("summary", null, "Sequence \xB7 Seed ", seed, " \xB7 probability ", Math.round(probability * 100), "% \xB7", " ", sequence ? "Seed playback" : "selected pattern"), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-controls" }, /* @__PURE__ */ React.createElement("label", null, "Playback", " ", /* @__PURE__ */ React.createElement(
-      "select",
-      {
-        "aria-label": "Playback mode",
-        value: sequence ? "seed" : "pattern",
-        onChange: (e) => onSettings({ sequence: e.target.value === "seed" })
-      },
-      /* @__PURE__ */ React.createElement("option", { value: "seed" }, "Seed sequence"),
-      /* @__PURE__ */ React.createElement("option", { value: "pattern" }, "Selected pattern")
-    )), /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("details", { className: "ch-sequence-settings" }, /* @__PURE__ */ React.createElement("summary", null, "Sequence \xB7 Seed ", seed, " \xB7 probability ", Math.round(probability * 100), "% \xB7", " ", sequence ? "Seed playback" : "selected pattern"), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-controls" }, /* @__PURE__ */ React.createElement(
       NumericField,
       {
         label: "Sequence probability",
@@ -11459,25 +11935,32 @@ ${error.message}`);
           cue: mode === "absolute" && event.mode === "relative" && resolved !== null ? resolved : event.cue
         })
       },
-      mode === "relative" ? "REL" : "ABS"
-    )))), !event ? /* @__PURE__ */ React.createElement("p", null, "Select an event to hear and edit it. New events use REL addressing.") : /* @__PURE__ */ React.createElement("div", { className: "ch-inspector-body" }, /* @__PURE__ */ React.createElement("p", null, resolved === null ? "Source unavailable" : `Source bar ${Math.floor(resolved / 4) + 1}, beat ${resolved % 4 + 1} \xB7 cue ${resolved + 1}`, /* @__PURE__ */ React.createElement("br", null), event.mode === "relative" ? "Follows the current pattern window." : "Pinned to this physical source cue."), numeric("Source cue (1\u201364)", "cue", 1, 64), numeric("Position (sixteenths)", "step", 1, maxPosition), numeric("Duration (sixteenths)", "length", 1, maxLength), numeric("Gain", "gain", 0, 2, 0.05), numeric("Pitch (semitones)", "pitch", -24, 24), numeric("Probability", "probability", 0, 1, 0.05), ["repeat", "roll"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, key === "repeat" ? "Repeat" : "Roll", /* @__PURE__ */ React.createElement(
+      mode === "relative" ? "Relative (REL)" : "Fixed (ABS)"
+    )))), !event ? /* @__PURE__ */ React.createElement("p", null, "Select an event to hear and edit it.") : /* @__PURE__ */ React.createElement("div", { className: "ch-inspector-body" }, /* @__PURE__ */ React.createElement("p", null, resolved === null ? "Source unavailable" : `Source bar ${Math.floor(resolved / 4) + 1}, beat ${resolved % 4 + 1} \xB7 cue ${resolved + 1}`, /* @__PURE__ */ React.createElement("br", null), "Relative (REL) follows the loop as the pattern repeats. Fixed (ABS) always plays the same place in the original WAV."), numeric("Source cue (1\u201364)", "cue", 1, 64), numeric("Position (sixteenths)", "step", 1, maxPosition), numeric("Duration (sixteenths)", "length", 1, maxLength), numeric("Gain", "gain", 0, 2, 0.05), numeric("Pitch (semitones)", "pitch", -24, 24), numeric("Probability", "probability", 0, 1, 0.05), /* @__PURE__ */ React.createElement("fieldset", { className: "ch-event-actions" }, /* @__PURE__ */ React.createElement("legend", null, "Action markers on this event"), ["repeat", "roll"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, key === "repeat" ? "Retrigger" : "Roll", /* @__PURE__ */ React.createElement(
       "select",
       {
-        "aria-label": key,
+        "aria-label": key === "repeat" ? "Retrigger" : "Roll",
         value: event[key],
         onChange: (e) => onChange({ ...event, [key]: +e.target.value })
       },
       (key === "repeat" ? [1, 2, 3, 4, 6, 8] : [1, 2, 4, 8]).map(
-        (n) => /* @__PURE__ */ React.createElement("option", { key: n, value: n }, n)
+        (n) => /* @__PURE__ */ React.createElement("option", { key: n, value: n }, n === 1 ? "Off" : `${n}\xD7`)
       )
-    ))), ["reverse", "gate"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, /* @__PURE__ */ React.createElement(
+    ))), /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "checkbox",
+        checked: Boolean(event.tapeStop),
+        onChange: (e) => onChange({ ...event, tapeStop: e.target.checked })
+      }
+    ), "Tape stop")), ["reverse", "gate"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, /* @__PURE__ */ React.createElement(
       "input",
       {
         type: "checkbox",
         checked: event[key],
         onChange: (e) => onChange({ ...event, [key]: e.target.checked })
       }
-    ), key === "reverse" ? "Reverse" : "Gate at cue end")), /* @__PURE__ */ React.createElement("button", { onClick: onPin }, "Pin auditioned cue (ABS)"), /* @__PURE__ */ React.createElement("button", { onClick: onPreview }, "Preview processed event"), /* @__PURE__ */ React.createElement("div", { className: "ch-edit-actions" }, /* @__PURE__ */ React.createElement("button", { onClick: onDuplicate }, "Duplicate"), /* @__PURE__ */ React.createElement("button", { disabled: event.length < 2, onClick: onSplit }, "Split"), /* @__PURE__ */ React.createElement("button", { onClick: onDelete }, "Delete"))));
+    ), key === "reverse" ? "Reverse" : "Gate at cue end")), /* @__PURE__ */ React.createElement("button", { onClick: onPin }, "Use last heard cue as fixed"), /* @__PURE__ */ React.createElement("button", { onClick: onPreview }, "Preview processed event"), /* @__PURE__ */ React.createElement("div", { className: "ch-edit-actions" }, /* @__PURE__ */ React.createElement("button", { onClick: onDuplicate }, "Duplicate"), /* @__PURE__ */ React.createElement("button", { disabled: event.length < 2, onClick: onSplit }, "Split"), /* @__PURE__ */ React.createElement("button", { onClick: onDelete }, "Delete"))));
   }
 
   // src/chopper/device.ts
@@ -11547,33 +12030,6 @@ ${error.message}`);
     }) }, "Download legacy pattern ", slot)), !caps && /* @__PURE__ */ React.createElement("p", null, "No compatible device capabilities confirmed. Standalone exports do not require a module."));
   }
 
-  // src/chopper/components/LoopEffectsPanel.tsx
-  function LoopEffectsPanel({ slot, value, onChange }) {
-    const [draft, setDraft] = React.useState(value);
-    const dirty = React.useRef(false);
-    React.useEffect(() => {
-      setDraft(value);
-      dirty.current = false;
-    }, [value]);
-    const update = (patch) => {
-      const next = { ...draft, ...patch };
-      setDraft(next);
-      onChange(next);
-    };
-    const adjust = (patch) => {
-      dirty.current = true;
-      setDraft({ ...draft, ...patch });
-    };
-    const commit = () => {
-      if (!dirty.current) return;
-      dirty.current = false;
-      onChange(draft);
-    };
-    const active = [draft.filter.enabled, draft.delay.enabled, draft.reverb.enabled, draft.drive.enabled].filter(Boolean).length;
-    const name = slot === 0 ? "A" : "B";
-    return /* @__PURE__ */ React.createElement("details", { className: "ch-loop-effects", "data-slot": slot }, /* @__PURE__ */ React.createElement("summary", null, /* @__PURE__ */ React.createElement("strong", null, "Loop ", name, " \xB7 Effects"), /* @__PURE__ */ React.createElement("span", null, active ? `${active} active` : "No effects"), /* @__PURE__ */ React.createElement("small", null, "Studio preview")), /* @__PURE__ */ React.createElement("p", null, "Effects are independent for each loop. Current firmware upload does not carry this FX chain."), /* @__PURE__ */ React.createElement("div", { className: "ch-fx-grid" }, /* @__PURE__ */ React.createElement("fieldset", null, /* @__PURE__ */ React.createElement("legend", null, "Filter"), /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: draft.filter.enabled, onChange: (e) => update({ filter: { ...draft.filter, enabled: e.target.checked } }) }), " On"), /* @__PURE__ */ React.createElement("label", null, "Cutoff ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.filter.cutoffHz), " Hz"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} filter cutoff`, type: "range", min: "80", max: "16000", step: "10", value: draft.filter.cutoffHz, disabled: !draft.filter.enabled, onChange: (e) => adjust({ filter: { ...draft.filter, cutoffHz: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit }))), /* @__PURE__ */ React.createElement("fieldset", null, /* @__PURE__ */ React.createElement("legend", null, "Delay"), /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: draft.delay.enabled, onChange: (e) => update({ delay: { ...draft.delay, enabled: e.target.checked } }) }), " On"), /* @__PURE__ */ React.createElement("label", null, "Time ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.delay.timeMs), " ms"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} delay time`, type: "range", min: "20", max: "1200", step: "5", value: draft.delay.timeMs, disabled: !draft.delay.enabled, onChange: (e) => adjust({ delay: { ...draft.delay, timeMs: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit })), /* @__PURE__ */ React.createElement("label", null, "Feedback ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.delay.feedback * 100), "%"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} delay feedback`, type: "range", min: "0", max: ".88", step: ".01", value: draft.delay.feedback, disabled: !draft.delay.enabled, onChange: (e) => adjust({ delay: { ...draft.delay, feedback: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit })), /* @__PURE__ */ React.createElement("label", null, "Mix ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.delay.mix * 100), "%"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} delay mix`, type: "range", min: "0", max: "1", step: ".01", value: draft.delay.mix, disabled: !draft.delay.enabled, onChange: (e) => adjust({ delay: { ...draft.delay, mix: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit }))), /* @__PURE__ */ React.createElement("fieldset", null, /* @__PURE__ */ React.createElement("legend", null, "Reverb"), /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: draft.reverb.enabled, onChange: (e) => update({ reverb: { ...draft.reverb, enabled: e.target.checked } }) }), " On"), /* @__PURE__ */ React.createElement("label", null, "Decay ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.reverb.decay * 100), "%"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} reverb decay`, type: "range", min: ".1", max: ".92", step: ".01", value: draft.reverb.decay, disabled: !draft.reverb.enabled, onChange: (e) => adjust({ reverb: { ...draft.reverb, decay: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit })), /* @__PURE__ */ React.createElement("label", null, "Mix ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.reverb.mix * 100), "%"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} reverb mix`, type: "range", min: "0", max: "1", step: ".01", value: draft.reverb.mix, disabled: !draft.reverb.enabled, onChange: (e) => adjust({ reverb: { ...draft.reverb, mix: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit }))), /* @__PURE__ */ React.createElement("fieldset", null, /* @__PURE__ */ React.createElement("legend", null, "Drive"), /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: draft.drive.enabled, onChange: (e) => update({ drive: { ...draft.drive, enabled: e.target.checked } }) }), " On"), /* @__PURE__ */ React.createElement("label", null, "Amount ", /* @__PURE__ */ React.createElement("output", null, Math.round(draft.drive.amount * 100), "%"), /* @__PURE__ */ React.createElement("input", { "aria-label": `Loop ${name} drive amount`, type: "range", min: "0", max: "1", step: ".01", value: draft.drive.amount, disabled: !draft.drive.enabled, onChange: (e) => adjust({ drive: { ...draft.drive, amount: +e.target.value } }), onPointerUp: commit, onKeyUp: commit, onBlur: commit })))));
-  }
-
   // src/chopper/ChopperApp.tsx
   var ChopperApp = class extends React.Component {
     constructor(props) {
@@ -11601,6 +12057,7 @@ ${error.message}`);
       this.legacyBuffers = /* @__PURE__ */ new Map();
       this.legacyPreviewGeneration = 0;
       this.projectLoadGeneration = 0;
+      this.fileDropGeneration = 0;
       this.compatibilityFiles = /* @__PURE__ */ new Map();
       this.compatibilityBuffers = /* @__PURE__ */ new Map();
       this.toolbarObserver = null;
@@ -11700,6 +12157,10 @@ ${error.message}`);
           return this.report(Error("No free space for a duplicate."));
         this.change({ ...event, id: crypto.randomUUID(), step });
       };
+      this.listen = (mode) => {
+        this.setState({ mode });
+        if (this.state.playing) this.audio.setMode(mode);
+      };
       this.selectPattern = (id) => {
         try {
           const pattern = this.state.patterns.find((p) => p.id === id);
@@ -11719,9 +12180,12 @@ ${error.message}`);
       };
       this.selectSlot = (slot) => {
         const state = this.state;
+        this.fileDropGeneration++;
         this.audio.editSlot = slot;
         this.setState({
           slot,
+          droppedSource: null,
+          prepare: false,
           sourceId: state.bindings[slot],
           patternId: state.patternBindings[slot] && state.patterns.some((p) => p.id === state.patternBindings[slot]) ? state.patternBindings[slot] : state.patterns[0].id,
           selected: null,
@@ -11811,18 +12275,6 @@ ${error.message}`);
         }
       };
       this.report = (error) => this.setState({ message: error?.message || String(error), error: true });
-      this.updateLoopEffects = (settings) => {
-        try {
-          const checked = validateLoopEffects(settings), next = [...this.state.loopEffects];
-          this.remember();
-          next[this.state.slot] = checked;
-          this.setState({ loopEffects: next }, () => {
-            if (this.state.playing) this.audio.setEffects(this.state.slot, checked);
-          });
-        } catch (error) {
-          this.report(error);
-        }
-      };
       this.addDrumMarker = (frame, kind) => {
         const source = this.source;
         if (!source || !Number.isSafeInteger(frame) || frame < 0 || frame >= source.frames) return;
@@ -11945,27 +12397,32 @@ ${error.message}`);
         this.setState({ selected: event.id }, this.revealSelection);
         return true;
       };
-      this.place = (step, physical = this.state.cue ?? 0) => {
-        if (!this.source) return;
-        const cue = this.state.placementMode === "absolute" ? physical : physical % this.pattern.beats;
+      this.place = (step, cue, physical = this.state.armed ? this.state.cue : null) => {
+        const source = this.source;
+        if (!source) return;
         if (cue > 63)
           return this.report(
             Error("This cue lies outside the 64-address pattern window.")
           );
         const event = { ...newEvent(step, cue), mode: this.state.placementMode };
+        let resolved;
+        try {
+          resolved = resolveCue(
+            cue,
+            event.mode,
+            this.state.beat,
+            this.pattern.beats,
+            sourceTiming(source.frames, source.sampleRate, source.bpm),
+            this.windowOrigin()
+          );
+        } catch (error) {
+          return this.report(error);
+        }
         if (!this.change(event)) return;
-        const resolved = resolveCue(
-          cue,
-          event.mode,
-          this.state.beat,
-          this.pattern.beats,
-          sourceTiming(this.source.frames, this.source.sampleRate, this.source.bpm),
-          this.windowOrigin()
-        );
         this.setState({
-          armed: true,
+          armed: this.state.cue !== null,
           inspector: innerWidth >= 1200,
-          message: resolved === physical ? `${event.mode === "relative" ? "REL" : "ABS"} cue ${cue + 1} \u2192 physical cue ${resolved + 1} in this window.` : `Auditioned physical cue ${physical + 1}; REL ${cue + 1} resolves to physical cue ${resolved + 1} now. Pin auditioned cue (ABS) to keep cue ${physical + 1}.`,
+          message: physical === null || resolved === physical ? `${event.mode === "relative" ? "REL" : "ABS"} cue ${cue + 1} \u2192 physical cue ${resolved + 1} in this window.` : `Auditioned physical cue ${physical + 1}; REL ${cue + 1} resolves to physical cue ${resolved + 1} now. Pin auditioned cue (ABS) to keep cue ${physical + 1}.`,
           error: false
         });
       };
@@ -12065,6 +12522,57 @@ ${error.message}`);
           this.report(error);
         }
       };
+      this.acceptAudioDrop = (event, slot) => {
+        if (!event.dataTransfer.types.includes("Files")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.setState({ dropSlot: null });
+        if (event.dataTransfer.files.length !== 1)
+          return this.report(Error("Drop one audio file per loop."));
+        void this.dropAudio(event.dataTransfer.files[0], slot);
+      };
+      this.dropAudio = async (file, slot) => {
+        const generation = ++this.fileDropGeneration;
+        const project = this.projectLoadGeneration;
+        try {
+          const source = await audioLibrary.addFile(file, this.state.bpm);
+          if (generation !== this.fileDropGeneration || project !== this.projectLoadGeneration) {
+            audioLibrary.discard(source.id);
+            return;
+          }
+          this.selectSlot(slot);
+          this.setState((state) => ({
+            sources: [...state.sources, source],
+            droppedSource: source,
+            prepare: true,
+            library: false,
+            sourceBpm: String(source.bpm),
+            bars: String(Math.max(1, Math.round(source.frames / source.sampleRate * source.bpm / 240))),
+            message: `Confirm timing to bind ${source.name} to Loop ${slot === 0 ? "A" : "B"}.`,
+            error: false
+          }));
+        } catch (error) {
+          if (generation === this.fileDropGeneration && project === this.projectLoadGeneration)
+            this.report(error);
+        }
+      };
+      this.changePlaybackMode = (sequence, playSlot) => {
+        const previous = { sequence: this.state.sequence, mode: this.state.mode };
+        const mode = playSlot === void 0 ? previous.mode : playSlot === 0 ? "A" : "B";
+        this.setState({ sequence, mode }, () => {
+          try {
+            if (this.state.playing) {
+              this.publish();
+              if (mode !== previous.mode) this.audio.setMode(mode);
+            } else if (playSlot !== void 0) {
+              void this.toggle();
+            }
+          } catch (error) {
+            this.setState(previous);
+            this.report(error);
+          }
+        });
+      };
       this.addFiles = async (event) => {
         const files = Array.from(event.currentTarget.files || []);
         event.currentTarget.value = "";
@@ -12109,6 +12617,7 @@ ${error.message}`);
           if (source.id !== this.state.sourceId) this.remember();
           this.setState({
             sourceId: source.id,
+            droppedSource: null,
             bindings: this.state.bindings.map(
               (id, slot) => slot === this.state.slot ? source.id : id
             ),
@@ -12131,7 +12640,8 @@ ${error.message}`);
       };
       this.confirmTiming = () => {
         try {
-          const source = this.source;
+          const dropped = this.state.droppedSource;
+          const source = dropped ?? this.source;
           if (!source) return;
           const bpm = Number(this.state.sourceBpm), beats = sourceTiming(source.frames, source.sampleRate, bpm);
           if (beats !== Number(this.state.bars) * 4)
@@ -12140,9 +12650,17 @@ ${error.message}`);
             );
           const next = { ...source, bpm };
           if (this.state.playing) this.plan(this.pattern, next);
+          if (dropped) this.remember();
           this.setState(
             {
               sources: this.state.sources.map((s) => s.id === next.id ? next : s),
+              ...dropped ? {
+                sourceId: next.id,
+                bindings: this.state.bindings.map(
+                  (id, slot) => slot === this.state.slot ? next.id : id
+                ),
+                droppedSource: null
+              } : {},
               bpm,
               prepare: false,
               message: `Prepared timing \xB7 ${beats / 4} bars at ${bpm} BPM. Original untouched.`,
@@ -12413,6 +12931,7 @@ ${error.message}`);
           activeSourceId: "",
           activeSourceBeats: 0,
           prepare: false,
+          droppedSource: null,
           compatibility: false,
           library: false,
           message: "Legacy project opened directly in Chopper. Exact-frame arrangement and originals preserved; no automatic cue conversion.",
@@ -12663,6 +13182,8 @@ ${error.message}`);
             bindings: paired ? value.bindings : [value.sourceId, ""],
             patternBindings: paired ? value.patternBindings : [value.patternId, value.patternId],
             mode: paired ? value.mode : "A",
+            droppedSource: null,
+            prepare: false,
             sequence: value.version >= 2 ? value.sequence : false,
             probability: value.version >= 2 ? value.probability : 0.5,
             selected: null,
@@ -12766,7 +13287,7 @@ ${error.message}`);
         sequenceSlot: 0,
         activeSourceBeats: 0,
         activeSourceId: "",
-        sequence: true,
+        sequence: false,
         probability: 0.5,
         seed: 42,
         bpm: 174,
@@ -12835,7 +13356,7 @@ ${error.message}`);
       return this.pattern.events.find((e) => e.id === this.state.selected) || null;
     }
     render() {
-      const s = this.state, source = this.source, buffer = source && audioLibrary.get(source.id), pattern = this.pattern, event = this.event;
+      const s = this.state, source = this.source, buffer = source && audioLibrary.get(source.id), pattern = this.pattern, event = this.event, playingEditedPattern = s.playing && !s.sequence && s.mode === (s.slot === 0 ? "A" : "B");
       let beats = 0, resolved = null;
       try {
         if (source)
@@ -12856,14 +13377,18 @@ ${error.message}`);
         {
           className: "ch-workspace " + (s.library ? "library-open " : "") + (s.inspector ? "inspector-open" : ""),
           hidden: s.compatibility,
-          "data-slot": s.slot
+          "data-slot": s.slot,
+          onDragOver: (event2) => {
+            if (event2.dataTransfer.types.includes("Files")) event2.preventDefault();
+          },
+          onDrop: (event2) => this.acceptAudioDrop(event2, s.slot)
         },
         /* @__PURE__ */ React.createElement(
           "header",
           {
             className: "ch-transport " + (s.transportMore ? "more-open" : "")
           },
-          /* @__PURE__ */ React.createElement("h1", null, "Chopper ", /* @__PURE__ */ React.createElement("small", null, "Studio preview")),
+          /* @__PURE__ */ React.createElement("h1", null, /* @__PURE__ */ React.createElement("small", null, "PENTAVOX"), " Chopper"),
           /* @__PURE__ */ React.createElement("label", { className: "ch-secondary" }, "Edit slot", " ", /* @__PURE__ */ React.createElement(
             "select",
             {
@@ -12874,22 +13399,28 @@ ${error.message}`);
             /* @__PURE__ */ React.createElement("option", { value: "0" }, "A"),
             /* @__PURE__ */ React.createElement("option", { value: "1" }, "B")
           )),
-          /* @__PURE__ */ React.createElement("label", { className: "ch-secondary" }, "Listen", " ", /* @__PURE__ */ React.createElement(
+          /* @__PURE__ */ React.createElement("label", { className: "ch-secondary ch-mobile-listen" }, "Listen", " ", /* @__PURE__ */ React.createElement(
             "select",
             {
               "aria-label": "Listen mode",
               value: s.mode,
-              onChange: (e) => {
-                const mode = e.target.value;
-                this.setState({ mode });
-                if (s.playing) this.audio.setMode(mode);
-              }
+              onChange: (e) => this.listen(e.target.value)
             },
             /* @__PURE__ */ React.createElement("option", null, "A"),
             /* @__PURE__ */ React.createElement("option", null, "B"),
             /* @__PURE__ */ React.createElement("option", null, "Both")
           )),
-          /* @__PURE__ */ React.createElement("button", { className: "ch-play", onClick: this.toggle }, s.playing ? "Stop" : "Play"),
+          /* @__PURE__ */ React.createElement("div", { className: "ch-desktop-listen", role: "group", "aria-label": "Listen mode" }, /* @__PURE__ */ React.createElement("span", null, "Listen"), ["A", "B", "Both"].map((mode) => /* @__PURE__ */ React.createElement(
+            "button",
+            {
+              key: mode,
+              type: "button",
+              "aria-pressed": s.mode === mode,
+              onClick: () => this.listen(mode)
+            },
+            mode
+          ))),
+          /* @__PURE__ */ React.createElement("button", { className: "ch-play", onClick: this.toggle }, s.playing ? "Stop" : s.sequence ? "Play Seed" : "Play pattern"),
           /* @__PURE__ */ React.createElement(
             "button",
             {
@@ -12925,7 +13456,7 @@ ${error.message}`);
           /* @__PURE__ */ React.createElement(
             "button",
             {
-              className: "ch-secondary",
+              className: "ch-secondary ch-undo",
               onClick: () => this.history(),
               disabled: !this.undo.length
             },
@@ -13002,10 +13533,12 @@ ${error.message}`);
           "button",
           {
             key: item.id,
+            className: "ch-sample",
             "aria-pressed": item.id === s.sourceId,
             onClick: () => this.selectSource(item)
           },
-          item.name
+          /* @__PURE__ */ React.createElement("span", { className: "ch-sample-name" }, item.name),
+          /* @__PURE__ */ React.createElement("span", { className: "ch-sample-slots" }, s.bindings.map((id, slot) => id === item.id && /* @__PURE__ */ React.createElement("span", { key: slot, "data-slot": slot }, slot === 0 ? "A" : "B")))
         )), /* @__PURE__ */ React.createElement("div", { className: "ch-library-actions" }, /* @__PURE__ */ React.createElement(
           "button",
           {
@@ -13050,7 +13583,7 @@ ${error.message}`);
           },
           p.name,
           " ",
-          /* @__PURE__ */ React.createElement("small", null, p.role)
+          /* @__PURE__ */ React.createElement("small", null, p.events.length, " events \xB7 ", p.beats / 4, " bars")
         )), /* @__PURE__ */ React.createElement(
           "button",
           {
@@ -13097,14 +13630,26 @@ ${error.message}`);
               className: "ch-loop-card",
               "data-slot": slot,
               "aria-pressed": slot === s.slot,
+              "data-drop": s.dropSlot === slot,
+              onDragOver: (e) => {
+                if (!e.dataTransfer.types.includes("Files")) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+                if (s.dropSlot !== slot) this.setState({ dropSlot: slot });
+              },
+              onDragLeave: (e) => {
+                if (!(e.relatedTarget instanceof Node) || !e.currentTarget.contains(e.relatedTarget))
+                  this.setState({ dropSlot: null });
+              },
+              onDrop: (e) => this.acceptAudioDrop(e, slot),
               onClick: () => this.selectSlot(slot)
             },
             /* @__PURE__ */ React.createElement("span", { className: "ch-loop-card-title" }, "Loop ", loopName),
-            /* @__PURE__ */ React.createElement("strong", null, bound?.name ?? (slot === 1 ? "Add second loop" : "No sample bound")),
-            /* @__PURE__ */ React.createElement("span", null, boundPattern?.name ?? "No pattern", " \xB7 ", boundPattern?.events.length ?? 0, " events"),
+            /* @__PURE__ */ React.createElement("strong", null, s.dropSlot === slot ? "Drop audio here" : bound?.name ?? "Drop audio here"),
+            /* @__PURE__ */ React.createElement("span", null, boundPattern?.name ?? "No pattern", " \xB7 ", boundPattern ? `${boundPattern.beats / 4} bars \xB7 ${boundPattern.events.length} events` : "0 events"),
             /* @__PURE__ */ React.createElement("small", null, slot === s.slot ? "Editing" : audible ? "Audible" : bound ? "Ready" : "Empty", audible ? " \xB7 playing" : "")
           );
-        }), /* @__PURE__ */ React.createElement("p", null, "Choose a loop to edit. Set Listen to Both to play A and B together.")), /* @__PURE__ */ React.createElement(LoopEffectsPanel, { slot: s.slot, value: s.loopEffects[s.slot], onChange: this.updateLoopEffects }), s.legacy && /* @__PURE__ */ React.createElement(
+        })), s.legacy && /* @__PURE__ */ React.createElement(
           LegacyArrangement,
           {
             document: s.legacy,
@@ -13125,7 +13670,7 @@ ${error.message}`);
             onExport: this.exportLegacy,
             onOriginal: this.exportLegacyOriginal
           }
-        ), s.prepare && source && /* @__PURE__ */ React.createElement("section", { className: "ch-prepare" }, /* @__PURE__ */ React.createElement("h2", null, "Prepare for Chopper"), /* @__PURE__ */ React.createElement("p", null, (source.frames / source.sampleRate).toFixed(3), " seconds \xB7 original audio stays unchanged."), /* @__PURE__ */ React.createElement("label", null, "Source BPM", " ", /* @__PURE__ */ React.createElement(
+        ), s.prepare && (s.droppedSource ?? source) && /* @__PURE__ */ React.createElement("section", { className: "ch-prepare" }, /* @__PURE__ */ React.createElement("h2", null, "Prepare for Chopper"), s.droppedSource && /* @__PURE__ */ React.createElement("p", null, "Bind ", s.droppedSource.name, " to Loop ", s.slot === 0 ? "A" : "B"), /* @__PURE__ */ React.createElement("label", null, "Source BPM", " ", /* @__PURE__ */ React.createElement(
           "input",
           {
             "aria-label": "Source BPM",
@@ -13146,8 +13691,9 @@ ${error.message}`);
           "button",
           {
             onClick: () => {
-              if (source && Number(s.bars) > 0) {
-                const bpm = Number(s.bars) * 4 * 60 * source.sampleRate / source.frames;
+              const source2 = s.droppedSource ?? this.source;
+              if (source2 && Number(s.bars) > 0) {
+                const bpm = Number(s.bars) * 4 * 60 * source2.sampleRate / source2.frames;
                 this.setState({
                   sourceBpm: String(bpm),
                   message: `Derived ${bpm.toFixed(6)} BPM from ${s.bars} bars. Confirm to apply.`,
@@ -13157,7 +13703,7 @@ ${error.message}`);
             }
           },
           "Derive BPM from bars"
-        ), /* @__PURE__ */ React.createElement("button", { onClick: this.confirmTiming }, "Confirm timing")), source && buffer && beats ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+        ), /* @__PURE__ */ React.createElement("button", { onClick: this.confirmTiming }, "Confirm timing"), s.droppedSource && /* @__PURE__ */ React.createElement("button", { onClick: () => this.setState({ droppedSource: null, prepare: false }) }, "Cancel replacement")), source && buffer && beats ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
           Waveform,
           {
             slot: s.slot,
@@ -13181,14 +13727,16 @@ ${error.message}`);
               if (this.state.cue !== cue) this.setState({ cue });
             }
           }
-        ), /* @__PURE__ */ React.createElement("div", { className: "ch-context ch-analysis" }, /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement(
+        ), /* @__PURE__ */ React.createElement("div", { className: "ch-context ch-analysis" }, /* @__PURE__ */ React.createElement("span", { className: "ch-cue-layer" }, "Cues \xB7 1/4"), /* @__PURE__ */ React.createElement("label", { className: "ch-layer-toggle" }, /* @__PURE__ */ React.createElement(
           "input",
           {
             type: "checkbox",
             checked: s.transients,
             onChange: (e) => this.setState({ transients: e.target.checked })
           }
-        ), " ", "Transients"), /* @__PURE__ */ React.createElement("div", { className: "ch-marker-controls", "aria-label": "Independent drum marker layers" }, ["kick", "snare", "hat", "other"].map((kind) => /* @__PURE__ */ React.createElement("label", { key: kind, className: "ch-marker-toggle", "data-kind": kind }, /* @__PURE__ */ React.createElement(
+        ), " ", "Transients"), /* @__PURE__ */ React.createElement("details", { className: "ch-drum-layers", onToggle: (e) => {
+          if (!e.currentTarget.open && s.markerKind) this.setState({ markerKind: null });
+        } }, /* @__PURE__ */ React.createElement("summary", null, "Drum tags"), /* @__PURE__ */ React.createElement("div", { className: "ch-marker-controls", "aria-label": "Source drum tags" }, /* @__PURE__ */ React.createElement("small", null, "Optional waveform tags for reference."), ["kick", "snare", "hat", "other"].map((kind) => /* @__PURE__ */ React.createElement("label", { key: kind, className: "ch-marker-toggle ch-layer-toggle", "data-kind": kind }, /* @__PURE__ */ React.createElement(
           "input",
           {
             type: "checkbox",
@@ -13197,7 +13745,7 @@ ${error.message}`);
               markerVisibility: { ...s.markerVisibility, [kind]: e.target.checked }
             })
           }
-        ), " ", kind[0].toUpperCase() + kind.slice(1))), /* @__PURE__ */ React.createElement("label", null, "Place", /* @__PURE__ */ React.createElement("select", { "aria-label": "Drum marker tool", value: s.markerKind ?? "", onChange: (e) => this.setState({ markerKind: e.target.value ? e.target.value : null, cue: null, armed: false }) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Off \xB7 audition cues"), /* @__PURE__ */ React.createElement("option", { value: "kick" }, "Kick"), /* @__PURE__ */ React.createElement("option", { value: "snare" }, "Snare"), /* @__PURE__ */ React.createElement("option", { value: "hat" }, "Hat"), /* @__PURE__ */ React.createElement("option", { value: "other" }, "Other"))), s.markerKind && /* @__PURE__ */ React.createElement("small", null, "Click waveform to add ", s.markerKind, "; click a marker to remove it. Cue grid stays independent.")), /* @__PURE__ */ React.createElement("span", null, s.cue === null ? "Select a cue" : `Selected physical cue ${s.cue + 1}`), s.armed && s.cue !== null && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("span", null, "Place", " ", s.placementMode === "relative" ? `REL ${s.cue % pattern.beats + 1}` : `ABS ${s.cue + 1}`, " ", "\u2192 source cue", " ", s.placementMode === "absolute" ? s.cue + 1 : resolveCue(
+        ), " ", kind[0].toUpperCase() + kind.slice(1))), /* @__PURE__ */ React.createElement("label", { className: "ch-marker-tool" }, "Place", /* @__PURE__ */ React.createElement("select", { "aria-label": "Drum marker tool", value: s.markerKind ?? "", onChange: (e) => this.setState({ markerKind: e.target.value ? e.target.value : null, cue: null, armed: false }) }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Off \xB7 audition cues"), /* @__PURE__ */ React.createElement("option", { value: "kick" }, "Kick"), /* @__PURE__ */ React.createElement("option", { value: "snare" }, "Snare"), /* @__PURE__ */ React.createElement("option", { value: "hat" }, "Hat"), /* @__PURE__ */ React.createElement("option", { value: "other" }, "Other"))), s.markerKind && /* @__PURE__ */ React.createElement("small", null, "Click waveform to add ", s.markerKind, ". Click a tag to remove it."))), s.armed && s.cue !== null && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("span", null, "Place", " ", s.placementMode === "relative" ? `relative cue ${s.cue % pattern.beats + 1}` : `fixed cue ${s.cue + 1}`, " ", "\u2192 source cue", " ", s.placementMode === "absolute" ? s.cue + 1 : resolveCue(
           s.cue % pattern.beats,
           "relative",
           s.beat,
@@ -13213,22 +13761,35 @@ ${error.message}`);
               placementMode: s.placementMode === "relative" ? "absolute" : "relative"
             })
           },
-          s.placementMode === "relative" ? "Pin ABS" : "Use REL"
-        ), /* @__PURE__ */ React.createElement("button", { onClick: () => this.setState({ armed: false }) }, "Cancel")))) : /* @__PURE__ */ React.createElement("section", { className: "ch-empty" }, /* @__PURE__ */ React.createElement("h2", null, "Your break, directly under your hands."), /* @__PURE__ */ React.createElement("p", null, source ? "Confirm BPM and bars above to create the quarter-note cue grid." : "Import a WAV. Hear a cue. Drop it into a pattern. Keep playing while you edit."), /* @__PURE__ */ React.createElement(
+          s.placementMode === "relative" ? "Fix to this source cue" : "Follow the loop"
+        ), /* @__PURE__ */ React.createElement("button", { onClick: () => this.setState({ armed: false }) }, "Cancel")))) : /* @__PURE__ */ React.createElement("section", { className: "ch-empty" }, /* @__PURE__ */ React.createElement("h2", null, source ? "Prepare your loop" : "Import a loop to start"), /* @__PURE__ */ React.createElement("p", null, source ? "Confirm BPM and bars above to create the quarter-note cue grid." : "Import a WAV. Hear a cue. Drop it into a pattern. Keep playing while you edit."), /* @__PURE__ */ React.createElement(
           "button",
           {
             onClick: () => source ? this.setState({ prepare: true }) : this.input.click()
           },
           source ? "Prepare for Chopper" : "Import audio"
-        )), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-focus" }, /* @__PURE__ */ React.createElement("label", null, "Editing pattern", " ", /* @__PURE__ */ React.createElement(
-          "select",
+        )), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-focus" }, /* @__PURE__ */ React.createElement(
+          "button",
           {
-            "aria-label": "Editing pattern",
-            value: s.patternId,
-            onChange: (e) => this.selectPattern(e.target.value)
+            type: "button",
+            className: "ch-play-edited-pattern",
+            disabled: !source || !beats,
+            onClick: () => playingEditedPattern ? this.toggle() : this.changePlaybackMode(false, s.slot)
           },
-          s.patterns.map((p) => /* @__PURE__ */ React.createElement("option", { key: p.id, value: p.id }, p.name, " \xB7 ", p.role))
-        )), /* @__PURE__ */ React.createElement(
+          playingEditedPattern ? "Stop" : "Play",
+          " Loop ",
+          s.slot === 0 ? "A" : "B",
+          " pattern"
+        ), /* @__PURE__ */ React.createElement("label", { className: "ch-playback-choice" }, "Playback", /* @__PURE__ */ React.createElement("select", { value: s.sequence ? "seed" : "pattern", onChange: (e) => this.changePlaybackMode(e.target.value === "seed") }, /* @__PURE__ */ React.createElement("option", { value: "pattern" }, "Selected pattern"), /* @__PURE__ */ React.createElement("option", { value: "seed" }, "Seed sequence"))), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-bank", role: "group", "aria-label": "Editing pattern" }, s.patterns.map((p) => /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            key: p.id,
+            type: "button",
+            "aria-pressed": p.id === s.patternId,
+            onClick: () => this.selectPattern(p.id)
+          },
+          p.name
+        ))), /* @__PURE__ */ React.createElement(
           "button",
           {
             disabled: s.patterns.length >= 8,
@@ -13297,7 +13858,8 @@ ${error.message}`);
               }
             }
           }
-        ), /* @__PURE__ */ React.createElement("div", { className: "ch-clocks" }, /* @__PURE__ */ React.createElement("span", null, "Slot ", s.slot === 0 ? "A" : "B", " source", " ", s.playing ? `${this.state.sources.find((source2) => source2.id === s.activeSourceId)?.name ?? "awaiting audio"} \xB7 ${(s.beat % (s.activeSourceBeats || 1) / 4 + 1).toFixed(2)} / ${s.activeSourceBeats / 4} bars` : "stopped"), /* @__PURE__ */ React.createElement("span", null, "Slot ", s.slot === 0 ? "A" : "B", " pattern", " ", s.activePattern?.name ?? "none", " \xB7", " ", ((s.beat - s.patternStart) / 4 + 1).toFixed(2), " /", " ", (s.activePattern?.beats ?? 0) / 4), /* @__PURE__ */ React.createElement("span", null, "Listen ", s.audibleMode, s.pendingMode ? ` \u2192 ${s.pendingMode} pending` : ""), /* @__PURE__ */ React.createElement("span", null, "Seed slot ", s.sequenceSlot + 1, " \xB7 master step", " ", Math.floor(s.beat * 4)), /* @__PURE__ */ React.createElement("strong", { className: s.pending ? "ch-pending" : "" }, s.pending ? `Pending \xB7 ${s.boundary === null ? "waiting for audio boundary" : `bar ${s.boundary / 4 + 1}`}` : `Active \xB7 revision ${s.active}`))),
+        )),
+        /* @__PURE__ */ React.createElement("div", { className: "ch-clocks" }, /* @__PURE__ */ React.createElement("span", null, "Slot ", s.slot === 0 ? "A" : "B", " source", " ", s.playing ? `${this.state.sources.find((source2) => source2.id === s.activeSourceId)?.name ?? "awaiting audio"} \xB7 ${(s.beat % (s.activeSourceBeats || 1) / 4 + 1).toFixed(2)} / ${s.activeSourceBeats / 4} bars` : "stopped"), /* @__PURE__ */ React.createElement("span", null, "Slot ", s.slot === 0 ? "A" : "B", " pattern", " ", s.activePattern?.name ?? "none", " \xB7", " ", ((s.beat - s.patternStart) / 4 + 1).toFixed(2), " /", " ", (s.activePattern?.beats ?? 0) / 4), /* @__PURE__ */ React.createElement("span", null, "Listen ", s.audibleMode, s.pendingMode ? ` \u2192 ${s.pendingMode} pending` : ""), /* @__PURE__ */ React.createElement("span", null, "Seed slot ", s.sequenceSlot + 1, " \xB7 master step", " ", Math.floor(s.beat * 4)), /* @__PURE__ */ React.createElement("strong", { className: s.pending ? "ch-pending" : "" }, s.pending ? `Pending \xB7 ${s.boundary === null ? "waiting for audio boundary" : `bar ${s.boundary / 4 + 1}`}` : `Active \xB7 revision ${s.active}`)),
         event && !s.inspector && /* @__PURE__ */ React.createElement("button", { className: "ch-event-dock", onClick: this.openInspector }, event.mode === "relative" ? "REL" : "ABS", " cue ", event.cue + 1, " \xB7 Edit event"),
         s.inspector && /* @__PURE__ */ React.createElement(
           EventInspector,
