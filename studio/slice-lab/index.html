@@ -1406,28 +1406,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-transport .ch-operation-feedback {
   font-size: 14px;
 }
-.ch-library > button[title*="REL/ABS cannot be encoded"] + p {
-  display: block;
-  margin-top: 4px;
-  padding: 12px;
-  border: 1px solid var(--ch-pending);
-  border-left: 4px solid var(--ch-pending);
-  border-radius: 4px;
-  background: #f0aa5318;
-  color: var(--ch-ink);
-  font-size: 14px;
-  line-height: 1.45;
-}
-.ch-library > button[title*="REL/ABS cannot be encoded"] + p::before {
-  content: "Studio preview only";
-  display: block;
-  margin-bottom: 5px;
-  color: var(--ch-pending);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
 @media (max-width: 1199px) {
   .ch-workspace {
     grid-template-columns: minmax(0, 1fr);
@@ -2088,6 +2066,14 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 .ch-library {
   min-width: 0;
+  gap: 5px;
+  padding: 12px;
+}
+.ch-library h2:not(:first-child) {
+  margin-top: 10px;
+}
+.ch-library-actions {
+  gap: 5px;
 }
 .ch-library > button {
   white-space: normal;
@@ -2100,6 +2086,9 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 .ch-sample-name {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .ch-sample-slots {
   display: flex;
@@ -2143,7 +2132,23 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 .ch-loop-card small {
   grid-column: 2;
-  grid-row: 1 / span 2;
+  grid-row: 1;
+  justify-self: end;
+}
+/* Keep loop identity and the bound audio/pattern visible, but give the grid its vertical space. */
+.ch-workspace .ch-loop-card,
+:root[data-studio-appearance="custom"] .ch-workspace .ch-loop-card {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 2px 8px;
+  padding: 6px 9px;
+}
+.ch-workspace .ch-loop-card strong {
+  grid-column: 1;
+  grid-row: 2;
+}
+.ch-workspace .ch-loop-card > span:not(.ch-loop-card-title) {
+  grid-column: 2;
+  grid-row: 2;
 }
 .ch-source .ch-region-title {
   padding-bottom: 5px;
@@ -2408,9 +2413,13 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-wave canvas {
     height: 68px;
   }
-  .ch-loop-card strong,
-  .ch-loop-card > span:not(.ch-loop-card-title) {
+  .ch-workspace .ch-loop-card strong {
     grid-column: 1/-1;
+    grid-row: 2;
+  }
+  .ch-workspace .ch-loop-card > span:not(.ch-loop-card-title) {
+    grid-column: 1/-1;
+    grid-row: 3;
   }
   .ch-loop-card small {
     grid-column: 2;
@@ -12087,7 +12096,7 @@ ${error.message}`);
       const result = await deviceRequest("upload-pattern", payload);
       if (result?.state !== "uploaded" && result?.state !== "sent") throw Error("Invalid pattern upload confirmation. Inspect module SD before retrying.");
       const answers = (result?.live ?? []).map((entry) => entry.error ? `slot ${entry.slot}: ${entry.error}` : `slot ${entry.slot}: ${entry.result}${entry.windowQuarters ? ` on a ${entry.windowQuarters}-quarter grid` : ""}`);
-      if (result?.partial) throw Error(`Only part of the pair accepted this pattern${answers.length ? `: ${answers.join("; ")}` : ""}. Both files are on module SD, so the next power cycle applies them alike.`);
+      if (result?.partial) throw Error(`Live staging was not confirmed in both Choppers${answers.length ? `: ${answers.join("; ")}` : ""}. Files were reported written to module SD, but boot loading and playback have not been verified. Do not retry or power-cycle solely to apply them until the firmware issue is resolved.`);
       onMessage([result?.stored?.length ? `Stored ${result.stored.join(" and ")} on module SD.` : "Sent live without storing (this module has no pattern file support).", answers.length ? `Live - ${answers.join("; ")}.` : "Not sent live: this module stores files only.", "Playing and sound are unverified from the browser."].join(" "));
     }) }, "Send patterns to both Choppers"), ["A", "B"].map((slot) => /* @__PURE__ */ React.createElement("button", { key: slot, disabled: busy || !caps?.legacyPatternDownload, onClick: () => run(async () => {
       const path = `/CHOPPER/${slot}.PVXP`, result = await deviceRequest("download-pattern", { path });
@@ -13604,7 +13613,7 @@ ${error.message}`);
             "aria-pressed": item.id === s.sourceId,
             onClick: () => this.selectSource(item)
           },
-          /* @__PURE__ */ React.createElement("span", { className: "ch-sample-name" }, item.name),
+          /* @__PURE__ */ React.createElement("span", { className: "ch-sample-name", title: item.name }, item.name),
           /* @__PURE__ */ React.createElement("span", { className: "ch-sample-slots" }, s.bindings.map((id, slot) => id === item.id && /* @__PURE__ */ React.createElement("span", { key: slot, "data-slot": slot }, slot === 0 ? "A" : "B")))
         )), /* @__PURE__ */ React.createElement("div", { className: "ch-library-actions" }, /* @__PURE__ */ React.createElement(
           "button",
@@ -13643,52 +13652,7 @@ ${error.message}`);
             },
             onError: this.report
           }
-        )), /* @__PURE__ */ React.createElement("h2", null, "Patterns"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.patternInput.click() }, "Import patterns"), /* @__PURE__ */ React.createElement("button", { onClick: this.exportPatterns }, "Export patterns"), s.patterns.map((p) => /* @__PURE__ */ React.createElement(
-          "button",
-          {
-            key: p.id,
-            "aria-pressed": p.id === s.patternId,
-            onClick: () => {
-              try {
-                if (s.playing) this.publish(p);
-                this.setState({
-                  patternId: p.id,
-                  patternBindings: s.patternBindings.map(
-                    (id, slot) => slot === s.slot ? p.id : id
-                  ),
-                  selected: null,
-                  library: false
-                });
-              } catch (error) {
-                this.report(error);
-              }
-            }
-          },
-          p.name,
-          " ",
-          /* @__PURE__ */ React.createElement("small", null, p.events.length, " events \xB7 ", p.beats / 4, " bars")
-        )), /* @__PURE__ */ React.createElement(
-          "button",
-          {
-            disabled: s.patterns.length >= 8,
-            onClick: () => this.addPattern("variation")
-          },
-          "Add variation"
-        ), /* @__PURE__ */ React.createElement(
-          "button",
-          {
-            disabled: s.patterns.length >= 8,
-            onClick: () => this.addPattern("fill")
-          },
-          "Add FILL"
-        ), /* @__PURE__ */ React.createElement(
-          "button",
-          {
-            disabled: true,
-            title: "REL/ABS cannot be encoded in the published PVXP v3/v4 firmware"
-          },
-          "Upload pattern to device \xB7 requires firmware support"
-        ), /* @__PURE__ */ React.createElement("p", null, "REL/ABS: Studio preview only. Requires compatible firmware; no lossy PVXP conversion."), /* @__PURE__ */ React.createElement("details", null, /* @__PURE__ */ React.createElement("summary", null, "Compatibility"), /* @__PURE__ */ React.createElement(
+        )), /* @__PURE__ */ React.createElement("h2", null, "Pattern files"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.patternInput.click() }, "Import patterns"), /* @__PURE__ */ React.createElement("button", { onClick: this.exportPatterns }, "Export patterns"), /* @__PURE__ */ React.createElement("details", null, /* @__PURE__ */ React.createElement("summary", null, "Compatibility"), /* @__PURE__ */ React.createElement(
           "button",
           {
             onClick: () => {
