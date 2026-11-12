@@ -752,7 +752,8 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   // the source and the workflow move together; the list is short because anything else is refused by the workflow.
   const source = document.createElement('select'); source.setAttribute('aria-label', 'Firmware source branch');
   source.title = 'Which repository branch the cloud build is made from';
-  for (const ref of buildableRefs()) source.append(new Option(ref, ref));
+  const fillSourceOptions = (profile) => { const refs = buildableRefs(profile); source.replaceChildren(...refs.map((ref) => new Option(ref, ref))); };
+  fillSourceOptions(state.profile);
   try { source.value = cloudSettings().buildRef; } catch { /* the first option stays selected */ }
   source.addEventListener('change', () => {
     if (!setCloudRef(source.value)) source.value = cloudSettings().buildRef;
@@ -766,7 +767,7 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
     tokenButton.textContent = entered ? 'Token saved' : 'Token cleared';
     setTimeout(() => { tokenButton.textContent = 'GitHub token'; }, 2500);
   });
-  const syncVariant = () => { const busy=['building','cancelling','flashing'].includes(state.phase);variant.disabled=diagnostic.disabled=bankCount.disabled=source.disabled=tokenButton.disabled=busy;bankCount.hidden=firmwareProfile(state.profile).plaitsVoices!==1;bankCount.value=String(state.engineBanks);try{source.value=cloudSettings().buildRef;}catch{ /* the picker keeps what it shows */ } };
+  const syncVariant = () => { const busy=['building','cancelling','flashing'].includes(state.phase);variant.disabled=diagnostic.disabled=bankCount.disabled=source.disabled=tokenButton.disabled=busy;bankCount.hidden=firmwareProfile(state.profile).plaitsVoices!==1;bankCount.value=String(state.engineBanks);if(state.profile==='chopper'&&[...source.options].map((o)=>o.value).join()!==buildableRefs('chopper').join())fillSourceOptions('chopper');if(state.profile!=='chopper'&&[...source.options].map((o)=>o.value).join()!==buildableRefs().join())fillSourceOptions(state.profile);try{source.value=cloudSettings().buildRef;}catch{ /* the picker keeps what it shows */ } };
   variant.addEventListener('change', () => { state.profile=variant.value;state.view='both';state.voice=0;cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;try { localStorage.setItem('pentavox.palette.variant', variant.value); } catch {} changed(); });
   diagnostic.addEventListener('change',()=>{cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;renderSummary();});
   actions.append(variant, source, bankCount, diagnosticLabel, build, el('span', 'eg-arrow', '→'), flash, dfu, copyLog, suggestButton, tokenButton);

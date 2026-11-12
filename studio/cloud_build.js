@@ -18,13 +18,18 @@ function write(key, value) { try { storage()?.setItem(key, value); } catch { /* 
 // workflow file that runs is the one on the branch being built, so a branch only becomes buildable once its own
 // .github/workflows/studio-build.yml accepts it too.
 const BUILDABLE_REFS = ['experiment/single-plaits-20261024', 'feat/chopper-engine', 'feat/chopper-event-address'];
-function buildableRef(key, fallback) {
+// The Chopper image can only be built from the Chopper line. A branch outside it is not offered for that
+// profile, because start() would reset it - and a picker that shows a choice which does not happen is worse
+// than no picker: the user believes they changed something.
+const CHOPPER_REFS = ['feat/chopper-engine', 'feat/chopper-event-address'];
+const CHOPPER_DEFAULT_REF = 'feat/chopper-engine';
+function buildableRef(key, fallback, allowed = BUILDABLE_REFS) {
   const value = read(key);
-  return BUILDABLE_REFS.includes(value) ? value : fallback;
+  return allowed.includes(value) ? value : fallback;
 }
 
-/** The source branches a cloud build may be made from, for a picker. */
-export function buildableRefs() { return [...BUILDABLE_REFS]; }
+/** The source branches a cloud build may be made from, for a picker. Chopper has its own two. */
+export function buildableRefs(profile) { return [...(profile === 'chopper' ? CHOPPER_REFS : BUILDABLE_REFS)]; }
 
 /**
  * Choose the branch a cloud build comes from. Both refs move together: the workflow that runs is the one that
@@ -43,8 +48,9 @@ export function setCloudRef(ref) {
 
 export function cloudSettings() {
   if(read('pentavox.palette.variant')==='chopper'){
-    // Chopper was pinned to one branch with no way out; the pin is only the default now.
-    const ref = buildableRef('pentavox.cloud.ref', 'feat/chopper-engine');
+    // Chopper was pinned to one branch with no way out; the pin is only the default now, and only Chopper
+    // branches can be chosen for it.
+    const ref = buildableRef('pentavox.cloud.ref', CHOPPER_DEFAULT_REF, CHOPPER_REFS);
     return {repo:read('pentavox.cloud.repo')||DEFAULTS.repo,buildRef:ref,workflowRef:ref};
   }
   return {
@@ -149,7 +155,9 @@ export class CloudBuild {
 
   /** Start a build; resolves with the request id that names the run. */
   async start(recipe, { compact = true, looper = false, profile, diagnostic = false } = {}) {
-    if(profile==='chopper')this.buildRef=this.workflowRef='feat/chopper-engine';
+    // The old unconditional pin is what made the branch picker decoration: a chosen Chopper branch must reach
+    // the dispatch, and only a choice outside the Chopper line falls back to the default.
+    if(profile==='chopper'&&!CHOPPER_REFS.includes(this.buildRef))this.buildRef=this.workflowRef=CHOPPER_DEFAULT_REF;
     const encodedRecipe = toBase64(JSON.stringify(recipe));
     if (encodedRecipe.length > 60000) throw new CloudBuildError('This recipe is too large for cloud Build. Remove some custom wave/terrain banks, or download recipe.json and build with the local Studio server.');
     const request = `${this.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
