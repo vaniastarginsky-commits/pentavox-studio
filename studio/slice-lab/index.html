@@ -979,6 +979,86 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-sequence-settings .ch-pattern-controls {
   padding: 8px;
 }
+.ch-sequence-hardware-note {
+  margin: 8px 10px 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--ch-focus);
+  background: color-mix(in srgb, var(--ch-focus) 9%, transparent);
+  color: var(--ch-muted);
+  font-size: 12px;
+}
+.ch-sequence-hardware-note strong {
+  color: var(--ch-ink);
+}
+.ch-sequence-knob-map {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.ch-sequence-knob-map span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--ch-line);
+  border-radius: 14px;
+  color: var(--ch-ink);
+}
+.ch-sequence-knob-map i {
+  position: relative;
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--ch-focus);
+  border-radius: 50%;
+}
+.ch-sequence-knob-map i::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 5px;
+  width: 1px;
+  height: 5px;
+  background: var(--ch-focus);
+}
+.ch-sequence-hardware-note small {
+  display: block;
+  margin-top: 5px;
+  color: var(--ch-muted);
+}
+.ch-sequence-controls .ch-numeric-field {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.ch-sequence-controls .ch-sequence-probability {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  gap: 4px 12px;
+  min-width: min(360px, 100%);
+  align-items: center;
+}
+.ch-sequence-controls .ch-sequence-probability span {
+  grid-column: 1 / -1;
+}
+.ch-sequence-controls .ch-sequence-probability input[type="range"] {
+  grid-column: 1;
+  width: 100%;
+  min-width: 180px;
+}
+.ch-sequence-controls .ch-sequence-probability output {
+  grid-column: 2;
+  grid-row: 2;
+  font-variant-numeric: tabular-nums;
+  color: var(--ch-ink);
+}
+.ch-sequence-play {
+  border-color: var(--ch-focus);
+  font-weight: 700;
+}
+.ch-sequence-boundary-note {
+  color: var(--ch-muted);
+}
 .ch-sequence-preview {
   display: grid;
   gap: 9px;
@@ -1930,14 +2010,30 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   line-height: 24px;
 }
 .ch-matrix-track .ch-external-resize {
-  top: 0;
+  top: 50%;
   right: auto;
   bottom: auto;
-  width: 30px;
-  height: var(--cue-height);
-  border-color: var(--ch-pattern-accent, var(--ch-focus));
+  width: 24px;
+  height: 24px;
+  transform: translateY(-50%);
+  z-index: 4;
+  border: 1px solid var(--ch-pattern-accent, var(--ch-focus));
+  border-radius: 4px;
   background: #14212b;
-  font-size: 13px;
+  box-shadow: 0 2px 8px #0008;
+  font-size: 11px;
+}
+.ch-matrix-track .ch-event.drag-source {
+  opacity: 0.28;
+  border-style: dashed;
+}
+/* The compact grip stays compact on touch: the hit area grows, the drawing does not. */
+@media (pointer:coarse) {
+  .ch-matrix-track .ch-external-resize::before {
+    content: "";
+    position: absolute;
+    inset: -9px;
+  }
 }
 .ch-matrix-ghost {
   position: absolute;
@@ -1945,6 +2041,28 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   border: 2px dashed var(--ch-pattern-accent, var(--ch-focus));
   background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 18%, transparent);
   pointer-events: none;
+}
+.ch-matrix-ghost.is-event-preview {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  padding: 1px 3px;
+  border: 1px solid var(--ch-pattern-accent, var(--ch-focus));
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 36%, #20303c);
+  box-shadow: 0 3px 12px #0009;
+  color: var(--ch-ink);
+}
+.ch-matrix-ghost.is-event-preview strong {
+  flex: 0 0 auto;
+  font-size: 11px;
+  line-height: 1;
+}
+.ch-matrix-ghost.is-event-preview small {
+  overflow: hidden;
+  font-size: 9px;
+  white-space: nowrap;
 }
 .ch-matrix-ghost span {
   position: absolute;
@@ -2554,9 +2672,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-pattern {
     display: flex;
     flex-direction: column;
-  }
-  .ch-matrix-track .ch-external-resize {
-    width: 44px;
   }
   .ch-clocks {
     column-gap: 12px;
@@ -11017,6 +11132,13 @@ ${error.message}`);
   }
 
   // src/chopper/gestures.ts
+  function eventDragGrabOffset(pointerStep, eventStep, length) {
+    return Math.max(0, Math.min(Math.max(0, length - 1), pointerStep - eventStep));
+  }
+  function eventDragTargetStep(pointerStep, grabOffset, length, total) {
+    const safeLength = Math.max(1, Math.floor(length)), last = Math.max(0, Math.floor(total) - safeLength);
+    return Math.max(0, Math.min(last, Math.floor(pointerStep) - Math.floor(grabOffset)));
+  }
   function useMusicalPinch(ref, zoom, setZoom, min, max, cancel) {
     const blocked = React.useRef(false), current = React.useRef(zoom);
     current.current = zoom;
@@ -11349,9 +11471,9 @@ ${error.message}`);
     onFillCueOrder
   }) {
     const [manualZoom, setManualZoom] = React.useState(1), [fit, setFit] = React.useState(true), [viewportWidth, setViewportWidth] = React.useState(0), [tool, setTool] = React.useState("pencil"), [ghost, setGhost] = React.useState(null), [cursor, setCursor] = React.useState(0), [dragged, setDragged] = React.useState(null), [dragCopy, setDragCopy] = React.useState(false), [resizeDraft, setResizeDraft] = React.useState(null);
-    const down = React.useRef(null), body = React.useRef(null), scroll = React.useRef(null), wheelAnchor = React.useRef(null), draggedCueRef = React.useRef(0), pointerDrag = React.useRef(null), suppressEventClick = React.useRef(false), nativeDrag = React.useRef(false), resizePointer = React.useRef(null);
+    const down = React.useRef(null), body = React.useRef(null), scroll = React.useRef(null), wheelAnchor = React.useRef(null), draggedCueRef = React.useRef(0), draggedEventRef = React.useRef(null), grabOffsetRef = React.useRef(0), pointerDrag = React.useRef(null), suppressEventClick = React.useRef(false), nativeDrag = React.useRef(false), resizePointer = React.useRef(null);
     const maxCue = pattern.events.reduce((max, event) => Math.max(max, event.cue), -1), addressCount = placementMode === "absolute" ? Math.min(64, Math.max(4, cueCount)) : Math.min(64, Math.max(pattern.beats, cueCount)), rowCount = Math.min(64, Math.max(addressCount, maxCue + 1));
-    const baseUnit = innerWidth < 768 ? 22 : 32, cueColumn = innerWidth < 768 ? 58 : 76, rowHeight = innerWidth < 768 ? 36 : rowCount > 48 ? 18 : rowCount > 24 ? 21 : 26, resizeWidth = innerWidth < 768 ? 44 : 30, total = pattern.beats * 4, fitZoom = patternFitZoom(viewportWidth, cueColumn, total, baseUnit), minZoom = Math.min(0.5, fitZoom), maxZoom = Math.max(3, fitZoom), zoom = fit ? fitZoom : Math.max(minZoom, Math.min(maxZoom, manualZoom)), unit = baseUnit * zoom, barStride = Math.max(1, Math.ceil(42 / (16 * unit))), chosen = pattern.events.find((e) => e.id === selected);
+    const baseUnit = innerWidth < 768 ? 22 : 32, cueColumn = innerWidth < 768 ? 58 : 76, rowHeight = innerWidth < 768 ? 36 : rowCount > 48 ? 18 : rowCount > 24 ? 21 : 26, resizeWidth = 24, total = pattern.beats * 4, fitZoom = patternFitZoom(viewportWidth, cueColumn, total, baseUnit), minZoom = Math.min(0.5, fitZoom), maxZoom = Math.max(3, fitZoom), zoom = fit ? fitZoom : Math.max(minZoom, Math.min(maxZoom, manualZoom)), unit = baseUnit * zoom, barStride = Math.max(1, Math.ceil(42 / (16 * unit))), chosen = pattern.events.find((e) => e.id === selected);
     const setZoom = (value) => {
       setFit(false);
       setManualZoom(value);
@@ -11426,7 +11548,8 @@ ${error.message}`);
         event.preventDefault();
         const cue = physical === null ? target2.cue : cueFromPhysical(physical);
         if (physical !== null && cue < rowCount) showRow(cue);
-        setGhost({ step: stepAt2(event.clientX, target2.track), cue });
+        const pointerStep = stepAt2(event.clientX, target2.track), movingEvent = moving ? draggedEventRef.current : null, step = movingEvent ? eventDragTargetStep(pointerStep, grabOffsetRef.current, movingEvent.length, total) : pointerStep;
+        setGhost({ step, cue });
       };
       const drop = (event) => {
         const target2 = at(event);
@@ -11436,7 +11559,7 @@ ${error.message}`);
         if (!target2 || physical === null && !rawEvent) return;
         event.preventDefault();
         event.stopPropagation();
-        const step = stepAt2(event.clientX, target2.track);
+        let step = stepAt2(event.clientX, target2.track);
         if (physical !== null) {
           onPlace(step, cueFromPhysical(physical), physical);
           return;
@@ -11445,6 +11568,7 @@ ${error.message}`);
           const data = JSON.parse(rawEvent);
           const sourceEvent = pattern.events.find((item) => item.id === data.id);
           if (sourceEvent) {
+            step = eventDragTargetStep(step, grabOffsetRef.current, sourceEvent.length, total);
             onChange({
               ...sourceEvent,
               id: data.copy ? crypto.randomUUID() : sourceEvent.id,
@@ -11471,27 +11595,32 @@ ${error.message}`);
       };
       const move = (e) => {
         const drag = pointerDrag.current;
-        if (!drag || drag.pointerId !== e.pointerId || e.pointerType === "touch")
+        if (!drag || drag.pointerId !== e.pointerId || e.pointerType === "touch" || nativeDrag.current)
           return;
         if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6)
           return;
         drag.moved = true;
         const target2 = at(e.clientX, e.clientY);
         setGhost(
-          target2 ? { step: stepAt2(e.clientX, target2.track), cue: target2.cue } : null
+          target2 ? {
+            step: eventDragTargetStep(stepAt2(e.clientX, target2.track), drag.grabOffset, drag.event.length, total),
+            cue: target2.cue
+          } : null
         );
       };
       const up = (e) => {
         const drag = pointerDrag.current;
         if (!drag || drag.pointerId !== e.pointerId) return;
         pointerDrag.current = null;
+        if (nativeDrag.current) return;
+        draggedEventRef.current = null;
         if (!drag.moved) return;
         const target2 = at(e.clientX, e.clientY);
         if (target2)
           onChange({
             ...drag.event,
             id: drag.copy ? crypto.randomUUID() : drag.event.id,
-            step: stepAt2(e.clientX, target2.track),
+            step: eventDragTargetStep(stepAt2(e.clientX, target2.track), drag.grabOffset, drag.event.length, total),
             cue: target2.cue
           });
         setDragged(null);
@@ -11503,6 +11632,7 @@ ${error.message}`);
         const drag = pointerDrag.current;
         if (!drag || drag.pointerId !== e.pointerId) return;
         pointerDrag.current = null;
+        draggedEventRef.current = null;
         if (nativeDrag.current) return;
         setDragged(null);
         setGhost(null);
@@ -11773,7 +11903,7 @@ ${error.message}`);
                     title: `Cue ${event.cue + 1} \xB7 ${event.mode === "relative" ? "REL" : "ABS"} \xB7 ${musical(event.step)}${actions(event) ? ` \xB7 ${actions(event)}` : ""}`,
                     "data-action-marked": Boolean(actions(event)),
                     "aria-pressed": event.id === selected,
-                    className: "ch-event " + (event.id === selected ? "selected " : "") + (changed(event) ? "pending " : "") + (event.id === soundingEvent ? "sounding" : ""),
+                    className: "ch-event " + (event.id === selected ? "selected " : "") + (dragged?.id === event.id && !dragCopy ? "drag-source " : "") + (changed(event) ? "pending " : "") + (event.id === soundingEvent ? "sounding" : ""),
                     style: {
                       left: event.step * unit,
                       width: (event === chosen ? previewLength ?? event.length : event.length) * unit
@@ -11782,13 +11912,17 @@ ${error.message}`);
                     onPointerDown: (e) => {
                       draggedCueRef.current = event.cue;
                       nativeDrag.current = false;
+                      const track = e.currentTarget.closest(".ch-matrix-track"), pointerStep = track ? stepAt2(e.clientX, track) : event.step, grabOffset = eventDragGrabOffset(pointerStep, event.step, event.length);
+                      draggedEventRef.current = event;
+                      grabOffsetRef.current = grabOffset;
                       pointerDrag.current = {
                         event,
                         pointerId: e.pointerId,
                         x: e.clientX,
                         y: e.clientY,
                         moved: false,
-                        copy: e.altKey
+                        copy: e.altKey,
+                        grabOffset
                       };
                       setDragged(event);
                       setDragCopy(e.altKey);
@@ -11800,6 +11934,9 @@ ${error.message}`);
                     onTouchEnd: () => setDragged(null),
                     onDragEnd: () => {
                       nativeDrag.current = false;
+                      pointerDrag.current = null;
+                      draggedEventRef.current = null;
+                      grabOffsetRef.current = 0;
                       setDragged(null);
                       setGhost(null);
                     },
@@ -11839,6 +11976,9 @@ ${error.message}`);
                     },
                     onDragStart: (e) => {
                       nativeDrag.current = true;
+                      const track = e.currentTarget.closest(".ch-matrix-track"), pointerStep = track ? stepAt2(e.clientX, track) : event.step;
+                      draggedEventRef.current = event;
+                      grabOffsetRef.current = eventDragGrabOffset(pointerStep, event.step, event.length);
                       setDragged(event);
                       setDragCopy(e.altKey);
                       e.dataTransfer.setData(
@@ -11910,7 +12050,7 @@ ${error.message}`);
           ghost !== null && ghost.cue < rowCount && /* @__PURE__ */ React.createElement(
             "div",
             {
-              className: "ch-matrix-ghost",
+              className: `ch-matrix-ghost${dragged ? " is-event-preview" : ""}`,
               style: {
                 left: cueColumn + ghost.step * unit,
                 top: ghost.cue * rowHeight,
@@ -11919,7 +12059,7 @@ ${error.message}`);
               },
               "aria-hidden": "true"
             },
-            /* @__PURE__ */ React.createElement("span", null, musical(ghost.step), " \xB7", " ", dragged ? `${dragCopy ? "Copy" : "Move"} ${describeEvent(dragged)}` : armed ? placement : `Cue ${ghost.cue + 1}`)
+            dragged ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("strong", null, ghost.cue + 1), dragged.length * unit >= 48 && /* @__PURE__ */ React.createElement("small", null, dragged.mode === "relative" ? "REL" : "ABS")) : /* @__PURE__ */ React.createElement("span", null, musical(ghost.step), " \xB7 ", armed ? placement : `Cue ${ghost.cue + 1}`)
           ),
           playing && samePattern && /* @__PURE__ */ React.createElement(
             "div",
@@ -11971,21 +12111,42 @@ ${error.message}`);
     probability,
     sequence,
     playing,
+    canPlaySequence,
+    onPlaySequence,
     onSettings,
     onPattern,
     onFill
   }) {
-    return /* @__PURE__ */ React.createElement("details", { className: "ch-sequence-settings" }, /* @__PURE__ */ React.createElement("summary", null, "Seed sequence preview \xB7 16 slots \xB7 Seed ", seed, " \xB7 ", Math.round(probability * 100), "% \xB7", " ", sequence ? "Seed playback on" : "pattern playback"), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-controls" }, /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("details", { className: "ch-sequence-settings", open: true }, /* @__PURE__ */ React.createElement("summary", null, "Seed sequence preview \xB7 16 slots \xB7 Seed ", seed, " \xB7 ", Math.round(probability * 100), "% \xB7", " ", sequence ? "Seed playback on" : "pattern playback"), /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-hardware-note", "aria-label": "Chopper hardware knob mapping" }, /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-knob-map" }, /* @__PURE__ */ React.createElement("strong", null, "CHOPPER KNOBS"), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("i", { "aria-hidden": "true" }), " Mid-L \xB7 Seed"), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("i", { "aria-hidden": "true" }), " Mid-R \xB7 Variation probability")), /* @__PURE__ */ React.createElement("small", null, "Preview values are browser-only; they do not read or move the module\u2019s physical knobs.")), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-controls ch-sequence-controls" }, /* @__PURE__ */ React.createElement(
       NumericField,
       {
-        label: "Sequence probability",
-        value: probability,
+        label: "Preview seed",
+        value: seed,
         min: 0,
-        max: 1,
-        step: 0.05,
-        onCommit: (probability2) => onSettings({ probability: probability2 })
+        max: 4294967295,
+        onCommit: (seed2) => onSettings({ seed: seed2 })
       }
-    ), /* @__PURE__ */ React.createElement("small", null, "Variation/FILL probability applies at a safe boundary, not immediately."), /* @__PURE__ */ React.createElement("button", { disabled: !playing || !sequence, onClick: onFill }, "Manual FILL"), /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("label", { className: "ch-sequence-probability" }, /* @__PURE__ */ React.createElement("span", null, "Preview probability"), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        "aria-label": "Preview probability",
+        type: "range",
+        min: 0,
+        max: 100,
+        step: 1,
+        value: Math.round(probability * 100),
+        onChange: (e) => onSettings({ probability: Number(e.target.value) / 100 })
+      }
+    ), /* @__PURE__ */ React.createElement("output", null, Math.round(probability * 100), "%")), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "ch-sequence-play",
+        disabled: !canPlaySequence,
+        title: canPlaySequence ? "Audition the Seed sequence in browser audio" : "Import and bind a local audio source to audition",
+        onClick: onPlaySequence
+      },
+      playing && sequence ? "\u25A0 Stop sequence" : "\u25B6 Play sequence"
+    ), /* @__PURE__ */ React.createElement("small", { className: "ch-sequence-boundary-note" }, "Variation/FILL probability applies at a safe boundary, not immediately."), /* @__PURE__ */ React.createElement("button", { disabled: !playing || !sequence, onClick: onFill }, "Manual FILL"), /* @__PURE__ */ React.createElement(
       NumericField,
       {
         label: "Pattern bars",
@@ -12004,16 +12165,7 @@ ${error.message}`);
       /* @__PURE__ */ React.createElement("option", { value: "base" }, "BASE"),
       /* @__PURE__ */ React.createElement("option", { value: "variation" }, "Variation"),
       /* @__PURE__ */ React.createElement("option", { value: "fill" }, "FILL")
-    )), /* @__PURE__ */ React.createElement(
-      NumericField,
-      {
-        label: "Seed",
-        value: seed,
-        min: 0,
-        max: 4294967295,
-        onCommit: (seed2) => onSettings({ seed: seed2 })
-      }
-    )), /* @__PURE__ */ React.createElement(SequencePreview, { patterns, seed, probability }));
+    ))), /* @__PURE__ */ React.createElement(SequencePreview, { patterns, seed, probability }));
   }
 
   // src/chopper/components/EventInspector.tsx
@@ -14156,6 +14308,8 @@ ${error.message}`);
             seed: s.seed,
             probability: s.probability,
             playing: s.playing,
+            canPlaySequence: Boolean(source && beats),
+            onPlaySequence: () => s.playing && s.sequence ? this.toggle() : this.changePlaybackMode(true, s.slot),
             onPattern: this.commit,
             onSettings: (patch) => this.setState(patch, () => {
               try {
