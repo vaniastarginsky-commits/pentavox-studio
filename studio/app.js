@@ -576,6 +576,8 @@ asPage(dx7Editor.dialog, () => document.getElementById('dx7-tab'));
 function refreshWorkspace() {
   const connected = connectionStatus.dataset.state === 'on';
   const loops = Boolean(session?.loopIo);
+  const firmware = session?.descriptor?.pentavox;
+  const chopper = firmware?.profile === 'chopper' || firmware?.chopperOnly === true || firmware?.chopperOnly === 1;
   const slots = session?.sampleSlotCount ?? 4;
   const titles = {
     palette: ['Engines', `${buildVoiceCount === 1 ? 'One voice' : 'Two voices'}, ${buildEngineBanks === 4 ? 'four' : 'three'} banks of eight`],
@@ -591,7 +593,7 @@ function refreshWorkspace() {
   document.getElementById('page-crumb').textContent = crumb;
   document.documentElement.dataset.studioTab = activeTab;
   const samplerLink = document.querySelector('.tabs [data-tab="sampler"]');
-  samplerLink.hidden = !loops;
+  samplerLink.hidden = !loops || chopper;
   for (const node of samplerLink.childNodes) if (node.nodeType === Node.TEXT_NODE) node.textContent = loops ? 'Loops' : 'Sampler · legacy';
   const settingsLink = document.querySelector('.settings-shortcut');
   if (activeTab === 'settings') settingsLink.setAttribute('aria-current','page'); else settingsLink.removeAttribute('aria-current');

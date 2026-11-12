@@ -3534,40 +3534,40 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 
   // src/core/validation.ts
   function validateProject(value) {
-    const fail = (path) => {
+    const fail2 = (path) => {
       throw new Error(`Invalid project: ${path}`);
     };
     const object = (v, path) => {
-      if (!v || typeof v !== "object" || Array.isArray(v)) fail(path);
+      if (!v || typeof v !== "object" || Array.isArray(v)) fail2(path);
     };
     const text = (v, path) => {
-      if (typeof v !== "string" || !v.length) fail(path);
+      if (typeof v !== "string" || !v.length) fail2(path);
     };
     const number = (v, path, min, integer2 = false) => {
-      if (typeof v !== "number" || !Number.isFinite(v) || v < min || integer2 && !Number.isSafeInteger(v)) fail(path);
+      if (typeof v !== "number" || !Number.isFinite(v) || v < min || integer2 && !Number.isSafeInteger(v)) fail2(path);
     };
     const array = (v, path) => {
-      if (!Array.isArray(v)) fail(path);
+      if (!Array.isArray(v)) fail2(path);
     };
     const ids = (items, path) => {
       const seen = /* @__PURE__ */ new Set();
       for (const item of items) {
         object(item, path);
         text(item.id, path + ".id");
-        if (seen.has(item.id)) fail(path + ": duplicate id " + item.id);
+        if (seen.has(item.id)) fail2(path + ": duplicate id " + item.id);
         seen.add(item.id);
       }
     };
     object(value, "root");
     const p = value;
-    if (p.schemaVersion !== 1) fail("schemaVersion");
+    if (p.schemaVersion !== 1) fail2("schemaVersion");
     text(p.id, "id");
     text(p.name, "name");
     number(p.bpm, "bpm", Number.MIN_VALUE);
-    if (p.beatsPerBar !== 4) fail("beatsPerBar");
+    if (p.beatsPerBar !== 4) fail2("beatsPerBar");
     array(p.sources, "sources");
     array(p.variations, "variations");
-    if (!p.variations.length) fail("variations is empty");
+    if (!p.variations.length) fail2("variations is empty");
     ids(p.sources, "sources");
     ids(p.variations, "variations");
     const sources = /* @__PURE__ */ new Map(), paths = /* @__PURE__ */ new Set();
@@ -3575,7 +3575,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       const path = `source ${s.id}`;
       text(s.name, path + ".name");
       text(s.assetPath, path + ".assetPath");
-      if (s.assetPath === "project.json" || paths.has(s.assetPath)) fail(path + ".assetPath duplicate/reserved");
+      if (s.assetPath === "project.json" || paths.has(s.assetPath)) fail2(path + ".assetPath duplicate/reserved");
       paths.add(s.assetPath);
       text(s.mime, path + ".mime");
       number(s.sampleRate, path + ".sampleRate", 1, true);
@@ -3586,16 +3586,16 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       let previous = 0;
       for (const marker of s.markers) {
         number(marker, path + ".marker", 1, true);
-        if (marker <= previous || marker >= s.frames) fail(path + ".markers: expected ordered unique interior frames");
+        if (marker <= previous || marker >= s.frames) fail2(path + ".markers: expected ordered unique interior frames");
         previous = marker;
       }
       if (s.preparation !== void 0) {
         const errors = preparationErrors(s, s.preparation);
-        if (errors.length) fail(path + ".preparation: " + errors.join("; "));
+        if (errors.length) fail2(path + ".preparation: " + errors.join("; "));
       }
       if (s.sampler !== void 0) {
         const errors = samplerSettingsErrors(s.sampler, s.markers.length + 1);
-        if (errors.length) fail(path + ".sampler: " + errors.join("; "));
+        if (errors.length) fail2(path + ".sampler: " + errors.join("; "));
       }
       sources.set(s.id, s);
     }
@@ -3603,20 +3603,20 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       if (s.derivedFrom !== void 0) {
         const d = s.derivedFrom, path = `source ${s.id}.derivedFrom`;
         object(d, path);
-        if (d.version !== 1 || !sources.has(d.sourceId) || d.sourceId === s.id) fail(path + ".sourceId/version");
+        if (d.version !== 1 || !sources.has(d.sourceId) || d.sourceId === s.id) fail2(path + ".sourceId/version");
         text(d.sourceName, path + ".sourceName");
         if (d.operation === "stretch") {
           number(d.ratio, path + ".ratio", 0.5);
-          if (d.ratio > 2) fail(path + ".ratio");
+          if (d.ratio > 2) fail2(path + ".ratio");
           number(d.targetBpm, path + ".targetBpm", Number.MIN_VALUE);
         } else if (d.operation === "rotate") {
           number(d.shiftFrames, path + ".shiftFrames", 1, true);
-          if (d.shiftFrames >= sources.get(d.sourceId).frames) fail(path + ".shiftFrames");
-        } else fail(path + ".operation");
+          if (d.shiftFrames >= sources.get(d.sourceId).frames) fail2(path + ".shiftFrames");
+        } else fail2(path + ".operation");
         let ancestor = sources.get(d.sourceId);
         const seen = /* @__PURE__ */ new Set([s.id]);
         while (ancestor?.derivedFrom) {
-          if (seen.has(ancestor.id)) fail(path + ": cyclic lineage");
+          if (seen.has(ancestor.id)) fail2(path + ": cyclic lineage");
           seen.add(ancestor.id);
           ancestor = sources.get(ancestor.derivedFrom.sourceId);
         }
@@ -3626,7 +3626,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       const path = `pattern ${v.id}`;
       text(v.name, path + ".name");
       array(v.tracks, path + ".tracks");
-      if (!v.tracks.length) fail(path + ".tracks is empty");
+      if (!v.tracks.length) fail2(path + ".tracks is empty");
       ids(v.tracks, path + ".tracks");
       array(v.clips, path + ".clips");
       ids(v.clips, path + ".clips");
@@ -3634,35 +3634,35 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       ids(v.effects, path + ".effects");
       const tracks = new Set(v.tracks.map((t) => t.id));
       if (v.patternBars !== void 0) number(v.patternBars, path + ".patternBars", 1, true);
-      if (v.patternDivision !== void 0 && ![4, 8, 16, 32, 64].includes(v.patternDivision)) fail(path + ".patternDivision");
+      if (v.patternDivision !== void 0 && ![4, 8, 16, 32, 64].includes(v.patternDivision)) fail2(path + ".patternDivision");
       for (const t of v.tracks) {
         number(t.gain, path + ".track.gain", 0);
-        if (typeof t.mute !== "boolean") fail(path + ".track.mute");
+        if (typeof t.mute !== "boolean") fail2(path + ".track.mute");
         text(t.color, path + ".track.color");
         text(t.name, path + ".track.name");
       }
       for (const c of v.clips) {
         const cp = path + `.clip ${c.id}`, source = sources.get(c.sourceId);
-        if (!source || !tracks.has(c.trackId)) fail(cp + ": missing source/track");
+        if (!source || !tracks.has(c.trackId)) fail2(cp + ": missing source/track");
         number(c.positionBeats, cp + ".positionBeats", 0);
         number(c.durationBeats, cp + ".durationBeats", Number.MIN_VALUE);
         number(c.sourceStartFrame, cp + ".sourceStartFrame", 0, true);
         number(c.sourceEndFrame, cp + ".sourceEndFrame", 1, true);
-        if (c.sourceEndFrame > source.frames || c.sourceStartFrame >= c.sourceEndFrame) fail(cp + ": frame range");
+        if (c.sourceEndFrame > source.frames || c.sourceStartFrame >= c.sourceEndFrame) fail2(cp + ": frame range");
         number(c.gain, cp + ".gain", 0);
         number(c.fadeInMs, cp + ".fadeInMs", 0);
         number(c.fadeOutMs, cp + ".fadeOutMs", 0);
-        if (typeof c.reverse !== "boolean") fail(cp + ".reverse");
-        if (c.playbackMode !== void 0 && c.playbackMode !== "gate") fail(cp + ".playbackMode");
+        if (typeof c.reverse !== "boolean") fail2(cp + ".reverse");
+        if (c.playbackMode !== void 0 && c.playbackMode !== "gate") fail2(cp + ".playbackMode");
       }
       for (const f of v.effects) {
         const fp = path + `.fx ${f.id}`;
-        if (!tracks.has(f.trackId) || !FX_TYPES.includes(f.type)) fail(fp + ": unsupported type/track");
+        if (!tracks.has(f.trackId) || !FX_TYPES.includes(f.type)) fail2(fp + ": unsupported type/track");
         number(f.startBeats, fp + ".startBeats", 0);
         number(f.durationBeats, fp + ".durationBeats", Number.MIN_VALUE);
         object(f.params, fp + ".params");
         for (const val of Object.values(f.params)) {
-          if (typeof val !== "number" || !Number.isFinite(val)) fail(fp + ".params");
+          if (typeof val !== "number" || !Number.isFinite(val)) fail2(fp + ".params");
         }
       }
       if (v.tags !== void 0) {
@@ -11949,6 +11949,31 @@ ${error.message}`);
     });
   }
 
+  // ../../studio/model/chopper_upload_result.js
+  function describePatternUpload(result) {
+    if (!result || !["uploaded", "sent"].includes(result.state))
+      throw Error("Invalid pattern upload confirmation. Inspect module SD before retrying.");
+    const stored = Array.isArray(result.stored) ? result.stored : [];
+    const live = Array.isArray(result.live) ? result.live : [];
+    const answers = live.map((entry) => {
+      const name = entry.slot === 0 ? "A" : entry.slot === 1 ? "B" : String(entry.slot);
+      if (entry.error) return `Chopper ${name}: no live confirmation (${entry.error})`;
+      if (entry.result === "noGrid") return `Chopper ${name}: not staged \u2014 no loop grid in this module slot`;
+      return `Chopper ${name}: ${entry.result}${entry.windowQuarters ? ` on a ${entry.windowQuarters}-quarter grid` : ""}`;
+    });
+    const waiting = live.some((entry) => entry.result === "noGrid");
+    const failed = live.some((entry) => entry.error || !["staged", "gridAdapted", "noGrid"].includes(entry.result));
+    const text = [
+      stored.length ? `Stored ${stored.join(" and ")} on module SD.` : "No pattern files stored on SD.",
+      ...answers,
+      !live.length ? "Not staged live." : "",
+      waiting ? "Load or record a loop in the indicated module slots, then send the patterns again. A WAV in Studio is not a loop loaded in the module. No reboot is required for live staging." : "",
+      failed ? "A live transfer failed. Inspect the connection before retrying; successful slots may already have changed." : "",
+      "Boot loading and audible playback are not verified by this transfer."
+    ].filter(Boolean).join(" ");
+    return { message: text, error: failed || waiting && stored.length !== 2 };
+  }
+
   // src/chopper/components/DeviceActions.tsx
   function DeviceActions({ sample, sampleAvailable, patterns, patternsAvailable, onMessage, onError }) {
     const [caps, setCaps] = React.useState(null), [busy, setBusy] = React.useState(false), [files, setFiles] = React.useState([]), [selected, setSelected] = React.useState("");
@@ -11983,20 +12008,233 @@ ${error.message}`);
       if (!(result.bytes instanceof ArrayBuffer)) throw Error("Invalid sample download.");
       download(new Blob([result.bytes], { type: "audio/wav" }), selected.split("/").pop());
       onMessage(`Downloaded ${selected} byte-for-byte from device. Import the saved WAV to edit it; no automatic migration.`);
-    }) }, "Download sample from device")), !caps?.newPatternUpload && /* @__PURE__ */ React.createElement("p", null, "This module does not advertise PVXE pattern upload. Export patterns locally; no lossy conversion."), /* @__PURE__ */ React.createElement("button", { disabled: busy || !patternsAvailable || !caps?.newPatternUpload, onClick: () => run(async () => {
+    }) }, "Download sample from device")), caps && !caps.newPatternUpload && /* @__PURE__ */ React.createElement("p", null, "This module does not advertise PVXE pattern upload. Export patterns locally; no lossy conversion."), /* @__PURE__ */ React.createElement("button", { disabled: busy || !patternsAvailable || !caps?.newPatternUpload, onClick: () => run(async () => {
       const payload = await patterns();
-      if (!confirm(`Send ${payload.patterns.length} pattern(s) to BOTH Choppers? This replaces /CHOPPER/A.PVXE and /CHOPPER/B.PVXE on module SD and stages slot A and slot B now. Pattern names stay in this editor: the module keys patterns by role.`)) return;
+      if (!confirm(`Send ${payload.patterns.length} pattern(s) to BOTH Choppers? ${caps?.patternFileStorage ? "This replaces /CHOPPER/A.PVXE and /CHOPPER/B.PVXE on module SD." : "This firmware does not store pattern files."} ${caps?.patternLiveUpload ? "Live staging will be attempted separately for A and B; each needs a loop loaded in the module." : "No live staging is available."} Pattern names stay in this editor: the module keys patterns by role.`)) return;
       const result = await deviceRequest("upload-pattern", payload);
-      if (result?.state !== "uploaded" && result?.state !== "sent") throw Error("Invalid pattern upload confirmation. Inspect module SD before retrying.");
-      const answers = (result?.live ?? []).map((entry) => entry.error ? `slot ${entry.slot}: ${entry.error}` : `slot ${entry.slot}: ${entry.result}${entry.windowQuarters ? ` on a ${entry.windowQuarters}-quarter grid` : ""}`);
-      if (result?.partial) throw Error(`Live staging was not confirmed in both Choppers${answers.length ? `: ${answers.join("; ")}` : ""}. Files were reported written to module SD, but boot loading and playback have not been verified. Do not retry or power-cycle solely to apply them until the firmware issue is resolved.`);
-      onMessage([result?.stored?.length ? `Stored ${result.stored.join(" and ")} on module SD.` : "Sent live without storing (this module has no pattern file support).", answers.length ? `Live - ${answers.join("; ")}.` : "Not sent live: this module stores files only.", "Playing and sound are unverified from the browser."].join(" "));
+      const summary = describePatternUpload(result);
+      if (summary.error) throw Error(summary.message);
+      onMessage(summary.message);
     }) }, "Send patterns to both Choppers"), ["A", "B"].map((slot) => /* @__PURE__ */ React.createElement("button", { key: slot, disabled: busy || !caps?.legacyPatternDownload, onClick: () => run(async () => {
       const path = `/CHOPPER/${slot}.PVXP`, result = await deviceRequest("download-pattern", { path });
       if (!(result.bytes instanceof ArrayBuffer)) throw Error("Invalid pattern download.");
       download(new Blob([result.bytes], { type: "application/octet-stream" }), `${slot}.PVXP`);
       onMessage(`Downloaded legacy ${slot}.PVXP unchanged. This is not a REL/ABS conversion.`);
     }) }, "Download legacy pattern ", slot)), !caps && /* @__PURE__ */ React.createElement("p", null, "No compatible device capabilities confirmed. Standalone exports do not require a module."));
+  }
+
+  // ../../studio/hostlink/frame.js
+  var CRC_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let i = 0; i < table.length; i += 1) {
+      let value = i;
+      for (let bit = 0; bit < 8; bit += 1) {
+        value = value & 1 ? 3988292384 ^ value >>> 1 : value >>> 1;
+      }
+      table[i] = value >>> 0;
+    }
+    return table;
+  })();
+  function crc322(bytes, seed = 0) {
+    let crc = ~seed >>> 0;
+    for (const byte of bytes) {
+      crc = (CRC_TABLE[(crc ^ byte) & 255] ^ crc >>> 8) >>> 0;
+    }
+    return ~crc >>> 0;
+  }
+
+  // ../../studio/model/chopper_event_bank.js
+  var PVXE_VERSION = 1;
+  var HEADER_BYTES = 32;
+  var EVENT_BYTES = 12;
+  var MAX_PATTERNS2 = 8;
+  var MAX_EVENTS2 = 256;
+  var MAX_CUE = 63;
+  var MAX_BANK_BYTES = HEADER_BYTES + MAX_PATTERNS2 * (4 + MAX_EVENTS2 * EVENT_BYTES);
+  var ROLES = ["base", "variation", "fill"];
+  var REPEATS = [1, 2, 3, 4, 6, 8];
+  var ROLLS = [1, 2, 4, 8];
+  var fail = (message) => {
+    throw new RangeError(`PVXE: ${message}`);
+  };
+  var isU = (value, max) => Number.isInteger(value) && value >= 0 && value <= max;
+  function checkSource(source) {
+    if (!source || !isU(source.sampleRate, 4294967295) || source.sampleRate < 1 || !isU(source.frames, 4294967295) || source.frames < 1 || ![1, 2].includes(source.channels) || !isU(source.beats, 65535) || source.beats < 4 || source.beats % 4 || !isU(source.pcmCrc, 4294967295)) fail("invalid source identity");
+  }
+  function checkEvent(e, beats, sourceBeats, end) {
+    if (!e || !isU(e.step, 65535) || !isU(e.length, 65535) || e.step < end || e.length < 1 || e.step + e.length > beats * 4 || !isU(e.cue, MAX_CUE) || typeof e.absolute !== "boolean" || typeof e.reverse !== "boolean" || typeof e.gate !== "boolean" || e.absolute && e.cue >= sourceBeats || !REPEATS.includes(e.repeat) || !ROLLS.includes(e.roll) || !Number.isInteger(e.pitch) || e.pitch < -24 || e.pitch > 24 || !isU(e.gain, 200) || !isU(e.probability, 100)) fail("invalid or overlapping event");
+    return e.step + e.length;
+  }
+  function validateBank(bank) {
+    checkSource(bank?.source);
+    if (!isU(bank.revision, 4294967295) || !Array.isArray(bank.patterns) || bank.patterns.length < 1 || bank.patterns.length > MAX_PATTERNS2) fail("invalid pattern count");
+    let base = false;
+    for (const p of bank.patterns) {
+      if (!ROLES.includes(p?.role) || !Number.isInteger(p.beats) || p.beats < 4 || p.beats > 64 || p.beats % 4 || !Array.isArray(p.events) || p.events.length > MAX_EVENTS2) fail("invalid pattern");
+      base || (base = p.role === "base");
+      let end = 0;
+      for (const e of p.events) end = checkEvent(e, p.beats, bank.source.beats, end);
+    }
+    if (!base) fail("a base pattern is required");
+  }
+  function decodeBank2(input) {
+    const bytes = input instanceof Uint8Array ? input : fail("bytes required");
+    if (bytes.length < HEADER_BYTES) fail("truncated");
+    if (String.fromCharCode(...bytes.subarray(0, 4)) !== "PVXE") fail("bad magic");
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    if (bytes[4] !== PVXE_VERSION) fail("unsupported version");
+    if (bytes[5] !== 0) fail("unsupported flags");
+    const payload = bytes.length - HEADER_BYTES;
+    if (view.getUint16(6, true) !== payload) fail("length mismatch");
+    if (view.getUint32(8, true) !== crc322(bytes.subarray(HEADER_BYTES))) fail("checksum mismatch");
+    const count = bytes[21];
+    const bank = {
+      source: {
+        sampleRate: view.getUint32(12, true),
+        frames: view.getUint32(16, true),
+        channels: bytes[20],
+        beats: view.getUint16(22, true),
+        pcmCrc: view.getUint32(24, true)
+      },
+      revision: view.getUint32(28, true),
+      patterns: []
+    };
+    let at = HEADER_BYTES;
+    for (let p = 0; p < count; p += 1) {
+      if (bytes.length - at < 4) fail("truncated");
+      const n = view.getUint16(at + 2, true);
+      const pattern = { role: ROLES[bytes[at]] ?? fail("invalid role"), beats: bytes[at + 1], events: [] };
+      at += 4;
+      if (n > MAX_EVENTS2 || bytes.length - at < n * EVENT_BYTES) fail("truncated");
+      for (let i = 0; i < n; i += 1, at += EVENT_BYTES) {
+        const flags = bytes[at + 5];
+        if ((flags & ~7) !== 0 || bytes[at + 11] !== 0) fail("reserved bits set");
+        pattern.events.push({
+          step: view.getUint16(at, true),
+          length: view.getUint16(at + 2, true),
+          cue: bytes[at + 4],
+          absolute: (flags & 1) !== 0,
+          reverse: (flags & 2) !== 0,
+          gate: (flags & 4) !== 0,
+          repeat: bytes[at + 6],
+          roll: bytes[at + 7],
+          pitch: bytes[at + 8] << 24 >> 24,
+          gain: bytes[at + 9],
+          probability: bytes[at + 10]
+        });
+      }
+      bank.patterns.push(pattern);
+    }
+    if (at !== bytes.length) fail("trailing data");
+    validateBank(bank);
+    return bank;
+  }
+  function eventFromEditor(e) {
+    const grid = (value, scale, what) => {
+      const scaled = value * scale;
+      const rounded = Math.round(scaled);
+      if (!Number.isFinite(scaled) || Math.abs(scaled - rounded) > 1e-6) fail(`${what} is not representable on the 1/100 grid`);
+      return rounded;
+    };
+    if (e.mode !== "relative" && e.mode !== "absolute") fail("unknown addressing mode");
+    return {
+      step: e.step,
+      length: e.length,
+      cue: e.cue,
+      absolute: e.mode === "absolute",
+      reverse: e.reverse,
+      gate: e.gate,
+      repeat: e.repeat,
+      roll: e.roll,
+      pitch: e.pitch,
+      gain: grid(e.gain, 100, "gain"),
+      probability: grid(e.probability, 100, "probability")
+    };
+  }
+  function bankFromEditor({ patterns, source, revision = 1 }) {
+    if (!Array.isArray(patterns) || patterns.length < 1) fail("editor patterns are required");
+    const beats = Number(source?.beats);
+    if (!Number.isInteger(beats) || beats < 4 || beats % 4) fail("the authored grid must be whole 4/4 bars");
+    const sampleRate2 = Number(source?.sampleRate), frames = Number(source?.frames);
+    if (!Number.isInteger(sampleRate2) || sampleRate2 < 1 || !Number.isInteger(frames) || frames < 1) {
+      fail("the authored loop must be stated in real sample rate and frames, not assumed");
+    }
+    const channels = Number(source?.channels ?? 1);
+    if (channels !== 1 && channels !== 2) fail("the authored loop must be mono or stereo");
+    const bank = {
+      // The module counts its own staging revisions; this field only says which bank came from where, so a
+      // download-edit-upload round trip can carry the number the module last reported.
+      revision,
+      source: { sampleRate: sampleRate2, frames, channels, beats, pcmCrc: Number(source?.pcmCrc ?? 0) },
+      // Events reach the wire in step order, and validateBank requires them sorted and non-overlapping; the
+      // editor keeps them sorted too, so this sort is a guard against a hand-edited file, not a reordering.
+      patterns: patterns.map((pattern) => ({
+        role: pattern?.role,
+        beats: pattern?.beats,
+        events: [...pattern?.events ?? []].sort((a, b) => a.step - b.step).map(eventFromEditor)
+      }))
+    };
+    validateBank(bank);
+    return bank;
+  }
+
+  // src/chopper/pattern-transfer.ts
+  function validateTransfer(patterns, source) {
+    bankFromEditor({ patterns, source });
+    return { patterns, source };
+  }
+  function patternDocument(patterns, imported, audio) {
+    let source = imported;
+    if (!source && audio) {
+      try {
+        source = { beats: sourceTiming(audio.frames, audio.sampleRate, audio.bpm), sampleRate: audio.sampleRate, frames: audio.frames, channels: audio.channels };
+      } catch {
+      }
+    }
+    return { format: "pentavox-chopper-pattern", version: 1, cueGrid: "quarter", patterns, ...source ? { source } : {} };
+  }
+  function transferPatterns(patterns, imported, audio) {
+    if (patterns.some((p) => p.events.some((e) => e.tapeStop)))
+      throw Error("This pattern uses tape stop, which the module cannot receive yet. Clear it, or keep it in this editor.");
+    const source = imported ?? (audio ? {
+      beats: sourceTiming(audio.frames, audio.sampleRate, audio.bpm),
+      sampleRate: audio.sampleRate,
+      frames: audio.frames,
+      channels: audio.channels
+    } : null);
+    if (!source) throw Error("No authored grid metadata. Import A.PVXE / B.PVXE, or a pattern JSON exported with source metadata. Alternatively load its original WAV. No files were sent.");
+    return validateTransfer(patterns, source);
+  }
+  function readPatternTransfer(input) {
+    if (typeof input === "string") {
+      const value = parsePatterns(input);
+      const source = value.source === void 0 ? null : value.source;
+      if (source !== null) validateTransfer(value.patterns, source);
+      else if ("source" in value) throw Error("Invalid pattern source metadata.");
+      return { patterns: value.patterns, source };
+    }
+    const bank = decodeBank2(input);
+    const patterns = bank.patterns.map((p, index) => ({
+      id: crypto.randomUUID(),
+      name: p.role === "base" ? "BASE" : p.role === "fill" ? `FILL ${index + 1}` : `Variation ${index + 1}`,
+      role: p.role,
+      beats: p.beats,
+      events: p.events.map((e) => ({
+        id: crypto.randomUUID(),
+        step: e.step,
+        length: e.length,
+        cue: e.cue,
+        mode: e.absolute ? "absolute" : "relative",
+        reverse: e.reverse,
+        gate: e.gate,
+        repeat: e.repeat,
+        roll: e.roll,
+        pitch: e.pitch,
+        gain: e.gain / 100,
+        probability: e.probability / 100
+      }))
+    }));
+    return validateTransfer(patterns, bank.source);
   }
 
   // src/chopper/ChopperApp.tsx
@@ -12008,6 +12246,7 @@ ${error.message}`);
       this.redo = [];
       this.snapshot = () => structuredClone({
         legacy: this.state.legacy,
+        patternSource: this.state.patternSource,
         sources: this.state.sources,
         patterns: this.state.patterns,
         bindings: this.state.bindings,
@@ -12671,12 +12910,7 @@ ${error.message}`);
         new Blob(
           [
             JSON.stringify(
-              {
-                format: "pentavox-chopper-pattern",
-                version: 1,
-                cueGrid: "quarter",
-                patterns: this.state.patterns
-              },
+              patternDocument(this.state.patterns, this.state.patternSource, this.source),
               null,
               2
             )
@@ -12691,17 +12925,20 @@ ${error.message}`);
         if (!file) return;
         try {
           if (file.size > 1e6) throw Error("Pattern file too large.");
-          const { patterns } = parsePatterns(await file.text());
+          const { patterns, source: patternSource } = readPatternTransfer(
+            /\.pvxe$/i.test(file.name) ? new Uint8Array(await file.arrayBuffer()) : await file.text()
+          );
           if (this.state.playing)
             this.publish(patterns[0], this.source, false, patterns);
           this.remember();
           this.setState({
             patterns,
+            patternSource,
             patternId: patterns[0].id,
             patternBindings: [patterns[0].id, patterns[0].id],
             selected: null,
             error: false,
-            message: "Patterns imported with explicit REL/ABS semantics. No legacy migration."
+            message: patternSource ? "Patterns imported with their authored grid. Sending to the module does not require a local WAV. PVXE names are role labels." : "Patterns imported. To send without a WAV, import A.PVXE / B.PVXE or a JSON carrying source metadata."
           });
         } catch (error) {
           this.report(error);
@@ -12785,8 +13022,11 @@ ${error.message}`);
             );
           const state = structuredClone(this.state), files = new Map(this.projectExtras), originals2 = new Map(audioLibrary.files), paths = /* @__PURE__ */ new Set();
           let previousVersion = 4;
+          let previousHasPatternSource = false;
           try {
-            previousVersion = JSON.parse(this.projectText)?.version ?? 4;
+            const previous = JSON.parse(this.projectText);
+            previousVersion = previous?.version ?? 4;
+            previousHasPatternSource = Object.prototype.hasOwnProperty.call(previous, "patternSource");
           } catch {
           }
           const extendedData = state.sources.some((source) => (source.drumMarkers?.length ?? 0) > 0) || JSON.stringify(state.loopEffects) !== JSON.stringify([defaultLoopEffects(), defaultLoopEffects()]);
@@ -12808,6 +13048,7 @@ ${error.message}`);
                 probability: state.probability,
                 sources: state.sources,
                 patterns: state.patterns,
+                ...state.patternSource || previousHasPatternSource ? { patternSource: state.patternSource } : {},
                 sourceId: state.sourceId,
                 patternId: state.patternId,
                 bpm: state.bpm,
@@ -12881,6 +13122,7 @@ ${error.message}`);
           loopEffects: [defaultLoopEffects(), defaultLoopEffects()],
           sourceId: source?.id ?? "",
           bindings: [source?.id ?? "", ""],
+          patternSource: null,
           patterns: [base],
           patternId: base.id,
           patternBindings: [base.id, base.id],
@@ -12974,6 +13216,7 @@ ${error.message}`);
               patterns: value.patterns
             })
           );
+          if (value.patternSource != null) validateTransfer(value.patterns, value.patternSource);
           const buffers = /* @__PURE__ */ new Map(), blobs = /* @__PURE__ */ new Map(), ids = /* @__PURE__ */ new Set();
           let decodedBudget = 0;
           for (const s of value.sources) {
@@ -13144,6 +13387,7 @@ ${error.message}`);
             loopEffects,
             sourceId: value.sourceId,
             patterns: value.patterns,
+            patternSource: value.patternSource ?? null,
             patternId: value.patternId,
             bpm: value.bpm,
             seed: value.seed,
@@ -13204,6 +13448,7 @@ ${error.message}`);
             legacy,
             loopEffects,
             patterns,
+            patternSource: snapshot.patternSource ?? null,
             bindings,
             patternBindings,
             patternId: selected.id,
@@ -13237,6 +13482,7 @@ ${error.message}`);
         previewLevel: 0.65,
         sources: [],
         sourceId: "",
+        patternSource: null,
         patterns: [base],
         patternId: base.id,
         selected: null,
@@ -13527,25 +13773,14 @@ ${error.message}`);
               );
             },
             onMessage: (message) => this.setState({ message, error: false }),
-            patternsAvailable: Boolean(source && this.state.patterns.length),
+            patternsAvailable: Boolean(this.state.patterns.length),
             patterns: async () => {
-              if (!this.source) throw Error("Select a source first.");
-              const { frames, sampleRate: sampleRate2, channels, bpm } = this.source;
-              const usingTapeStop = this.state.patterns.some(
-                (pattern2) => pattern2.events.some((entry) => entry.tapeStop)
-              );
-              if (usingTapeStop)
-                throw Error(
-                  "This pattern uses tape stop, which the module cannot receive yet. Clear it, or keep the pattern in this editor."
-                );
-              return {
-                patterns: this.state.patterns,
-                source: { beats: sourceTiming(frames, sampleRate2, bpm), sampleRate: sampleRate2, frames, channels }
-              };
+              const payload = transferPatterns(this.state.patterns, this.state.patternSource, this.source);
+              return { patterns: payload.patterns, source: { ...payload.source } };
             },
             onError: this.report
           }
-        )), /* @__PURE__ */ React.createElement("h2", null, "Pattern files"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.patternInput.click() }, "Import patterns"), /* @__PURE__ */ React.createElement("button", { onClick: this.exportPatterns }, "Export patterns"), /* @__PURE__ */ React.createElement("details", null, /* @__PURE__ */ React.createElement("summary", null, "Compatibility"), /* @__PURE__ */ React.createElement(
+        )), /* @__PURE__ */ React.createElement("h2", null, "Pattern files"), /* @__PURE__ */ React.createElement("button", { title: "Import pattern JSON or A.PVXE / B.PVXE. PVXE includes the authored grid; a local WAV is not required to send it.", onClick: () => this.patternInput.click() }, "Import patterns"), /* @__PURE__ */ React.createElement("button", { onClick: this.exportPatterns }, "Export patterns"), /* @__PURE__ */ React.createElement("details", null, /* @__PURE__ */ React.createElement("summary", null, "Compatibility"), /* @__PURE__ */ React.createElement(
           "button",
           {
             onClick: () => {
@@ -13702,7 +13937,7 @@ ${error.message}`);
             })
           },
           s.placementMode === "relative" ? "Fix to this source cue" : "Follow the loop"
-        ), /* @__PURE__ */ React.createElement("button", { onClick: () => this.setState({ armed: false }) }, "Cancel")))) : /* @__PURE__ */ React.createElement("section", { className: "ch-empty" }, /* @__PURE__ */ React.createElement("h2", null, source ? "Prepare your loop" : "Import a loop to start"), /* @__PURE__ */ React.createElement("p", null, source ? "Confirm BPM and bars above to create the quarter-note cue grid." : "Import a WAV. Hear a cue. Drop it into a pattern. Keep playing while you edit."), /* @__PURE__ */ React.createElement(
+        ), /* @__PURE__ */ React.createElement("button", { onClick: () => this.setState({ armed: false }) }, "Cancel")))) : /* @__PURE__ */ React.createElement("section", { className: "ch-empty" }, /* @__PURE__ */ React.createElement("h2", null, source ? "Prepare your loop" : s.patternSource ? "Patterns ready to send" : "Import audio to preview, or patterns to send"), /* @__PURE__ */ React.createElement("p", null, source ? "Confirm BPM and bars above to create the quarter-note cue grid." : s.patternSource ? "The authored grid came with this pattern bank. A local WAV is only needed for browser preview. Live staging needs a loop loaded in each module slot." : "Import a WAV for browser preview, or import A.PVXE / B.PVXE (or JSON with source metadata) to send patterns without local audio."), /* @__PURE__ */ React.createElement(
           "button",
           {
             onClick: () => source ? this.setState({ prepare: true }) : this.input.click()
@@ -13857,7 +14092,7 @@ ${error.message}`);
           {
             hidden: true,
             type: "file",
-            accept: ".json",
+            accept: ".json,.PVXE,.pvxe",
             ref: (node) => this.patternInput = node,
             onChange: this.importPatterns
           }

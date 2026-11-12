@@ -74,8 +74,8 @@ export class ChopperDeviceService {
     if(patternStores)for(const name of['A','B']){await files.upload(`/CHOPPER/${name}.PVXE`,bytes,{overwrite:true,makeParents:true});stored.push(`/CHOPPER/${name}.PVXE`);}
     if(patternLive)for(const slot of[0,1]){
      // Attempted per slot, and a failure on the second one is recorded rather than thrown: the first Chopper has
-     // already changed, and losing that fact behind an exception is how A and B silently diverge. The card holds
-     // both files either way, so the next power cycle converges them whether or not this moment did.
+     // already changed, and losing that fact behind an exception is how A and B silently diverge. SD writes do
+     // not prove boot loading or playback. NoGrid is a live refusal: load a loop, then explicitly resend.
      try{live.push({slot,...await owner.client.uploadPvxe(owner.info,slot,bytes)});}
      catch(error){live.push({slot,error:error?.message||String(error)});}
     }
