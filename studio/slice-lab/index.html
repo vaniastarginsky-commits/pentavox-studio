@@ -863,29 +863,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-inspector-body > .ch-edit-actions {
   grid-column: 1/-1;
 }
-.ch-audible-strip {
-  margin: 0 20px 12px;
-  font-size: 12px;
-  color: var(--ch-muted);
-}
-.ch-audible-strip > div {
-  position: relative;
-  height: 22px;
-  margin-top: 5px;
-  background: var(--ch-surface);
-  overflow: hidden;
-}
-.ch-audible-strip i {
-  position: absolute;
-  height: 100%;
-  background: #2b3e4c;
-  min-width: 2px;
-}
-.ch-audible-strip b {
-  position: absolute;
-  height: 100%;
-  border-left: 2px solid white;
-}
 .ch-workspace .ch-event {
   padding: 4px 2px;
 }
@@ -957,42 +934,17 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-workspace {
     padding-bottom: 48px;
   }
-  .ch-audible-strip {
-    margin-left: 12px;
-    margin-right: 12px;
-  }
   .ch-transport label:has(input[aria-label="Preview level"]) {
     max-width: 140px;
   }
 }
 .ch-pattern-focus,
-.ch-placement-strip,
-.ch-event-summary {
+.ch-placement-strip {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   padding: 8px 16px;
-}
-.ch-event-summary label {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-}
-.ch-event-summary select {
-  max-width: 100%;
-  min-width: 0;
-}
-.ch-event-summary {
-  font-size: 12px;
-  min-height: 44px;
-}
-.ch-event-summary label {
-  flex: 1 1 220px;
-}
-.ch-event-summary select {
-  flex: 1;
 }
 .ch-sequence-settings {
   margin: 0 16px 8px;
@@ -1148,16 +1100,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-pattern-focus > button:not(.ch-play-edited-pattern) {
     display: none;
   }
-  .ch-event-summary label {
-    flex: 0 0 126px;
-  }
-  .ch-event-summary select {
-    width: 76px;
-  }
-  .ch-event-summary > span {
-    flex: 1;
-    min-width: 180px;
-  }
   .ch-transport > label:not(.ch-secondary) {
     order: 2;
   }
@@ -1185,8 +1127,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
     padding: 6px 7px;
   }
   .ch-pattern-focus,
-  .ch-placement-strip,
-  .ch-event-summary {
+  .ch-placement-strip {
     padding: 6px 12px;
   }
   .ch-sequence-settings {
@@ -2262,12 +2203,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   margin-right: auto;
   font-size: 12px;
 }
-.ch-event-summary {
-  padding: 4px 20px 6px;
-}
-.ch-event-summary select {
-  min-height: 30px;
-}
 .ch-pattern-scroll {
   max-height: min(52vh, 484px);
 }
@@ -2428,8 +2363,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-pattern-focus {
     padding-block: 2px;
   }
-  .ch-pattern-focus,
-  .ch-event-summary {
+  .ch-pattern-focus {
     padding-inline: 12px;
   }
   .ch-pattern .ch-matrix-heading {
@@ -2486,9 +2420,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-pattern {
     display: flex;
     flex-direction: column;
-  }
-  .ch-event-summary {
-    order: 1;
   }
   .ch-pattern-scroll {
     max-height: min(42vh, 324px);
@@ -11562,44 +11493,6 @@ ${error.message}`);
         },
         "Fill from cue order"
       ), pending && /* @__PURE__ */ React.createElement("strong", { className: "ch-boundary" }, "Pending", " ", boundary === null ? "\xB7 awaiting audio" : `\xB7 applies at bar ${boundary / 4 + 1}`)),
-      playing && activePattern && /* @__PURE__ */ React.createElement(
-        "div",
-        {
-          className: "ch-audible-strip",
-          role: "group",
-          "aria-label": "Audibly active pattern"
-        },
-        /* @__PURE__ */ React.createElement("span", null, "Playing ", activePattern.name, " \xB7", " ", ((beat - activeStart) / 4 + 1).toFixed(2), " /", " ", activePattern.beats / 4, " bars"),
-        /* @__PURE__ */ React.createElement("div", null, activePattern.events.map((event) => /* @__PURE__ */ React.createElement(
-          "i",
-          {
-            key: event.id,
-            style: {
-              left: `${event.step / 4 / activePattern.beats * 100}%`,
-              width: `${event.length / 4 / activePattern.beats * 100}%`
-            }
-          }
-        )), /* @__PURE__ */ React.createElement(
-          "b",
-          {
-            style: {
-              left: `${(beat - activeStart) % activePattern.beats / activePattern.beats * 100}%`
-            }
-          }
-        ))
-      ),
-      pattern.events.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "ch-event-summary" }, /* @__PURE__ */ React.createElement("label", null, "Event", " ", /* @__PURE__ */ React.createElement(
-        "select",
-        {
-          "aria-label": "Select event",
-          value: selected ?? "",
-          onChange: (e) => {
-            if (e.target.value) onSelect(e.target.value);
-          }
-        },
-        /* @__PURE__ */ React.createElement("option", { value: "" }, "Select an event"),
-        pattern.events.map((event, index) => /* @__PURE__ */ React.createElement("option", { key: event.id, value: event.id }, "#", index + 1, " \xB7 cue ", event.cue + 1, " ", event.mode === "relative" ? "REL" : "ABS", " \xB7 ", musical(event.step)))
-      )), chosen && /* @__PURE__ */ React.createElement("span", null, "Cue ", chosen.cue + 1, " \xB7", " ", chosen.mode === "relative" ? "REL" : "ABS", " \xB7 ", chosen.length, "/16 \xB7 ", musical(chosen.step))),
       /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-scroll", ref: scroll }, /* @__PURE__ */ React.createElement(
         "div",
         {
