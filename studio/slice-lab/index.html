@@ -1791,9 +1791,9 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   min-height: 36px;
 }
 .ch-pattern-scroll {
-  max-height: min(56vh, 520px);
-  overflow: auto;
-  overscroll-behavior: contain;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-x: contain;
   scrollbar-width: thin;
   border-top: 1px solid var(--ch-line);
   border-bottom: 1px solid var(--ch-line);
@@ -1998,9 +1998,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   }
   .ch-matrix-heading > label {
     margin-left: 0;
-  }
-  .ch-pattern-scroll {
-    max-height: min(48vh, 430px);
   }
   .ch-matrix-label {
     padding: 0 6px;
@@ -2355,9 +2352,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   margin-right: auto;
   font-size: 12px;
 }
-.ch-pattern-scroll {
-  max-height: min(68vh, 720px);
-}
 .ch-matrix-ruler-track span {
   padding-left: 4px;
   white-space: nowrap;
@@ -2560,9 +2554,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-pattern {
     display: flex;
     flex-direction: column;
-  }
-  .ch-pattern-scroll {
-    max-height: min(42vh, 324px);
   }
   .ch-matrix-track .ch-external-resize {
     width: 44px;
