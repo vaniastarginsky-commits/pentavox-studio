@@ -14,7 +14,20 @@ const COMMAND = Object.freeze({
   SAVE_TO_SLOT: 0x30,
   LOAD_FROM_SLOT: 0x31,
   REBOOT: 0x40,
+  // The Chopper PVXE pattern session (docs/protocol/hostlink.md:0x64-0x67): the module keeps a receive session
+  // open for the whole upload, so these four commands belong to exactly one held transaction.
+  PVXE_BEGIN: 0x64,
+  PVXE_CHUNK: 0x65,
+  PVXE_COMMIT: 0x66,
+  PVXE_ABORT: 0x67,
 });
+
+// 32 byte envelope + 8 patterns x (4 byte header + 256 events x 12 bytes). The same number the firmware buffer
+// is sized for and the chopper descriptor advertises as pvxeMax; a bank this model encodes cannot exceed it.
+export const PVXE_MAX_BYTES = 32 + 8 * (4 + 256 * 12);
+
+// Names for the commit result byte, in the module's order.
+const PVXE_RESULTS = Object.freeze(['staged', 'gridAdapted']);
 
 const STATUS_NAMES = [
   'OK',
@@ -256,6 +269,75 @@ export class HostLinkClient {
         await send(COMMAND.BLOB_DATA, concat(u32(offset), chunk));
       }
       await send(COMMAND.BLOB_COMMIT, u32(crc32(bytes)), COMMIT_TIMEOUT_MS);
+    });
+  }
+
+  /**
+   * Send one encoded PVXE bank into a Chopper slot while the module runs.
+   *
+   * One transaction holds the queue for the whole session, because the module keeps the receive buffer between
+   * chunks: an interleaved request would either be refused Busy by that session or have its own answer stolen.
+   * Every failure path aborts, since a module left holding a half-received session answers Busy to the next
+   * attempt - which the user would read as an unexplained refusal of the file they were about to resend.
+   *
+   * The chunk body carries a per-chunk CRC over the payload bytes only, and the sequence number is a chunk
+   * index rather than a byte offset like the blob commands; telling those two apart is what the module checks.
+   *
+   * The commit result is returned rather than interpreted: GridAdapted is a success that says which grid the
+   * pattern landed on, and NoGrid is a refusal with a reason - the slot has no loop for it to follow.
+   */
+  async uploadPvxe(info, slot, bytes, { signal, onProgress = () => {} } = {}) {
+    if (slot !== 0 && slot !== 1) {
+      throw new HostLinkError('PVXE pattern slots are the two Choppers, 0 and 1', { code: 'BAD_ARGS' });
+    }
+    if (!(bytes instanceof Uint8Array) || bytes.length === 0 || bytes.length > PVXE_MAX_BYTES)
+      throw new HostLinkError(`PVXE bank must be 1 to ${PVXE_MAX_BYTES} bytes`, { code: 'BAD_ARGS' });
+    // Four bytes of sequence and four of CRC precede the payload inside one frame body.
+    const chunkMaximum = info.maxBody - 8;
+    if (chunkMaximum <= 0) throw new HostLinkError('PVXE_CHUNK: maxBody too small', { code: 'BAD_STATUS' });
+    return this.#transaction(async (send) => {
+      const abort = async () => {
+        try { await send(COMMAND.PVXE_ABORT, new Uint8Array(0)); } catch { /* the failure being reported wins */ }
+      };
+      try {
+        await send(COMMAND.PVXE_BEGIN, Uint8Array.of(slot));
+        let index = 0;
+        for (let offset = 0; offset < bytes.length; offset += chunkMaximum, index += 1) {
+          if (signal?.aborted) {
+            await abort();
+            throw new HostLinkError('PVXE upload cancelled', { code: 'CANCELLED' });
+          }
+          const chunk = bytes.subarray(offset, offset + chunkMaximum);
+          const { body } = await send(COMMAND.PVXE_CHUNK, concat(u32(index), u32(crc32(chunk)), chunk));
+          requireLength(body, 8, 'PVXE_CHUNK');
+          const view = new DataView(body.buffer, body.byteOffset, body.byteLength);
+          onProgress({
+            sent: Math.min(offset + chunk.length, bytes.length),
+            total: bytes.length,
+            // The module's own count: trusting it is what makes a resumed duplicate look like progress.
+            received: view.getUint32(4, true),
+          });
+        }
+        const committed = await send(COMMAND.PVXE_COMMIT, new Uint8Array(0), COMMIT_TIMEOUT_MS);
+        const reply = committed.body;
+        requireLength(reply, 21, 'PVXE_COMMIT');
+        const view = new DataView(reply.buffer, reply.byteOffset, reply.byteLength);
+        const code = reply[0];
+        if (code === 2) return { result: 'noGrid', code, reason: 'the slot has no loop for the pattern to follow' };
+        if (code > 1) throw new HostLinkError(`PVXE_COMMIT returned an unknown result ${code}`, { code: 'BAD_STATUS' });
+        return {
+          result: PVXE_RESULTS[code],
+          code,
+          authoredQuarters: view.getUint32(1, true),
+          loadedQuarters: view.getUint32(5, true),
+          windowQuarters: view.getUint32(9, true),
+          authoredFrames: view.getUint32(13, true),
+          loadedFrames: view.getUint32(17, true),
+        };
+      } catch (error) {
+        await abort();
+        throw error;
+      }
     });
   }
 

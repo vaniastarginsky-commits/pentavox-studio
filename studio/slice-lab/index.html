@@ -12037,17 +12037,18 @@ ${error.message}`);
         cleanup();
         m.ok ? resolve(m.value) : reject(Error(m.error || "Device operation failed."));
       };
+      const longTransfer = type === "upload-sample" || type === "upload-pattern" || type.startsWith("download");
       const timer = setTimeout(() => {
         cleanup();
-        reject(Error(type === "upload-sample" ? "Upload timed out; the file may already be committed on SD. Inspect the module before retrying." : "No compatible Studio response. Connect the module in the parent Studio and retry."));
-      }, type === "upload-sample" || type.startsWith("download") ? 18e4 : 15e3);
+        reject(Error(longTransfer ? `${type === "upload-pattern" ? "Pattern upload" : "Upload"} timed out; the transfer may already be partway committed. Inspect the module before retrying.` : "No compatible Studio response. Connect the module in the parent Studio and retry."));
+      }, longTransfer ? 18e4 : 15e3);
       window.addEventListener("message", receive);
       window.parent.postMessage({ protocol, type, id, ...data }, origin);
     });
   }
 
   // src/chopper/components/DeviceActions.tsx
-  function DeviceActions({ sample, sampleAvailable, onMessage, onError }) {
+  function DeviceActions({ sample, sampleAvailable, patterns, patternsAvailable, onMessage, onError }) {
     const [caps, setCaps] = React.useState(null), [busy, setBusy] = React.useState(false), [files, setFiles] = React.useState([]), [selected, setSelected] = React.useState("");
     const run = async (job) => {
       if (busy) return;
@@ -12080,7 +12081,15 @@ ${error.message}`);
       if (!(result.bytes instanceof ArrayBuffer)) throw Error("Invalid sample download.");
       download(new Blob([result.bytes], { type: "audio/wav" }), selected.split("/").pop());
       onMessage(`Downloaded ${selected} byte-for-byte from device. Import the saved WAV to edit it; no automatic migration.`);
-    }) }, "Download sample from device")), /* @__PURE__ */ React.createElement("p", null, "New REL/ABS pattern Upload is unavailable on current firmware. Export patterns locally; no lossy conversion."), ["A", "B"].map((slot) => /* @__PURE__ */ React.createElement("button", { key: slot, disabled: busy || !caps?.legacyPatternDownload, onClick: () => run(async () => {
+    }) }, "Download sample from device")), !caps?.newPatternUpload && /* @__PURE__ */ React.createElement("p", null, "This module does not advertise PVXE pattern upload. Export patterns locally; no lossy conversion."), /* @__PURE__ */ React.createElement("button", { disabled: busy || !patternsAvailable || !caps?.newPatternUpload, onClick: () => run(async () => {
+      const payload = await patterns();
+      if (!confirm(`Send ${payload.patterns.length} pattern(s) to BOTH Choppers? This replaces /CHOPPER/A.PVXE and /CHOPPER/B.PVXE on module SD and stages slot A and slot B now. Pattern names stay in this editor: the module keys patterns by role.`)) return;
+      const result = await deviceRequest("upload-pattern", payload);
+      if (result?.state !== "uploaded" && result?.state !== "sent") throw Error("Invalid pattern upload confirmation. Inspect module SD before retrying.");
+      const answers = (result?.live ?? []).map((entry) => entry.error ? `slot ${entry.slot}: ${entry.error}` : `slot ${entry.slot}: ${entry.result}${entry.windowQuarters ? ` on a ${entry.windowQuarters}-quarter grid` : ""}`);
+      if (result?.partial) throw Error(`Only part of the pair accepted this pattern${answers.length ? `: ${answers.join("; ")}` : ""}. Both files are on module SD, so the next power cycle applies them alike.`);
+      onMessage([result?.stored?.length ? `Stored ${result.stored.join(" and ")} on module SD.` : "Sent live without storing (this module has no pattern file support).", answers.length ? `Live - ${answers.join("; ")}.` : "Not sent live: this module stores files only.", "Playing and sound are unverified from the browser."].join(" "));
+    }) }, "Send patterns to both Choppers"), ["A", "B"].map((slot) => /* @__PURE__ */ React.createElement("button", { key: slot, disabled: busy || !caps?.legacyPatternDownload, onClick: () => run(async () => {
       const path = `/CHOPPER/${slot}.PVXP`, result = await deviceRequest("download-pattern", { path });
       if (!(result.bytes instanceof ArrayBuffer)) throw Error("Invalid pattern download.");
       download(new Blob([result.bytes], { type: "application/octet-stream" }), `${slot}.PVXP`);
@@ -13616,6 +13625,22 @@ ${error.message}`);
               );
             },
             onMessage: (message) => this.setState({ message, error: false }),
+            patternsAvailable: Boolean(source && this.state.patterns.length),
+            patterns: async () => {
+              if (!this.source) throw Error("Select a source first.");
+              const { frames, sampleRate: sampleRate2, channels, bpm } = this.source;
+              const usingTapeStop = this.state.patterns.some(
+                (pattern2) => pattern2.events.some((entry) => entry.tapeStop)
+              );
+              if (usingTapeStop)
+                throw Error(
+                  "This pattern uses tape stop, which the module cannot receive yet. Clear it, or keep the pattern in this editor."
+                );
+              return {
+                patterns: this.state.patterns,
+                source: { beats: sourceTiming(frames, sampleRate2, bpm), sampleRate: sampleRate2, frames, channels }
+              };
+            },
             onError: this.report
           }
         )), /* @__PURE__ */ React.createElement("h2", null, "Patterns"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.patternInput.click() }, "Import patterns"), /* @__PURE__ */ React.createElement("button", { onClick: this.exportPatterns }, "Export patterns"), s.patterns.map((p) => /* @__PURE__ */ React.createElement(

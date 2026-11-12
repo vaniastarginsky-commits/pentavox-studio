@@ -10,6 +10,10 @@ export const EVENT_BYTES = 12;
 export const MAX_PATTERNS = 8;
 export const MAX_EVENTS = 256;
 export const MAX_CUE = 63;
+// The largest bank this model can produce, straight from the wire layout in the header comment. The transport
+// constant and the firmware buffer are pinned to this number by a test, so "Studio encoded it" and "the module
+// has room for it" cannot quietly mean different sizes.
+export const MAX_BANK_BYTES = HEADER_BYTES + MAX_PATTERNS * (4 + MAX_EVENTS * EVENT_BYTES);
 const ROLES = ['base', 'variation', 'fill'];
 const REPEATS = [1, 2, 3, 4, 6, 8];
 const ROLLS = [1, 2, 4, 8];
@@ -141,4 +145,48 @@ export function eventFromEditor(e) {
   return { step: e.step, length: e.length, cue: e.cue, absolute: e.mode === 'absolute', reverse: e.reverse,
     gate: e.gate, repeat: e.repeat, roll: e.roll, pitch: e.pitch,
     gain: grid(e.gain, 100, 'gain'), probability: grid(e.probability, 100, 'probability') };
+}
+
+/**
+ * Map the Chopper editor's document into a bank this model can encode - the only place where editor semantics
+ * become device bytes, so that the encoder stays the one certified against the firmware by the golden timeline
+ * vectors. The editor keeps no second byte-level implementation, and this function does not invent what the
+ * editor does not say.
+ *
+ * `source` is what the patterns were authored against: { beats, sampleRate, frames, channels }. `beats` becomes
+ * the bank's authored grid, which is the number REL cues are scheduled inside and the number ABS cues were
+ * chosen against - it is not the loop that happens to be loaded in the module, and the module reports the two
+ * apart. frames / sample rate / channels are provenance the module enforces against nothing, so an editor that
+ * cannot state them is refused rather than written for. `pcmCrc` stays 0 meaning *not measured*: a fabricated
+ * hash would be indistinguishable from a real one after a reboot.
+ *
+ * Anything structurally wrong is raised by validateBank rather than repaired here. An ABS cue beyond the
+ * authored grid, for example, is a message the user can act on; clamping it silently would send a different
+ * pattern than the one they wrote.
+ */
+export function bankFromEditor({ patterns, source, revision = 1 }) {
+  if (!Array.isArray(patterns) || patterns.length < 1) fail('editor patterns are required');
+  const beats = Number(source?.beats);
+  if (!Number.isInteger(beats) || beats < 4 || beats % 4) fail('the authored grid must be whole 4/4 bars');
+  const sampleRate = Number(source?.sampleRate), frames = Number(source?.frames);
+  if (!Number.isInteger(sampleRate) || sampleRate < 1 || !Number.isInteger(frames) || frames < 1) {
+    fail('the authored loop must be stated in real sample rate and frames, not assumed');
+  }
+  const channels = Number(source?.channels ?? 1);
+  if (channels !== 1 && channels !== 2) fail('the authored loop must be mono or stereo');
+  const bank = {
+    // The module counts its own staging revisions; this field only says which bank came from where, so a
+    // download-edit-upload round trip can carry the number the module last reported.
+    revision,
+    source: { sampleRate, frames, channels, beats, pcmCrc: Number(source?.pcmCrc ?? 0) },
+    // Events reach the wire in step order, and validateBank requires them sorted and non-overlapping; the
+    // editor keeps them sorted too, so this sort is a guard against a hand-edited file, not a reordering.
+    patterns: patterns.map((pattern) => ({
+      role: pattern?.role,
+      beats: pattern?.beats,
+      events: [...(pattern?.events ?? [])].sort((a, b) => a.step - b.step).map(eventFromEditor),
+    })),
+  };
+  validateBank(bank);
+  return bank;
 }
