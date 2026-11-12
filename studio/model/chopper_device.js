@@ -4,6 +4,7 @@ import {SdFilesClient} from './sd_files.js';
 import {loopFiles,loopFileName,loopIoVersion} from './loop_io.js';
 import {decodeChopperBank} from './chopper_bank.js';
 import {decodeBank,encodeBank,bankFromEditor,MAX_BANK_BYTES} from './chopper_event_bank.js';
+import {convertLegacyBank,describeConversion} from './chopper_legacy_convert.js';
 import {validateArtifactBytes,MAX_ARTIFACT_BYTES} from '../ui/samples_bridge.js';
 
 export function validChopperDevicePath(path,kind){
@@ -42,14 +43,23 @@ export class ChopperDeviceService {
     await files.upload(path,bytes,{overwrite:false,makeParents:true});
     return {state:'uploaded',path,selected:false,audiblyActive:false};
    }
-   if(request.type==='upload-pattern'){
+   if(request.type==='upload-pattern'||request.type==='convert-pattern'){
     // One action for both Choppers, by construction: a pattern is the pair's behaviour, so this service does not
     // offer a call that could leave slot A and slot B holding different banks.
     // Two accepted inputs, one meaning: a bank already encoded, or the editor's own patterns plus the loop they
     // were authored against. Both end as the same envelope the module checks, and the encoder is the Studio
     // model's - the editor ships no second byte-level implementation that could drift from the firmware.
-    let bytes;
-    if(request.bytes instanceof ArrayBuffer)bytes=new Uint8Array(request.bytes);
+    let bytes;let conversion=null;
+    if(request.type==='convert-pattern'){
+     // A PVXP bank and the geometry of the loop it was cut against become one PVXE bank, then travel the identical
+     // route below: the legacy pattern is not a second-class upload.
+     let converted;
+     try{converted=convertLegacyBank({bytes:new Uint8Array(request.bytes instanceof ArrayBuffer?request.bytes:Uint8Array.from(request.bytes??[])),sliceStartFrames:request.sliceStartFrames,bpm:request.bpm,sampleRate:request.sampleRate,sourceFrames:request.sourceFrames,channels:request.channels,revision:request.revision});}
+     catch(error){throw Error(`This legacy pattern cannot be converted (${error?.message||error}). Nothing was written.`);}
+     bytes=converted.bytes;
+     conversion={...converted.report,summary:describeConversion(converted.report,request.bpm)};
+    }
+    else if(request.bytes instanceof ArrayBuffer)bytes=new Uint8Array(request.bytes);
     else if(Array.isArray(request.patterns)){
      try{bytes=encodeBank(bankFromEditor({patterns:request.patterns,source:request.source,revision:request.revision}));}
      catch(error){throw Error(`This pattern cannot be sent to the module (${error?.message||error}). Nothing was written.`);}
@@ -72,7 +82,7 @@ export class ChopperDeviceService {
     const accepted=live.filter(entry=>!entry.error&&entry.result!=='noGrid').length;
     // Reported per slot on purpose: the two loops need not be the same length, so one bank can legitimately land
     // on two different grids - and one slot's NoGrid must never be hidden by the other slot's success.
-    return {state:stored.length?'uploaded':'sent',stored,live,partial:live.length>0&&accepted<live.length,patterns:bank.patterns.length,audiblyActive:false};
+    return {state:stored.length?'uploaded':'sent',stored,live,partial:live.length>0&&accepted<live.length,patterns:bank.patterns.length,conversion,audiblyActive:false};
    }
    if(request.type==='download-sample'||request.type==='download-pattern'){
     const kind=request.type==='download-sample'?'sample':'pattern';
