@@ -321,7 +321,27 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
   margin-bottom: 4px;
+}
+.ch-device-actions {
+  width: 100%;
+  min-width: 0;
+}
+.ch-device-actions > :not(summary) {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.ch-device-actions > button {
+  text-align: left;
+  line-height: 1.25;
+}
+.ch-device-actions > summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
 }
 .ch-library details {
   margin-top: 16px;
@@ -959,6 +979,108 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-sequence-settings .ch-pattern-controls {
   padding: 8px;
 }
+.ch-sequence-preview {
+  display: grid;
+  gap: 9px;
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--ch-line);
+}
+.ch-sequence-rules,
+.ch-sequence-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ch-sequence-rules span {
+  padding: 3px 7px;
+  border: 1px solid var(--ch-line);
+  border-radius: 12px;
+  color: var(--ch-muted);
+  font-size: 11px;
+}
+.ch-sequence-summary {
+  color: var(--ch-muted);
+  font-size: 12px;
+}
+.ch-sequence-summary strong {
+  color: var(--ch-ink);
+}
+.ch-sequence-table-wrap {
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--ch-line);
+  border-radius: 5px;
+}
+.ch-sequence-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+.ch-sequence-table th,
+.ch-sequence-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--ch-line);
+  vertical-align: top;
+}
+.ch-sequence-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--ch-surface);
+  color: var(--ch-muted);
+}
+.ch-sequence-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--ch-surface) 55%, transparent);
+}
+.ch-sequence-table tr.is-filtered td,
+.ch-sequence-table tr.is-filtered th {
+  color: var(--ch-muted);
+}
+.ch-sequence-table .mono {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ch-sequence-kind {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: #394252;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+.ch-sequence-kind.kind-base { color: #b5d9c2; }
+.ch-sequence-kind.kind-variation { color: #d3bcff; }
+.ch-sequence-subcandidate,
+.ch-sequence-draw {
+  display: block;
+  margin-top: 2px;
+  color: var(--ch-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.ch-sequence-footnote,
+.ch-sequence-warning,
+.ch-sequence-note {
+  margin: 0;
+  color: var(--ch-muted);
+  font-size: 11px;
+}
+.ch-sequence-warning { color: var(--ch-pending); }
+.ch-sequence-settings > summary {
+  list-style: none;
+}
+.ch-sequence-settings > summary::-webkit-details-marker { display: none; }
+.ch-sequence-settings > summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 1.2em;
+  color: var(--ch-a);
+}
+.ch-sequence-settings[open] > summary::before { content: "▾"; }
 .ch-boundary {
   color: var(--ch-pending);
   font-size: 12px;
@@ -1097,8 +1219,15 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-transport:not(.more-open) ~ .ch-center .ch-context > label {
     display: none;
   }
-  .ch-pattern-focus > button:not(.ch-play-edited-pattern) {
-    display: none;
+  .ch-pattern-focus .ch-pattern-bank {
+    order: 10;
+    flex: 1 0 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .ch-pattern-focus .ch-pattern-bank button {
+    min-height: 40px;
   }
   .ch-transport > label:not(.ch-secondary) {
     order: 2;
@@ -2137,19 +2266,21 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   cursor: pointer;
 }
 .ch-pattern-focus {
-  padding: 3px 12px;
-  gap: 4px;
+  padding: 8px 16px;
+  gap: 8px;
   border-top: 1px solid var(--ch-line);
+  border-bottom: 1px solid var(--ch-line);
 }
 .ch-pattern-focus > button,
 .ch-pattern-focus > label {
-  min-height: 32px;
-  padding-block: 3px;
-  font-size: 12px;
+  min-height: 40px;
+  padding-block: 6px;
+  font-size: 14px;
 }
 .ch-pattern-focus .ch-play-edited-pattern {
   min-width: 0;
-  padding-inline: 8px;
+  min-height: 40px;
+  padding-inline: 12px;
 }
 .ch-compact-label {
   color: var(--ch-muted);
@@ -2159,13 +2290,18 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   gap: 4px;
 }
 .ch-pattern-focus .ch-playback-choice select {
-  max-width: 116px;
-  min-height: 30px;
-  padding: 3px 6px;
+  max-width: 140px;
+  min-height: 36px;
+  padding: 5px 8px;
+}
+.ch-pattern-focus .ch-icon-action {
+  width: 40px;
+  min-width: 40px !important;
+  min-height: 40px !important;
 }
 .ch-pattern-focus .ch-pattern-bank button {
-  min-height: 30px;
-  padding-inline: 9px;
+  min-height: 36px;
+  padding-inline: 12px;
 }
 .ch-icon-action {
   min-width: 34px !important;
@@ -2180,10 +2316,11 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 .ch-pattern-bank {
   display: flex;
-  flex: 1 1 180px;
-  gap: 5px;
-  min-width: 0;
-  overflow-x: auto;
+  flex: 1 1 240px;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 200px;
+  overflow: visible;
   padding: 3px;
 }
 .ch-pattern-bank button {
@@ -11192,6 +11329,9 @@ ${error.message}`);
   }
 
   // src/chopper/components/PatternTimeline.tsx
+  function patternFitZoom(viewportWidth, cueColumn, totalSteps, baseUnit) {
+    return viewportWidth > cueColumn ? (viewportWidth - cueColumn) / totalSteps / baseUnit : 1;
+  }
   function PatternTimeline({
     pattern,
     slot,
@@ -11217,10 +11357,10 @@ ${error.message}`);
     onPatternBeatsChange,
     onFillCueOrder
   }) {
-    const [manualZoom, setManualZoom] = React.useState(1), [fit, setFit] = React.useState(false), [viewportWidth, setViewportWidth] = React.useState(0), [tool, setTool] = React.useState("pencil"), [ghost, setGhost] = React.useState(null), [cursor, setCursor] = React.useState(0), [dragged, setDragged] = React.useState(null), [dragCopy, setDragCopy] = React.useState(false), [resizeDraft, setResizeDraft] = React.useState(null);
+    const [manualZoom, setManualZoom] = React.useState(1), [fit, setFit] = React.useState(true), [viewportWidth, setViewportWidth] = React.useState(0), [tool, setTool] = React.useState("pencil"), [ghost, setGhost] = React.useState(null), [cursor, setCursor] = React.useState(0), [dragged, setDragged] = React.useState(null), [dragCopy, setDragCopy] = React.useState(false), [resizeDraft, setResizeDraft] = React.useState(null);
     const down = React.useRef(null), body = React.useRef(null), scroll = React.useRef(null), wheelAnchor = React.useRef(null), draggedCueRef = React.useRef(0), pointerDrag = React.useRef(null), suppressEventClick = React.useRef(false), nativeDrag = React.useRef(false), resizePointer = React.useRef(null);
     const maxCue = pattern.events.reduce((max, event) => Math.max(max, event.cue), -1), addressCount = placementMode === "absolute" ? Math.min(64, Math.max(4, cueCount)) : Math.min(64, Math.max(pattern.beats, cueCount)), rowCount = Math.min(64, Math.max(addressCount, maxCue + 1));
-    const baseUnit = innerWidth < 768 ? 22 : 32, cueColumn = innerWidth < 768 ? 58 : 76, rowHeight = innerWidth < 768 ? 36 : rowCount > 48 ? 18 : rowCount > 24 ? 21 : 26, resizeWidth = innerWidth < 768 ? 44 : 30, total = pattern.beats * 4, fitZoom = viewportWidth > cueColumn ? (viewportWidth - cueColumn) / total / baseUnit : 1, minZoom = Math.min(0.5, fitZoom), maxZoom = Math.max(3, fitZoom), zoom = fit ? fitZoom : Math.max(minZoom, Math.min(maxZoom, manualZoom)), unit = baseUnit * zoom, barStride = Math.max(1, Math.ceil(42 / (16 * unit))), chosen = pattern.events.find((e) => e.id === selected);
+    const baseUnit = innerWidth < 768 ? 22 : 32, cueColumn = innerWidth < 768 ? 58 : 76, rowHeight = innerWidth < 768 ? 36 : rowCount > 48 ? 18 : rowCount > 24 ? 21 : 26, resizeWidth = innerWidth < 768 ? 44 : 30, total = pattern.beats * 4, fitZoom = patternFitZoom(viewportWidth, cueColumn, total, baseUnit), minZoom = Math.min(0.5, fitZoom), maxZoom = Math.max(3, fitZoom), zoom = fit ? fitZoom : Math.max(minZoom, Math.min(maxZoom, manualZoom)), unit = baseUnit * zoom, barStride = Math.max(1, Math.ceil(42 / (16 * unit))), chosen = pattern.events.find((e) => e.id === selected);
     const setZoom = (value) => {
       setFit(false);
       setManualZoom(value);
@@ -11806,8 +11946,35 @@ ${error.message}`);
     );
   }
 
+  // src/chopper/components/SequencePreview.tsx
+  function buildSequencePreview(patterns, seed, probability) {
+    const roles = patterns.map((pattern) => pattern.role), names = patterns.map((pattern) => pattern.name), decisions = buildSeedSequence(seed, names, roles, probability, 16, patterns.map((pattern) => pattern.beats * 4), 16), baseIndex = roles.findIndex((role) => role === "base"), fallback = baseIndex >= 0 ? baseIndex : Math.max(0, roles.findIndex((role) => role !== "fill")), variationChance = Math.max(0, Math.min(1, (probability - 0.1) / 0.9)), fillChance = Math.max(0, Math.min(1, (probability - 0.2) / 0.8)), earlyChance = probability < 0.9 ? 0 : 0.02 + 0.13 * ((probability - 0.9) / 0.1);
+    let elapsedBeats = 0;
+    const counts = { base: 0, variation: 0, fill: 0 };
+    const rows = decisions.patternIndices.map((output, slot) => {
+      const candidate = decisions.candidateIndices[slot], kind = roles[candidate] === "variation" ? "variation" : "base", duration = patterns[output]?.beats ?? 4, startBar = Math.floor(elapsedBeats / 4) + 1, endBar = startBar + duration / 4 - 1, fill = decisions.fillCandidateIndices[slot], early = decisions.earlyFillCandidateIndices[slot];
+      elapsedBeats += duration;
+      counts[roles[output] ?? "base"]++;
+      const draws = [];
+      if (kind === "variation") draws.push(`Variation ${(decisions.probabilityDraws[slot] * 100).toFixed(0)}% / ${(variationChance * 100).toFixed(0)}%`);
+      if (fill >= 0) draws.push(`FILL ${(decisions.fillProbabilityDraws[slot] * 100).toFixed(0)}% / ${(fillChance * 100).toFixed(0)}%`);
+      if (early >= 0) draws.push(`Early ${(decisions.earlyFillDraws[slot] * 100).toFixed(0)}% / ${(earlyChance * 100).toFixed(0)}%`);
+      let state = decisions.variationActive[slot] ? "candidate accepted" : "filtered to BASE";
+      if (decisions.fillActive[slot]) state = "scheduled FILL";
+      else if (decisions.fillOpportunities[slot]) state = fill < 0 ? "no duration-matched FILL" : "FILL gate missed; primary kept";
+      if (early >= 0) state = decisions.earlyFillActive[slot] ? "early FILL accepted" : "early FILL blocked or gate missed";
+      return { slot, bars: startBar === endBar ? `${startBar}` : `${startBar}\u2013${endBar}`, candidate, output, draws, fillCandidate: fill, earlyCandidate: early, state, kind };
+    });
+    return { rows, counts, fallback, baseIndex, variationChance, fillChance, earlyChance, hasFill: roles.includes("fill"), names };
+  }
+  function SequencePreview({ patterns, seed, probability }) {
+    const preview = buildSequencePreview(patterns, seed, probability);
+    return /* @__PURE__ */ React.createElement("section", { className: "ch-sequence-preview", "aria-label": "Seed sequence preview" }, /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-rules" }, /* @__PURE__ */ React.createElement("span", null, "BASE always"), /* @__PURE__ */ React.createElement("span", null, "Variations \xB7 ", (preview.variationChance * 100).toFixed(0), "% after 10%"), /* @__PURE__ */ React.createElement("span", null, "FILL \xB7 ", (preview.fillChance * 100).toFixed(0), "% at 16-bar windows after 20%"), /* @__PURE__ */ React.createElement("span", null, "Early FILL \xB7 ", (preview.earlyChance * 100).toFixed(0), "% at 90\u2013100%")), /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-summary", "aria-live": "polite" }, /* @__PURE__ */ React.createElement("strong", null, preview.counts.base, " BASE"), /* @__PURE__ */ React.createElement("strong", null, preview.counts.variation, " variations"), /* @__PURE__ */ React.createElement("strong", null, preview.counts.fill, " fills"), /* @__PURE__ */ React.createElement("span", null, "active out of 16 slots")), preview.baseIndex < 0 && /* @__PURE__ */ React.createElement("p", { className: "ch-sequence-warning" }, "No BASE role is assigned; the scheduler falls back to ", preview.names[preview.fallback] ?? "the first non-FILL pattern", "."), !preview.hasFill && /* @__PURE__ */ React.createElement("p", { className: "ch-sequence-note" }, "No FILL pattern is available. Scheduled FILL windows keep the primary pattern."), /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-table-wrap" }, /* @__PURE__ */ React.createElement("table", { className: "ch-sequence-table" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", null, "Slot"), /* @__PURE__ */ React.createElement("th", null, "Bars"), /* @__PURE__ */ React.createElement("th", null, "Seed candidate"), /* @__PURE__ */ React.createElement("th", null, "Draw / gate"), /* @__PURE__ */ React.createElement("th", null, "Preview output"), /* @__PURE__ */ React.createElement("th", null, "State"))), /* @__PURE__ */ React.createElement("tbody", null, preview.rows.map((row) => /* @__PURE__ */ React.createElement("tr", { key: row.slot, className: row.candidate === row.output ? "is-active" : "is-filtered" }, /* @__PURE__ */ React.createElement("th", { scope: "row" }, String(row.slot + 1).padStart(2, "0")), /* @__PURE__ */ React.createElement("td", null, row.bars), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: `ch-sequence-kind kind-${row.kind}` }, row.kind), preview.names[row.candidate] ?? `Pattern ${row.candidate + 1}`, row.fillCandidate >= 0 && /* @__PURE__ */ React.createElement("small", { className: "ch-sequence-subcandidate" }, "FILL: ", preview.names[row.fillCandidate]), row.earlyCandidate >= 0 && /* @__PURE__ */ React.createElement("small", { className: "ch-sequence-subcandidate" }, "Early FILL: ", preview.names[row.earlyCandidate])), /* @__PURE__ */ React.createElement("td", { className: "mono" }, row.draws.length ? row.draws.map((draw, index) => /* @__PURE__ */ React.createElement("small", { key: index, className: "ch-sequence-draw" }, draw)) : "\u2014"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("strong", null, preview.names[row.output] ?? `Pattern ${row.output + 1}`)), /* @__PURE__ */ React.createElement("td", null, row.state)))))), /* @__PURE__ */ React.createElement("p", { className: "ch-sequence-footnote" }, "Preview only: the seed fixes these 16 candidates and probability draws; changing probability filters the same draws. This table does not play audio or alter the project."));
+  }
+
   // src/chopper/components/SequenceSettings.tsx
   function SequenceSettings({
+    patterns,
     pattern,
     seed,
     probability,
@@ -11817,7 +11984,7 @@ ${error.message}`);
     onPattern,
     onFill
   }) {
-    return /* @__PURE__ */ React.createElement("details", { className: "ch-sequence-settings" }, /* @__PURE__ */ React.createElement("summary", null, "Sequence \xB7 Seed ", seed, " \xB7 probability ", Math.round(probability * 100), "% \xB7", " ", sequence ? "Seed playback" : "selected pattern"), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-controls" }, /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("details", { className: "ch-sequence-settings" }, /* @__PURE__ */ React.createElement("summary", null, "Seed sequence preview \xB7 16 slots \xB7 Seed ", seed, " \xB7 ", Math.round(probability * 100), "% \xB7", " ", sequence ? "Seed playback on" : "pattern playback"), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-controls" }, /* @__PURE__ */ React.createElement(
       NumericField,
       {
         label: "Sequence probability",
@@ -11855,7 +12022,7 @@ ${error.message}`);
         max: 4294967295,
         onCommit: (seed2) => onSettings({ seed: seed2 })
       }
-    )));
+    )), /* @__PURE__ */ React.createElement(SequencePreview, { patterns, seed, probability }));
   }
 
   // src/chopper/components/EventInspector.tsx
@@ -12022,7 +12189,7 @@ ${error.message}`);
       const summary = describePatternUpload(result);
       if (summary.error) throw Error(summary.message);
       onMessage(summary.message);
-    }) }, "Send patterns to both Choppers"), ["A", "B"].map((slot) => /* @__PURE__ */ React.createElement("button", { key: slot, disabled: busy || !caps?.legacyPatternDownload, onClick: () => run(async () => {
+    }) }, "Send patterns to A + B"), ["A", "B"].map((slot) => /* @__PURE__ */ React.createElement("button", { key: slot, disabled: busy || !caps?.legacyPatternDownload, onClick: () => run(async () => {
       const path = `/CHOPPER/${slot}.PVXP`, result = await deviceRequest("download-pattern", { path });
       if (!(result.bytes instanceof ArrayBuffer)) throw Error("Invalid pattern download.");
       download(new Blob([result.bytes], { type: "application/octet-stream" }), `${slot}.PVXP`);
@@ -12889,26 +13056,6 @@ ${error.message}`);
               }
             }
           );
-        } catch (error) {
-          this.report(error);
-        }
-      };
-      this.exportSample = async () => {
-        try {
-          const source = this.source;
-          if (!source) return;
-          const bytes = await prepareChopperSource(
-            source,
-            audioLibrary.get(source.id)
-          );
-          download(
-            new Blob([bytes], { type: "audio/wav" }),
-            source.name.replace(/\.[^.]+$/, "") + "_chopper.wav"
-          );
-          this.setState({
-            message: "Prepared WAV exported. Not uploaded to a device.",
-            error: false
-          });
         } catch (error) {
           this.report(error);
         }
@@ -13795,13 +13942,6 @@ ${error.message}`);
             /* @__PURE__ */ React.createElement("span", { className: "ch-loop-card-meta" }, bound ? `${bound.bpm} BPM \xB7 ${Math.max(4, Math.round(bound.frames / bound.sampleRate * bound.bpm / 60))} slices \xB7 ${(bound.frames / bound.sampleRate).toFixed(2)} s` : "Choose a sample or drop a WAV")
           );
         })), /* @__PURE__ */ React.createElement("div", { className: "ch-library-actions" }, /* @__PURE__ */ React.createElement(
-          "button",
-          {
-            disabled: !source,
-            onClick: () => this.setState({ prepare: !s.prepare })
-          },
-          "Prepare for Chopper"
-        ), /* @__PURE__ */ React.createElement("button", { disabled: !source, onClick: this.exportSample }, "Export prepared WAV"), /* @__PURE__ */ React.createElement(
           DeviceActions,
           {
             sampleAvailable: Boolean(source),
@@ -13945,7 +14085,7 @@ ${error.message}`);
             })
           },
           s.placementMode === "relative" ? "Fix to this source cue" : "Follow the loop"
-        ), /* @__PURE__ */ React.createElement("button", { onClick: () => this.setState({ armed: false }) }, "Cancel")))) : /* @__PURE__ */ React.createElement("section", { className: "ch-empty" }, /* @__PURE__ */ React.createElement("h2", null, source ? "Prepare your loop" : s.patternSource ? "Patterns ready to send" : "Import audio to preview, or patterns to send"), /* @__PURE__ */ React.createElement("p", null, source ? "Confirm BPM and bars above to create the quarter-note cue grid." : s.patternSource ? "The authored grid came with this pattern bank. A local WAV is only needed for browser preview. Live staging needs a loop loaded in each module slot." : "Import a WAV for browser preview, or import A.PVXE / B.PVXE (or JSON with source metadata) to send patterns without local audio.")), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-focus" }, /* @__PURE__ */ React.createElement(
+        ), /* @__PURE__ */ React.createElement("button", { onClick: () => this.setState({ armed: false }) }, "Cancel")))) : null, /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-focus" }, /* @__PURE__ */ React.createElement(
           "button",
           {
             type: "button",
@@ -14019,6 +14159,7 @@ ${error.message}`);
         ), event && !s.inspector && /* @__PURE__ */ React.createElement("button", { className: "ch-event-dock", onClick: this.openInspector }, event.mode === "relative" ? "REL" : "ABS", " cue ", event.cue + 1, " \xB7 Edit event"), /* @__PURE__ */ React.createElement(
           SequenceSettings,
           {
+            patterns: s.patterns,
             pattern,
             sequence: s.sequence,
             seed: s.seed,
