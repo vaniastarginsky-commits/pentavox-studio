@@ -12,8 +12,10 @@ export class WebSerialTransport {
     this.disconnectCallback = () => {};
   }
 
-  /** `interactive: false` never opens the port chooser: it takes a port this site was allowed before, or throws NO_PORT (for the automatic connect). */
-  static async connect({ interactive = true } = {}) {
+  /** `interactive: false` never opens the port chooser: it takes a port this site was allowed before, or throws NO_PORT (for the automatic connect).
+   *  `unfiltered: true` asks for any port at all. It is a separate, explicit user action (a module plugged in with an unusual vendor id),
+   *  never something the code falls back to on its own. */
+  static async connect({ interactive = true, unfiltered = false } = {}) {
     if (!globalThis.navigator?.serial) {
       throw new HostLinkError('Web Serial is not available. Open Studio in Chrome or Edge.', {
         code: 'UNSUPPORTED',
@@ -26,11 +28,15 @@ export class WebSerialTransport {
     let port = authorised.length === 1 || (!interactive && authorised.length > 0) ? authorised[0] : null;
     if (!port && !interactive) throw new HostLinkError('No module has been allowed yet', { code: 'NO_PORT' });
     if (!port) {
+      // P0 BUG 3: cancelling the chooser used to re-ask without any filter, so a decline offered every serial device on the
+      // computer and could open one that is not a module. A cancellation is an answer: it ends this attempt.
       try {
-        port = await navigator.serial.requestPort({ filters: [{ usbVendorId: ALCHEMY_VENDOR_ID }] });
+        port = await navigator.serial.requestPort(unfiltered ? {} : { filters: [{ usbVendorId: ALCHEMY_VENDOR_ID }] });
       } catch (error) {
-        if (error.name !== 'NotFoundError') throw error;
-        port = await navigator.serial.requestPort();
+        if (error.name === 'NotFoundError') {
+          throw new HostLinkError('No module was chosen.', { code: 'USER_CANCELLED' });
+        }
+        throw error;
       }
     }
 

@@ -4,8 +4,18 @@
 // https://<user>.github.io/<repo>/studio/). Data files sit next to the studio folder in both, so they are addressed relative to this module,
 // never from the server root. Build / Flash / DFU status need serve.py, which on the static site is the one running on the user's own machine.
 
-/** Absolute URL of a file that lives beside the studio/ folder (palette/catalog.json, sets.json, engines_stock.wasm ...). */
-export const siteUrl = (path) => new URL(`../${path}`, import.meta.url).href;
+/** Absolute URL of a file that lives beside the studio/ folder (palette/catalog.json, sets.json, engines_stock.wasm ...).
+ *
+ *  A published site stamps its commit into window.STUDIO_VERSION before any module runs, and the URL carries it as ?v=. These files
+ *  change with every release — palette/catalog.json is the parameter table the freshly published app.js reads — while Pages serves
+ *  them from a ~10 minute cache, so an unversioned fetch can hand a new Studio an old catalog. serve.py and a source checkout set no
+ *  stamp, so nothing is appended there and a reload still picks up an edited JSON file. */
+export const siteUrl = (path) => {
+  const url = new URL(`../${path}`, import.meta.url);
+  const version = globalThis.STUDIO_VERSION;
+  if (typeof version === 'string' && version) url.searchParams.set('v', version);
+  return url.href;
+};
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 const DEFAULT_LOCAL_SERVER = 'http://127.0.0.1:8766';

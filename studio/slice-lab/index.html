@@ -10264,11 +10264,11 @@ ${error.message}`);
       if (index >= 0 && this.accepted) {
         const e = p.events[index], elapsed = this.beat - start, span3 = e.length / 4, period = span3 / (e.repeat * e.roll), local = elapsed % period;
         const cue = e.mode === "absolute" ? e.cue : (this.patternStart + e.cue) % plan.sourceBeats;
-        const ratio = Math.pow(2, e.pitch / 12);
-        const readBeat = local * ratio * (e.tapeStop ? 1 - (elapsed - local / 2) / span3 : 1);
-        if (!e.gate || readBeat < 1) {
-          const pos = (cue + (e.reverse ? 1 - readBeat : readBeat)) % plan.sourceBeats, frame = (pos + plan.sourceBeats) % plan.sourceBeats / plan.sourceBeats * data.length;
-          const ramp2 = Math.max(1e-6, plan.bpm / 60 * 3e-3), gateTail = e.gate ? (1 - readBeat) / ratio / ramp2 : 1;
+        const ratio = Math.pow(2, e.pitch / 12), readBeat = local * ratio;
+        const reach = period * ratio;
+        if (!e.gate || readBeat < reach) {
+          const pos = (cue + (e.reverse ? reach - readBeat : readBeat)) % plan.sourceBeats, frame = (pos + plan.sourceBeats) % plan.sourceBeats / plan.sourceBeats * data.length;
+          const ramp2 = Math.max(1e-6, plan.bpm / 60 * 3e-3), gateTail = e.gate ? (reach - readBeat) / ratio / ramp2 : 1;
           const envelope = Math.max(0, Math.min(1, elapsed / ramp2, (span3 - elapsed) / ramp2, local / ramp2, (period - local) / ramp2, gateTail));
           this.soundingCue = Math.floor((pos + plan.sourceBeats) % plan.sourceBeats);
           this.soundingEvent = e.id;
@@ -12003,11 +12003,12 @@ ${error.message}`);
       (key === "repeat" ? [1, 2, 3, 4, 6, 8] : [1, 2, 4, 8]).map(
         (n) => /* @__PURE__ */ React.createElement("option", { key: n, value: n }, n === 1 ? "Off" : `${n}\xD7`)
       )
-    ))), /* @__PURE__ */ React.createElement("label", null, /* @__PURE__ */ React.createElement(
+    ))), /* @__PURE__ */ React.createElement("label", { title: "Not yet part of the PVXE bank format: the module cannot receive this effect" }, /* @__PURE__ */ React.createElement(
       "input",
       {
         type: "checkbox",
         checked: Boolean(event.tapeStop),
+        disabled: true,
         onChange: (e) => onChange({ ...event, tapeStop: e.target.checked })
       }
     ), "Tape stop")), ["reverse", "gate"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, /* @__PURE__ */ React.createElement(

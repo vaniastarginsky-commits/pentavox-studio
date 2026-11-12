@@ -379,17 +379,31 @@ async function runAutoConnect() {
   if (--autoTries > 0) autoTimer = setTimeout(runAutoConnect, 1500);   // the module may still be starting: HostLink answers a moment after the port appears
 }
 
-async function connect({ demo = false, auto = false } = {}) {
-  demoMode = demo;
-  demoBanner.hidden = !demo;
-  document.body.classList.toggle('demo-mode', demo);
-  globalThis.dispatchEvent(new Event('pentavox-demo'));
-  stopDfuWatch();
-  connectButton.disabled = true;
-  connectionStatus.textContent = 'Connecting…'; connectionStatus.dataset.state = 'connecting';
-  if (session) { session.readOnly = true; controller?.notify(); }
-  dx7Editor.refresh(); syncFooter();
+// P0 BUG 2: one connect at a time. Connect, Demo, the unsupported-browser Demo and the automatic connect all come through this
+// guard, so pressing Demo while a real connect is running joins that attempt instead of opening a second transport on a second port.
+let connectInFlight = null;
+function connect(options = {}) {
+  if (connectInFlight) return connectInFlight;
+  connectInFlight = connectAttempt(options).finally(() => {
+    connectInFlight = null;
+    demoButton.disabled = false;
+    connectButton.disabled = !globalThis.navigator?.serial;
+  });
+  return connectInFlight;
+}
+
+async function connectAttempt({ demo = false, auto = false } = {}) {
   try {
+    demoMode = demo;
+    demoBanner.hidden = !demo;
+    document.body.classList.toggle('demo-mode', demo);
+    globalThis.dispatchEvent(new Event('pentavox-demo'));
+    stopDfuWatch();
+    connectButton.disabled = true;
+    demoButton.disabled = true;   // Demo must not start a second connect while one is running
+    connectionStatus.textContent = 'Connecting…'; connectionStatus.dataset.state = 'connecting';
+    if (session) { session.readOnly = true; controller?.notify(); }
+    dx7Editor.refresh(); syncFooter();
     persistDraft();
     if (client) { try { await client.close(); } catch { /* already disconnected */ } }
     const assets = await assetsPromise;
@@ -404,8 +418,11 @@ async function connect({ demo = false, auto = false } = {}) {
     // Connecting never writes to the module: an old draft would overwrite what the module holds now (a voice engine changed on the panel,
     // a loaded preset), so it is dropped (persistDraft below clears it) instead of being restored and flushed.
     if (!session.table || !session.voices) throw new Error(result.reason ?? 'This firmware has no live fields');
-    client.onDisconnect(markDisconnected);
-    session.onBusy = (busy) => document.body.classList.toggle('studio-busy', busy);
+    // A transport of an attempt that was replaced must not touch the state of the one that stands now (P0 BUG 2).
+    const thisClient = client;
+    const thisSession = session;
+    client.onDisconnect(() => { if (client === thisClient) markDisconnected(); });
+    session.onBusy = (busy) => { if (session === thisSession) document.body.classList.toggle('studio-busy', busy); };
     controller?.dispose(); controller = new RoutingController(session, session.destinations, { onError: showError });
     unmountRouting?.(); unmountSettings?.(); unmountPresets?.(); unmountVoices.forEach((dispose) => dispose()); unsubscribePaletteLive?.(); unsubscribeDraft?.();
     routingRoot.classList.remove('disconnected'); unmountRouting = mountPatchDesk(routingRoot, controller, { onError: showError, onUndo: showUndo });
@@ -428,15 +445,34 @@ async function connect({ demo = false, auto = false } = {}) {
     refreshWorkspace();
     return true;
   } catch (error) {
+    // Nothing is connected now, whatever the user asked for: demoMode has to agree with the UI, otherwise a failed Demo
+    // would leave it true and block the automatic connect for good (P0 BUG 2). The statements above are inside this try for
+    // the same reason: a throw while painting the header would otherwise leave the app saying 'Connecting…' forever.
+    demoMode = false;
     demoBanner.hidden = true;
     document.body.classList.remove('demo-mode');
+    document.body.classList.remove('studio-busy');
     globalThis.dispatchEvent(new Event('pentavox-demo'));
     connectionStatus.textContent = error?.code === 'BUSY_PORT' ? 'Port busy' : 'Not connected'; connectionStatus.dataset.state = 'err';
     connectButton.disabled = false;
-    if (!auto) showError(error);   // an automatic try fails quietly: the next one follows
+    // A declined chooser is an answer, not a fault: it is reported like an automatic try, quietly (P0 BUG 3).
+    if (!auto && error?.code !== 'USER_CANCELLED') { try { showError(error); } catch { /* reporting must not stop the recovery */ } }
     connectButton.textContent = 'Reconnect';
-    samplerMount.refreshConnection();
-  loopRecorderMount.refreshConnection(); dx7Editor.refresh(); syncFooter();
+    // Let go of the transport this attempt had already opened, so a retry does not meet a port that is still busy, and drop
+    // the half-built client and session so no callback of this attempt can act on them later.
+    if (client) {
+      const abandoned = client;
+      client = undefined;
+      session = undefined;
+      try { await abandoned.close(); } catch { /* already disconnected */ }
+    }
+    // The same mounts are refreshed as on success: after a failed reconnect none of them may keep showing a module that is gone.
+    // One mount refusing to refresh must not abandon the rest — the whole point of this path is a consistent UI afterwards.
+    for (const refresh of [samplerMount, loopRecorderMount, sdcardMount, panelSkin, locksMount, manualMount, pageDockMount]) {
+      try { refresh.refreshConnection(); } catch { /* that one keeps its stale view; the others still recover */ }
+    }
+    try { showConnectionEmptyStates(); } catch { /* as above */ }
+    try { dx7Editor.refresh(); syncFooter(); } catch { /* as above */ }
     return false;
   }
 }
