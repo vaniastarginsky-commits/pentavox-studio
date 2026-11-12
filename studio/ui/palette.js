@@ -11,6 +11,7 @@ import { lastBackupInfo } from '../model/preset_backup.js';
 import { apiFetch, servedLocally } from '../site.js';
 import { requestDfuDevice } from '../webdfu.js';
 import { describeBuild, loadChangesForFlash, resumeCloudBuild, loadLatestCloudBuild, localServerUp, recentFirmwareChanges, runCloudBuild, runWebFlash } from '../build_flow.js';
+import { buildableRefs, cloudSettings, replaceGithubToken, setCloudRef } from '../cloud_build.js';
 import { lastModuleFirmware, loadChangelog, parseFwGit } from '../firmware_info.js';
 import { mountWaveResourcesEditor } from './wave_resources_editor.js';
 import { activeLinkJob, linkBusyMessage } from '../model/link_jobs.js';
@@ -747,10 +748,28 @@ export function mountPalette(root, { catalog, sets, measured, help = {}, getVoic
   const diagnostic = document.createElement('input'); diagnostic.type='checkbox';
   const diagnosticLabel=el('label','firmware-diagnostic');diagnosticLabel.append(diagnostic,document.createTextNode(' CPU diagnostic'));
   diagnostic.setAttribute('aria-label','Build CPU diagnostic firmware');
-  const syncVariant = () => { const busy=['building','cancelling','flashing'].includes(state.phase);variant.disabled=diagnostic.disabled=bankCount.disabled=busy;bankCount.hidden=firmwareProfile(state.profile).plaitsVoices!==1;bankCount.value=String(state.engineBanks); };
+  // Which trusted branch the cloud Build comes from. The workflow that runs is the one living on that branch, so
+  // the source and the workflow move together; the list is short because anything else is refused by the workflow.
+  const source = document.createElement('select'); source.setAttribute('aria-label', 'Firmware source branch');
+  source.title = 'Which repository branch the cloud build is made from';
+  for (const ref of buildableRefs()) source.append(new Option(ref, ref));
+  try { source.value = cloudSettings().buildRef; } catch { /* the first option stays selected */ }
+  source.addEventListener('change', () => {
+    if (!setCloudRef(source.value)) source.value = cloudSettings().buildRef;
+    cloudResult = null; state.image = null; state.hasImage = false; flash.disabled = true; renderSummary();
+  });
+  // A rotated GitHub token used to need the browser console: the only thing that ever dropped it was a 401.
+  const tokenButton = button('GitHub token', 'quiet');
+  tokenButton.title = 'Replace the GitHub token this browser uses for cloud builds';
+  tokenButton.addEventListener('click', () => {
+    const entered = replaceGithubToken();
+    tokenButton.textContent = entered ? 'Token saved' : 'Token cleared';
+    setTimeout(() => { tokenButton.textContent = 'GitHub token'; }, 2500);
+  });
+  const syncVariant = () => { const busy=['building','cancelling','flashing'].includes(state.phase);variant.disabled=diagnostic.disabled=bankCount.disabled=source.disabled=tokenButton.disabled=busy;bankCount.hidden=firmwareProfile(state.profile).plaitsVoices!==1;bankCount.value=String(state.engineBanks);try{source.value=cloudSettings().buildRef;}catch{ /* the picker keeps what it shows */ } };
   variant.addEventListener('change', () => { state.profile=variant.value;state.view='both';state.voice=0;cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;try { localStorage.setItem('pentavox.palette.variant', variant.value); } catch {} changed(); });
   diagnostic.addEventListener('change',()=>{cloudResult=null;state.image=null;state.hasImage=false;flash.disabled=true;renderSummary();});
-  actions.append(variant, bankCount, diagnosticLabel, build, el('span', 'eg-arrow', '→'), flash, dfu, copyLog, suggestButton);
+  actions.append(variant, source, bankCount, diagnosticLabel, build, el('span', 'eg-arrow', '→'), flash, dfu, copyLog, suggestButton, tokenButton);
   $('.eg-meter').append(progress);
   // Demo mode (a simulated module): nothing may be built or flashed, so the three buttons stay off with an explanation.
   const DEMO_HINT = 'Not available in demo mode: there is no real module';

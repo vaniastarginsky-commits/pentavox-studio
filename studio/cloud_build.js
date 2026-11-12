@@ -14,14 +14,39 @@ function read(key) { try { return storage()?.getItem(key) ?? null; } catch { ret
 function write(key, value) { try { storage()?.setItem(key, value); } catch { /* a convenience only */ } }
 
 // The workflow refuses every other branch, so a stale override saved in the browser must not reach it.
-const BUILDABLE_REFS = ['experiment/single-plaits-20261024', 'feat/chopper-engine'];
+// `feat/chopper-event-address` is the Chopper line carrying the PVXE grid binding and the Studio P0 fixes; the
+// workflow file that runs is the one on the branch being built, so a branch only becomes buildable once its own
+// .github/workflows/studio-build.yml accepts it too.
+const BUILDABLE_REFS = ['experiment/single-plaits-20261024', 'feat/chopper-engine', 'feat/chopper-event-address'];
 function buildableRef(key, fallback) {
   const value = read(key);
   return BUILDABLE_REFS.includes(value) ? value : fallback;
 }
 
+/** The source branches a cloud build may be made from, for a picker. */
+export function buildableRefs() { return [...BUILDABLE_REFS]; }
+
+/**
+ * Choose the branch a cloud build comes from. Both refs move together: the workflow that runs is the one that
+ * lives on the branch being built, so splitting them would run one branch's scripts over another's sources. An
+ * unlisted branch clears the choice rather than being remembered, because the workflow would refuse it anyway.
+ */
+export function setCloudRef(ref) {
+  if (!BUILDABLE_REFS.includes(ref)) {
+    try { storage()?.removeItem('pentavox.cloud.ref'); storage()?.removeItem('pentavox.cloud.workflowRef'); } catch { /* ignore */ }
+    return null;
+  }
+  write('pentavox.cloud.ref', ref);
+  write('pentavox.cloud.workflowRef', ref);
+  return ref;
+}
+
 export function cloudSettings() {
-  if(read('pentavox.palette.variant')==='chopper')return {repo:read('pentavox.cloud.repo')||DEFAULTS.repo,buildRef:'feat/chopper-engine',workflowRef:'feat/chopper-engine'};
+  if(read('pentavox.palette.variant')==='chopper'){
+    // Chopper was pinned to one branch with no way out; the pin is only the default now.
+    const ref = buildableRef('pentavox.cloud.ref', 'feat/chopper-engine');
+    return {repo:read('pentavox.cloud.repo')||DEFAULTS.repo,buildRef:ref,workflowRef:ref};
+  }
   return {
     repo: read('pentavox.cloud.repo') || DEFAULTS.repo,
     buildRef: buildableRef('pentavox.cloud.ref', DEFAULTS.buildRef),
@@ -40,6 +65,15 @@ export function githubToken(ask = () => globalThis.prompt?.('GitHub token for cl
 }
 
 export function forgetGithubToken() { try { storage()?.removeItem('pentavox.github'); } catch { /* ignore */ } }
+
+/**
+ * Replace the stored GitHub token: forget the old one, then ask for the new one the way a first build asks.
+ * Cancelling stores nothing - a rotated token left in this browser would only earn a 401 on the next build.
+ */
+export function replaceGithubToken(ask = () => globalThis.prompt?.('New GitHub token for cloud builds (fine-grained: Actions write + Contents read on the firmware repository):') ?? '') {
+  forgetGithubToken();
+  return githubToken(ask) ?? '';
+}
 
 export function toBase64(text) {
   const bytes = new TextEncoder().encode(text);
@@ -202,6 +236,27 @@ export class CloudBuild {
   }
 
   /** meta.json (+ full.bin when the build succeeded) published by the workflow for this request. */
+  /**
+   * Why a finished run stopped: the step that failed, and the link to its log. Called after the build already
+   * failed, so everything it cannot get is swallowed - the outcome is known either way, and a second error must
+   * not replace the failure the user needs to read.
+   */
+  async failureDetail(runId) {
+    const detail = { step: '', url: '' };
+    if (!runId) return detail;
+    try {
+      const [run, jobs] = await Promise.all([
+        this.json(`/repos/${this.repo}/actions/runs/${runId}`).catch(() => null),
+        this.json(`/repos/${this.repo}/actions/runs/${runId}/jobs`).catch(() => null),
+      ]);
+      detail.url = run?.html_url ?? '';
+      const stopped = (jobs?.jobs ?? []).flatMap((job) => job.steps ?? [])
+        .find((step) => step.conclusion && !['success', 'skipped'].includes(step.conclusion));
+      detail.step = stopped?.name ?? '';
+    } catch { /* a convenience only */ }
+    return detail;
+  }
+
   async result(request) {
     const meta = JSON.parse(await (await this.resultText('meta.json')).text());
     if (meta.request !== request) throw new CloudBuildError('The published result belongs to another build; try again', { status: 409 });
@@ -270,7 +325,11 @@ export class CloudBuild {
         catch(error) {
           if(error.status!==409) throw error;
           this.clearPending(request);
-          const replaced=new CloudBuildError(current.conclusion==='success'?'Build completed; a newer build replaced its download':'The cloud build failed; a newer build replaced its log',{status:410});
+          const detail = await this.failureDetail(run.id);
+          const stopped = current.conclusion === 'success'
+            ? 'Build completed'
+            : `The cloud build failed${detail.step ? ` in "${detail.step}"` : ''}`;
+          const replaced=new CloudBuildError(`${stopped}; a newer build replaced its log${detail.url ? ` - its log is at ${detail.url}` : ''}`,{status:410,log:detail.url?`GitHub Actions run: ${detail.url}`:''});
           replaced.buildFailed=current.conclusion!=='success';
           throw replaced;
         }
