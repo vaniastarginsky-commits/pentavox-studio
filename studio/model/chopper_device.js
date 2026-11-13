@@ -25,6 +25,25 @@ export class ChopperDeviceService {
    const loops=loopIoVersion(descriptor)>0;
    const patternStores=descriptor?.chopper?.pvxeFile===1,patternLive=descriptor?.pvxeUpload?.playable===true;
    if(request.type==='capabilities')return {sampleUpload:loops,sampleDownload:loops,legacyPatternDownload:descriptor?.chopper?.cueFileVersion===1,newPatternUpload:patternStores||patternLive,patternFileStorage:patternStores,patternLiveUpload:patternLive,reason:patternStores||patternLive?'This firmware accepts a PVXE pattern bank and stores it per slot; the legacy PVXP bank keeps its own file and semantics.':'REL/ABS pattern upload requires compatible firmware; current PVXP v1–v4 is not reinterpreted.'};
+   if(request.type==='read-pattern-banks'){
+    if(!patternStores)throw Error('This firmware does not advertise PVXE storage.');
+    let entries;try{entries=await files.list('/CHOPPER');}catch(error){if(error?.status===12)entries=[];else throw error;}
+    const banks=[],missing=[],errors=[];
+    for(const slot of [0,1]){
+     const path=`/CHOPPER/${slot?'B':'A'}.PVXE`,entry=entries.find(e=>e.path?.toUpperCase()===path&&!e.directory);
+     if(!entry){missing.push(slot);continue;}
+     try{
+      const limit=Math.min(MAX_BANK_BYTES,Number.isInteger(descriptor?.chopper?.pvxeMax)?descriptor.chopper.pvxeMax:MAX_BANK_BYTES);
+      if(!Number.isSafeInteger(entry.size)||entry.size<HEADER_MIN||entry.size>limit)throw Error('Invalid PVXE file size.');
+      const bytes=await files.download(entry.path,{maxBytes:limit});
+      if(bytes.length!==entry.size)throw Error('File changed during download.');
+      if(owner.client!==this.getClient()||owner.info!==this.getInfo())throw Error('Connection changed.');
+      const bank=decodeBank(bytes);if(bank.patterns.filter(p=>p.role==='base').length!==1)throw Error('PVXE requires one BASE.');
+      banks.push({slot,bytes:bytes.slice().buffer});
+     }catch(error){errors.push({slot,message:error?.message||String(error)});}
+    }
+    return {banks,missing,errors};
+   }
    if(request.type==='list-samples'){
     if(!loops)throw Error('This firmware does not advertise loop I/O.');
     return {files:loopFiles(await files.list('/LOOPS')).filter(file=>file.size<=MAX_ARTIFACT_BYTES)};

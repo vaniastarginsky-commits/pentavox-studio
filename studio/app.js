@@ -144,6 +144,7 @@ function startDfuWatch() {
 }
 
 function markDisconnected() {
+  chopperBridge.setConnectionState(false);
   if (session) session.readOnly = true;
   scheduleAutoConnect(1500, 20);   // a restarted or replugged module is opened again by itself
   disconnectBanner.hidden = false;
@@ -200,7 +201,7 @@ samplerMount = mountSampler(document.querySelector('#sampler-root'), {
 });
 
 mountSamplesBridge({frame:document.querySelector('.slice-lab-frame'),stage:file=>samplerMount.stageArtifact(file),installCue:(file,slot)=>samplerMount.installCueBank(file,slot),reloadCue:slot=>samplerMount.reloadCueBank(slot),navigate:()=>samplesDelivery.open()});
-mountChopperDeviceBridge({frame:document.querySelector('.slice-lab-frame'),request:request=>samplerMount.chopperDeviceRequest(request)});
+const chopperBridge=mountChopperDeviceBridge({frame:document.querySelector('.slice-lab-frame'),request:request=>samplerMount.chopperDeviceRequest(request)});
 
 locksMount = mountKnobLocks(document.querySelector('#locks-root'), {
   getSession: () => connectionStatus.dataset.state === 'on' ? session : null,
@@ -393,6 +394,7 @@ function connect(options = {}) {
 }
 
 async function connectAttempt({ demo = false, auto = false } = {}) {
+  chopperBridge.setConnectionState(false);
   try {
     demoMode = demo;
     demoBanner.hidden = !demo;
@@ -436,6 +438,7 @@ async function connectAttempt({ demo = false, auto = false } = {}) {
     connectButton.textContent = 'Reconnect'; connectButton.disabled = false; connectionStatus.dataset.state = 'on'; disconnectBanner.hidden = true; syncFooter(); dx7Editor.refresh();
     persistDraft();
     samplerMount.refreshConnection();
+    chopperBridge.setConnectionState(!demoMode);
   loopRecorderMount.refreshConnection();
     sdcardMount.refreshConnection();
     panelSkin.refreshConnection();

@@ -2751,6 +2751,9 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
     margin-inline: 12px;
   }
 }
+
+.ch-device-dialog-backdrop{position:fixed;inset:0;background:#0009;z-index:10000;display:flex;align-items:center;justify-content:center;padding:1rem}
+.ch-device-dialog{background:var(--panel,#20232a);color:var(--text,#fff);padding:1.5rem;max-width:40rem;width:100%;max-height:90vh;overflow:auto;border:1px solid #888;border-radius:.5rem}
 </style>
 </head>
 <body>
@@ -12566,10 +12569,10 @@ ${error.message}`);
         cleanup();
         m.ok ? resolve(m.value) : reject(Error(m.error || "Device operation failed."));
       };
-      const longTransfer = type === "upload-sample" || type === "upload-pattern" || type.startsWith("download");
+      const longTransfer = type === "upload-sample" || type === "upload-pattern" || type.startsWith("download") || type === "read-pattern-banks";
       const timer = setTimeout(() => {
         cleanup();
-        reject(Error(longTransfer ? `${type === "upload-pattern" ? "Pattern upload" : "Upload"} timed out; the transfer may already be partway committed. Inspect the module before retrying.` : "No compatible Studio response. Connect the module in the parent Studio and retry."));
+        reject(Error(type === "read-pattern-banks" ? "Reading pattern banks timed out; no writes were requested." : longTransfer ? `${type === "upload-pattern" ? "Pattern upload" : "Upload"} timed out; the transfer may already be partway committed. Inspect the module before retrying.` : "No compatible Studio response. Connect the module in the parent Studio and retry."));
       }, longTransfer ? 18e4 : 15e3);
       window.addEventListener("message", receive);
       window.parent.postMessage({ protocol, type, id, ...data }, origin);
@@ -12869,6 +12872,49 @@ ${error.message}`);
     return validateTransfer(patterns, bank.source);
   }
 
+  // src/chopper/device-bank-sync.ts
+  function decodeDiscoveredBanks(items) {
+    const banks = [], errors = [];
+    for (const item of items) {
+      try {
+        const parsed = readPatternTransfer(new Uint8Array(item.bytes));
+        banks.push({ slot: item.slot, bank: { patterns: parsed.patterns, patternSource: parsed.source } });
+      } catch (error) {
+        errors.push({ slot: item.slot, message: error?.message || String(error) });
+      }
+    }
+    return { banks, errors };
+  }
+  var stable = (value) => Array.isArray(value) ? value.map(stable) : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map((k) => [k, stable(value[k])])) : value;
+  var patternContent = (pattern) => {
+    const { id: _id, name: _name, events, ...fields } = pattern;
+    return { fields: stable(fields), events: events.map((event) => {
+      const { id: _eventId, ...eventFields } = event;
+      return stable(eventFields);
+    }) };
+  };
+  var samePatternContent = (a, b) => JSON.stringify(patternContent(a)) === JSON.stringify(patternContent(b));
+  function isPristineEmptyBank(bank) {
+    const p = bank.patterns[0];
+    return bank.patternSource === null && bank.patterns.length === 1 && p.name === "BASE" && p.role === "base" && p.beats === 32 && p.events.length === 0;
+  }
+  function sameBankContent(a, b) {
+    return JSON.stringify({ patterns: a.patterns.map(patternContent), source: stable(a.patternSource) }) === JSON.stringify({ patterns: b.patterns.map(patternContent), source: stable(b.patternSource) });
+  }
+  function reconcileDeviceBank(local, remote) {
+    const kind = sameBankContent(local, remote) ? "same" : isPristineEmptyBank(local) ? "auto-import" : "conflict";
+    const base = local.patterns.find((p) => p.role === "base"), incoming = remote.patterns.find((p) => p.role === "base");
+    const additions = [];
+    for (const p of remote.patterns.filter((p2) => p2.role !== "base")) if (![...local.patterns, ...additions].some((q) => samePatternContent(p, q))) additions.push(p);
+    const addReason = !base || !incoming || !samePatternContent(base, incoming) ? "BASE patterns differ." : !local.patternSource || !remote.patternSource || JSON.stringify(stable(local.patternSource)) !== JSON.stringify(stable(remote.patternSource)) ? "Source metadata differs or is missing." : local.patterns.length + additions.length > 20 ? "Adding patterns exceeds the 20-pattern limit." : null;
+    return { kind, addAllowed: addReason === null, addReason, additions };
+  }
+  function appendDevicePatterns(local, remote) {
+    const result = reconcileDeviceBank(local, remote);
+    if (!result.addAllowed) throw Error(result.addReason || "Cannot add patterns.");
+    return { patterns: [...structuredClone(local.patterns), ...structuredClone(result.additions)], patternSource: structuredClone(local.patternSource) };
+  }
+
   // src/chopper/ChopperApp.tsx
   function sourceTimingDraft(source, fallbackBpm) {
     const estimate = Number.isFinite(source.bpm) && source.bpm >= 20 && source.bpm <= 400 ? source.bpm : fallbackBpm;
@@ -12915,6 +12961,86 @@ ${error.message}`);
       this.compatibilityFiles = /* @__PURE__ */ new Map();
       this.compatibilityBuffers = /* @__PURE__ */ new Map();
       this.toolbarObserver = null;
+      this.deviceGeneration = 0;
+      this.deviceConnected = false;
+      this.setDeviceConnected = (connected) => {
+        if (this.deviceConnected === connected) return false;
+        this.deviceConnected = connected;
+        this.deviceGeneration++;
+        return true;
+      };
+      this.restoreDone = Promise.resolve();
+      this.restoreUnsafe = false;
+      this.deviceConnection = (event) => {
+        if (event.source !== window.parent || event.origin !== location.origin || event.data?.protocol !== "pentavox-chopper-device-v1" || event.data.type !== "connection") return;
+        const connected = Boolean(event.data.connected);
+        if (!this.setDeviceConnected(connected)) return;
+        const generation = this.deviceGeneration;
+        if (!connected) {
+          if (this.state.deviceConflicts.length) this.setState({ deviceConflicts: [] });
+          return;
+        }
+        void (async () => {
+          try {
+            await this.restoreDone;
+            if (!this.mounted || generation !== this.deviceGeneration) return;
+            const result = await deviceRequest("read-pattern-banks");
+            if (!this.mounted || generation !== this.deviceGeneration) return;
+            const decoded = decodeDiscoveredBanks(result.banks ?? []);
+            this.applyDiscoveredBanks(decoded.banks);
+            const errors = [...result.errors ?? [], ...decoded.errors];
+            if (errors.length) this.setState({ message: "Some PVXE files on module SD could not be read: " + errors.map((e) => `${e.slot ? "B" : "A"}: ${e.message}`).join("; "), error: true });
+          } catch (error) {
+            if (this.mounted && generation === this.deviceGeneration) this.report(error);
+          }
+        })();
+      };
+      this.applyDiscoveredBanks = (banks) => {
+        if (this.restoreUnsafe) {
+          this.setState({ message: "Local workspace restore failed; module SD patterns were not imported.", error: true });
+          return;
+        }
+        const conflicts = [];
+        const next = (index) => {
+          if (index === banks.length) {
+            this.setState({ deviceConflicts: conflicts });
+            return;
+          }
+          const entry = banks[index], result = reconcileDeviceBank(this.patternSets()[entry.slot], entry.bank);
+          if (result.kind === "auto-import") this.applyDeviceBank(entry.slot, entry.bank, () => next(index + 1));
+          else {
+            if (result.kind === "conflict") conflicts.push({ ...entry, localSnapshot: JSON.stringify(this.patternSets()[entry.slot]) });
+            next(index + 1);
+          }
+        };
+        next(0);
+      };
+      this.applyDeviceBank = (slot, bank, done) => {
+        this.remember();
+        const sets = structuredClone(this.patternSets());
+        sets[slot] = structuredClone(bank);
+        const selected = sets[slot].patterns[0].id, bindings = this.state.patternBindings.map((id, index) => index === slot ? selected : id);
+        this.setState({ patternSets: sets, patternBindings: bindings, ...this.state.slot === slot ? { patterns: sets[slot].patterns, patternSource: sets[slot].patternSource, patternId: selected, selected: null } : {}, message: `Imported ${slot ? "B" : "A"}.PVXE from module SD into Studio. Live playback is not confirmed.`, error: false }, done);
+      };
+      this.resolveDeviceConflict = (slot, action) => {
+        const entry = this.state.deviceConflicts.find((item) => item.slot === slot);
+        if (!entry) return;
+        const dismiss = () => this.setState({ deviceConflicts: this.state.deviceConflicts.filter((item) => item.slot !== slot) });
+        if (action === "cancel") {
+          dismiss();
+          return;
+        }
+        if (JSON.stringify(this.patternSets()[slot]) !== entry.localSnapshot) {
+          this.setState({ deviceConflicts: this.state.deviceConflicts.filter((item) => item.slot !== slot), message: "Studio patterns changed since the SD comparison; reconnect to compare again. Nothing was replaced.", error: true });
+          return;
+        }
+        try {
+          const bank = action === "add" ? appendDevicePatterns(this.patternSets()[slot], entry.bank) : entry.bank;
+          this.applyDeviceBank(slot, bank, dismiss);
+        } catch (error) {
+          this.report(error);
+        }
+      };
       this.revealSelection = () => requestAnimationFrame(() => {
         const selected = document.querySelector(
           `[data-event-id="${CSS.escape(this.state.selected ?? "")}"]`
@@ -13778,12 +13904,17 @@ ${error.message}`);
           })));
           const archive = exportProjectArchive(archiveEntries);
           if (this.state !== before) {
+            this.restoreUnsafe = true;
             this.setState({ message: "Local autosave was not restored because editing started while it was loading.", error: false });
             return;
           }
           const restored = await this.importProject({ currentTarget: { files: [archive], value: "" } });
-          if (!restored && this.mounted) this.setState({ message: "Local autosave could not be restored; current workspace was kept.", error: true });
+          if (!restored) {
+            this.restoreUnsafe = true;
+            if (this.mounted) this.setState({ message: "Local autosave could not be restored; current workspace was kept.", error: true });
+          }
         } catch (error) {
+          this.restoreUnsafe = true;
           if (this.mounted) this.report(new Error(`Local Chopper restore failed; current workspace was kept: ${error?.message ?? error}`));
         }
       };
@@ -14186,6 +14317,7 @@ ${error.message}`);
       };
       const base = newPattern(), baseB = newPattern();
       this.state = {
+        deviceConflicts: [],
         patternSets: [{ patterns: [base], patternSource: null }, { patterns: [baseB], patternSource: null }],
         slot: 0,
         bindings: ["", ""],
@@ -14271,7 +14403,8 @@ ${error.message}`);
         );
       });
       this.toolbarObserver.observe(toolbar);
-      void this.restoreAutosave();
+      this.restoreDone = this.restoreAutosave();
+      window.addEventListener("message", this.deviceConnection);
     }
     componentDidUpdate(_previousProps, previousState) {
       if (hasPersistentChopperChange(previousState, this.state))
@@ -14279,6 +14412,8 @@ ${error.message}`);
     }
     componentWillUnmount() {
       this.mounted = false;
+      this.deviceGeneration++;
+      window.removeEventListener("message", this.deviceConnection);
       clearTimeout(this.autosaveTimer);
       window.removeEventListener("pagehide", this.flushAutosave);
       this.legacyPreviewGeneration++;
@@ -14340,7 +14475,10 @@ ${error.message}`);
         if (source) waveformBeats = sourceTimingDraft(source, this.state.bpm).beats;
       }
       if (s.timingEdit) beats = 0;
-      return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+      return /* @__PURE__ */ React.createElement(React.Fragment, null, s.deviceConflicts.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "ch-device-dialog-backdrop" }, /* @__PURE__ */ React.createElement("section", { className: "ch-device-dialog", role: "dialog", "aria-modal": "true", "aria-label": "Module SD pattern banks" }, /* @__PURE__ */ React.createElement("h2", null, "Chopper banks on module SD differ from Studio"), s.deviceConflicts.map(({ slot, bank }) => {
+        const result = reconcileDeviceBank(this.patternSets()[slot], bank);
+        return /* @__PURE__ */ React.createElement("div", { key: slot }, /* @__PURE__ */ React.createElement("h3", null, "Slot ", slot ? "B" : "A", " \xB7 ", bank.patterns.length, " patterns on SD"), /* @__PURE__ */ React.createElement("button", { disabled: !result.addAllowed, onClick: () => this.resolveDeviceConflict(slot, "add") }, "Add missing patterns"), " ", /* @__PURE__ */ React.createElement("button", { onClick: () => this.resolveDeviceConflict(slot, "replace") }, "Replace ", slot ? "B" : "A"), " ", /* @__PURE__ */ React.createElement("button", { onClick: () => this.resolveDeviceConflict(slot, "cancel") }, "Cancel"), !result.addAllowed && /* @__PURE__ */ React.createElement("p", null, result.addReason));
+      }))), /* @__PURE__ */ React.createElement(
         "main",
         {
           className: "ch-workspace " + (s.library ? "library-open " : "") + (s.inspector ? "inspector-open" : ""),

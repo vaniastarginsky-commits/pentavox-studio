@@ -1,7 +1,7 @@
 // Separate experimental protocol: does not alter the legacy staging bridge.
 import {MAX_BANK_BYTES} from '../model/chopper_event_bank.js';
 export const CHOPPER_DEVICE_PROTOCOL='pentavox-chopper-device-v1';
-const TYPES=new Set(['capabilities','list-samples','upload-sample','download-sample','download-pattern','upload-pattern','convert-pattern']);
+const TYPES=new Set(['capabilities','list-samples','upload-sample','download-sample','download-pattern','upload-pattern','convert-pattern','read-pattern-banks']);
 export function mountChopperDeviceBridge({frame,request,window:win=window}){
  let busy=false;const completed=new Map();
  const receive=async event=>{
@@ -35,5 +35,10 @@ export function mountChopperDeviceBridge({frame,request,window:win=window}){
   // creating a second numbered file. New explicit actions get new IDs.
   completed.set(message.id,result);while(completed.size>8)completed.delete(completed.keys().next().value);reply(result);
  };
- win.addEventListener('message',receive);return()=>win.removeEventListener('message',receive);
+ let connected=false;
+ const notify=()=>{if(win.location.protocol!=='file:')frame.contentWindow?.postMessage({protocol:CHOPPER_DEVICE_PROTOCOL,type:'connection',connected},win.location.origin);};
+ frame.addEventListener?.('load',notify);
+ win.addEventListener('message',receive);
+ const dispose=()=>{win.removeEventListener('message',receive);frame.removeEventListener?.('load',notify);};
+ dispose.setConnectionState=value=>{connected=Boolean(value);notify();};return dispose;
 }
