@@ -2408,6 +2408,25 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   border-radius: 16px;
   padding-inline: 14px;
 }
+.ch-pattern-entry {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+.ch-pattern-entry > .ch-pattern-delete {
+  width: 30px;
+  min-width: 30px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+}
+.ch-pattern-entry > .ch-pattern-delete:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
 :is(.ch-workspace, :root[data-studio-appearance="custom"] .ch-workspace) .ch-pattern-bank button[aria-pressed="true"] {
   background-color: var(--ch-a);
   border-color: var(--ch-a);
@@ -12284,7 +12303,7 @@ ${error.message}`);
                     },
                     onKeyDown: (e) => {
                       if (handleGroupKey(e)) return;
-                      if (e.key === "Enter" || e.key === " ") {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         e.stopPropagation();
                         onInspect(event.id);
@@ -13240,7 +13259,7 @@ ${error.message}`);
             e.preventDefault();
             this.deleteEvent();
           }
-        } else if (e.code === "Space" && !e.repeat && !e.target?.closest("button,a,summary,[role=slider]")) {
+        } else if (e.code === "Space" && !e.repeat) {
           e.preventDefault();
           void this.toggle();
         }
@@ -13337,6 +13356,41 @@ ${error.message}`);
           activeSourceBeats: 0,
           library: !state.bindings[slot]
         }, done);
+      };
+      this.deletePattern = (id) => {
+        const removed = this.state.patterns.find((pattern) => pattern.id === id);
+        if (!removed || removed.role === "base") return;
+        const patterns = this.state.patterns.filter((pattern) => pattern.id !== id);
+        const base = patterns.find((pattern) => pattern.role === "base");
+        if (!base) return this.report(Error("A pattern set must keep its BASE pattern."));
+        const slot = this.state.slot;
+        const wasActive = this.state.patternId === id || this.state.patternBindings[slot] === id;
+        const patternId = wasActive ? base.id : this.state.patternId;
+        const patternBindings = this.state.patternBindings.map(
+          (bound, index) => index === slot && (wasActive || bound === id) ? base.id : bound
+        );
+        const sets = this.patternSets();
+        sets[slot] = { ...sets[slot], patterns };
+        this.remember();
+        this.setState(
+          {
+            patternSets: sets,
+            patterns,
+            patternId,
+            patternBindings,
+            ...wasActive ? { selected: null } : {},
+            library: false,
+            ...!this.state.playing ? { message: `Deleted ${removed.name} from Studio only. Undo restores it; send the bank separately to update the module.`, error: false } : {}
+          },
+          () => {
+            if (!this.state.playing) return;
+            try {
+              this.publish(patterns.find((pattern) => pattern.id === patternId) ?? base, this.source, false, patterns);
+            } catch (error) {
+              this.report(error);
+            }
+          }
+        );
       };
       this.addPattern = (role) => {
         if (this.state.patterns.length >= 20) return this.report(Error("Maximum 20 patterns per slot."));
@@ -14926,16 +14980,25 @@ ${error.message}`);
           playingEditedPattern ? "\u25A0" : "\u25B6",
           " ",
           /* @__PURE__ */ React.createElement("span", null, playingEditedPattern ? "Stop" : "Play", " Loop ", s.slot === 0 ? "A" : "B")
-        ), /* @__PURE__ */ React.createElement("label", { className: "ch-playback-choice", title: "Choose selected pattern or Seed sequence" }, /* @__PURE__ */ React.createElement("span", { className: "ch-compact-label" }, "Mode"), /* @__PURE__ */ React.createElement("select", { "aria-label": "Playback mode", value: s.sequence ? "seed" : "pattern", onChange: (e) => this.changePlaybackMode(e.target.value === "seed") }, /* @__PURE__ */ React.createElement("option", { value: "pattern" }, "Pattern"), /* @__PURE__ */ React.createElement("option", { value: "seed" }, "Seed"))), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-bank", role: "group", "aria-label": "Editing pattern" }, s.patterns.map((p) => /* @__PURE__ */ React.createElement(
+        ), /* @__PURE__ */ React.createElement("label", { className: "ch-playback-choice", title: "Choose selected pattern or Seed sequence" }, /* @__PURE__ */ React.createElement("span", { className: "ch-compact-label" }, "Mode"), /* @__PURE__ */ React.createElement("select", { "aria-label": "Playback mode", value: s.sequence ? "seed" : "pattern", onChange: (e) => this.changePlaybackMode(e.target.value === "seed") }, /* @__PURE__ */ React.createElement("option", { value: "pattern" }, "Pattern"), /* @__PURE__ */ React.createElement("option", { value: "seed" }, "Seed"))), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-bank", role: "group", "aria-label": "Editing pattern" }, s.patterns.map((p) => /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-entry", key: p.id }, /* @__PURE__ */ React.createElement(
           "button",
           {
-            key: p.id,
             type: "button",
             "aria-pressed": p.id === s.patternId,
             onClick: () => this.selectPattern(p.id)
           },
           p.name
-        ))), /* @__PURE__ */ React.createElement(
+        ), p.role !== "base" && /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            className: "ch-pattern-delete",
+            "aria-label": `Delete ${p.name}`,
+            title: `Delete ${p.name} from Studio`,
+            onClick: () => this.deletePattern(p.id)
+          },
+          "\xD7"
+        )))), /* @__PURE__ */ React.createElement(
           "button",
           {
             type: "button",
