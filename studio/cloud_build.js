@@ -21,8 +21,9 @@ const BUILDABLE_REFS = ['experiment/single-plaits-20261024', 'feat/chopper-engin
 // The Chopper image can only be built from the Chopper line. A branch outside it is not offered for that
 // profile, because start() would reset it - and a picker that shows a choice which does not happen is worse
 // than no picker: the user believes they changed something.
-const CHOPPER_REFS = ['feat/chopper-engine', 'feat/chopper-event-address'];
-const CHOPPER_DEFAULT_REF = 'feat/chopper-engine';
+const CHOPPER_REFS = ['feat/chopper-engine', 'feat/chopper-event-address', 'merge/chopper-editor-line'];
+const CHOPPER_DEFAULT_REF = 'merge/chopper-editor-line';
+const ALL_BUILDABLE_REFS = [...BUILDABLE_REFS, ...CHOPPER_REFS];
 function buildableRef(key, fallback, allowed = BUILDABLE_REFS) {
   const value = read(key);
   return allowed.includes(value) ? value : fallback;
@@ -37,7 +38,7 @@ export function buildableRefs(profile) { return [...(profile === 'chopper' ? CHO
  * unlisted branch clears the choice rather than being remembered, because the workflow would refuse it anyway.
  */
 export function setCloudRef(ref) {
-  if (!BUILDABLE_REFS.includes(ref)) {
+  if (!ALL_BUILDABLE_REFS.includes(ref)) {
     try { storage()?.removeItem('pentavox.cloud.ref'); storage()?.removeItem('pentavox.cloud.workflowRef'); } catch { /* ignore */ }
     return null;
   }
