@@ -625,20 +625,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   max-width: 560px;
   color: var(--ch-muted);
 }
-.ch-prepare {
-  margin: 0 20px 20px;
-  padding: 16px;
-  background: var(--ch-surface);
-  border-left: 3px solid var(--ch-focus);
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.ch-prepare h2,
-.ch-prepare p {
-  width: 100%;
-}
 .ch-library-toggle {
   display: none;
 }
@@ -821,9 +807,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   .ch-empty h2 {
     font-size: 18px;
   }
-  .ch-prepare {
-    margin: 0 12px 14px;
-  }
   .ch-library {
     top: var(--toolbar-height, 108px);
   }
@@ -878,6 +861,24 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   gap: 12px;
   min-height: 0;
 }
+.ch-source-timing {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ch-line);
+}
+.ch-source-timing h3,
+.ch-source-timing small,
+.ch-source-timing button {
+  grid-column: 1 / -1;
+}
+.ch-source-timing h3 { margin: 0; font-size: 14px; }
+.ch-source-timing label { display: grid; gap: 4px; font-size: 12px; }
+.ch-source-timing input { width: 100%; min-width: 0; }
+.ch-source-timing small { color: var(--ch-muted); }
 .ch-inspector-body > p,
 .ch-inspector-body > button,
 .ch-inspector-body > .ch-edit-actions {
@@ -979,53 +980,10 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-sequence-settings .ch-pattern-controls {
   padding: 8px;
 }
-.ch-sequence-hardware-note {
-  margin: 8px 10px 0;
-  padding: 8px 10px;
-  border-left: 3px solid var(--ch-focus);
-  background: color-mix(in srgb, var(--ch-focus) 9%, transparent);
+.ch-sequence-browser-note {
+  grid-column: 1 / -1;
   color: var(--ch-muted);
-  font-size: 12px;
-}
-.ch-sequence-hardware-note strong {
-  color: var(--ch-ink);
-}
-.ch-sequence-knob-map {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 12px;
-}
-.ch-sequence-knob-map span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
-  border: 1px solid var(--ch-line);
-  border-radius: 14px;
-  color: var(--ch-ink);
-}
-.ch-sequence-knob-map i {
-  position: relative;
-  display: inline-block;
-  width: 15px;
-  height: 15px;
-  border: 2px solid var(--ch-focus);
-  border-radius: 50%;
-}
-.ch-sequence-knob-map i::after {
-  content: "";
-  position: absolute;
-  top: 1px;
-  left: 5px;
-  width: 1px;
-  height: 5px;
-  background: var(--ch-focus);
-}
-.ch-sequence-hardware-note small {
-  display: block;
-  margin-top: 5px;
-  color: var(--ch-muted);
+  font-size: 11px;
 }
 .ch-sequence-controls .ch-numeric-field {
   flex-direction: column;
@@ -1087,8 +1045,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   color: var(--ch-ink);
 }
 .ch-sequence-table-wrap {
-  max-height: 360px;
-  overflow: auto;
   border: 1px solid var(--ch-line);
   border-radius: 5px;
 }
@@ -1607,13 +1563,10 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   }
   .ch-transport {
     display: grid;
-    grid-template-columns:
-      minmax(88px, 1.15fr)
-      minmax(88px, 1.15fr)
-      minmax(60px, 0.8fr)
-      minmax(84px, 1.1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     grid-template-areas:
-      "edit listen play bpm"
+      "title title title title"
+      "listen listen play bpm"
       "undo library project more"
       "feedback feedback feedback feedback";
     align-items: center;
@@ -1622,13 +1575,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   }
   .ch-transport h1 {
     grid-area: title;
-  }
-  .ch-transport > label.ch-secondary:has(select[aria-label="Edit slot"]) {
-    grid-area: edit;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(36px, auto);
-    gap: 4px;
-    font-size: 14px;
   }
   .ch-transport > label.ch-secondary:has(select[aria-label="Listen mode"]) {
     grid-area: listen;
@@ -1667,7 +1613,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
     grid-area: feedback;
     line-height: 1.35;
   }
-  .ch-transport select[aria-label="Edit slot"],
   .ch-transport select[aria-label="Listen mode"] {
     min-width: 36px;
     width: 42px;
@@ -2221,20 +2166,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ch-sample-slots {
-  display: flex;
-  gap: 4px;
-}
-.ch-sample-slots span {
-  border-radius: 10px;
-  padding: 0 6px;
-  background: var(--ch-a);
-  color: var(--ch-canvas);
-  font-weight: 700;
-}
-.ch-sample-slots [data-slot="1"] {
-  background: var(--ch-b);
-}
 .ch-center {
   padding: 0 0 10px;
 }
@@ -2559,9 +2490,6 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   }
   .ch-transport:not(.more-open) > label.ch-secondary:has(select[aria-label="Listen mode"]) {
     display: flex;
-  }
-  .ch-transport:not(.more-open) > label.ch-secondary:has(select[aria-label="Edit slot"]) {
-    display: none;
   }
   .ch-transport select[aria-label="Listen mode"] {
     width: auto;
@@ -9177,6 +9105,20 @@ ${error.message}`);
     if (!Number.isFinite(beats) || frames < 1 || sampleRate2 < 1 || !Number.isFinite(bpm) || bpm < 20 || bpm > 400 || whole < 4 || whole % 4 || Math.abs(frames - whole * 60 / bpm * sampleRate2) > 2) throw Error("Confirm BPM matching a whole number of 4/4 bars (within two frames). Original audio is unchanged.");
     return whole;
   }
+  function deriveSourceTiming(frames, sampleRate2, tempoEstimate) {
+    if (!Number.isSafeInteger(frames) || frames < 1 || !Number.isFinite(sampleRate2) || sampleRate2 < 1 || !Number.isFinite(tempoEstimate) || tempoEstimate < 20 || tempoEstimate > 400) throw Error("Source duration and BPM estimate must be valid.");
+    const duration = frames / sampleRate2, estimatedBeats = duration * tempoEstimate / 60;
+    if (!Number.isFinite(estimatedBeats) || estimatedBeats < 4) throw Error("Source duration is shorter than one 4/4 bar at the estimated BPM.");
+    try {
+      const beats2 = sourceTiming(frames, sampleRate2, tempoEstimate);
+      return { bpm: tempoEstimate, bars: beats2 / 4, beats: beats2 };
+    } catch {
+    }
+    const bars = Math.round(estimatedBeats / 4), bpm = bars * 240 / duration, beats = bars * 4;
+    if (bars < 1 || !Number.isFinite(bpm) || bpm < 20 || bpm > 400) throw Error("Source duration cannot fit a whole 4/4 bar within the 20\u2013400 BPM range.");
+    sourceTiming(frames, sampleRate2, bpm);
+    return { bpm, bars, beats };
+  }
   function validatePlan(plan) {
     validatePattern(plan.pattern);
     if (plan.version !== 1 || !Number.isFinite(plan.bpm) || plan.bpm < 20 || plan.bpm > 400 || !Number.isFinite(plan.sourceBpm) || plan.sourceBpm < 20 || plan.sourceBpm > 400 || !Number.isInteger(plan.sourceBeats) || plan.sourceBeats < 4 || plan.sourceBeats % 4 || !Number.isInteger(plan.seed) || plan.seed < 0 || plan.seed > 4294967295) throw Error("Invalid Chopper timing.");
@@ -11272,6 +11214,7 @@ ${error.message}`);
     source,
     buffer,
     beats,
+    interactive,
     selected,
     playingCue,
     transients,
@@ -11390,7 +11333,9 @@ ${error.message}`);
         {
           key: cue,
           "aria-label": `Audition source cue ${cue + 1}${cue % 4 === 0 ? ` \xB7 position ${cue / 4 + 1}.1` : ""}`,
-          draggable: !markerKind,
+          draggable: !markerKind && interactive,
+          disabled: !interactive && !markerKind,
+          title: !interactive && !markerKind ? "Correct source BPM and bars in Inspector to audition or place cues." : void 0,
           className: (cue === selected ? "selected " : "") + (cue === playingCue ? "sounding" : ""),
           onClick: (e) => {
             if (pinch.current) return;
@@ -11438,7 +11383,7 @@ ${error.message}`);
         },
         /* @__PURE__ */ React.createElement("span", null, { kick: "K", snare: "S", hat: "H", other: "O" }[marker.kind])
       ))
-    )), /* @__PURE__ */ React.createElement("p", { className: "ch-hint" }, /* @__PURE__ */ React.createElement("span", { className: "ch-desktop-hint" }, "Click a cue to hear it. Drag it to a step in the matrix."), /* @__PURE__ */ React.createElement("span", { className: "ch-mobile-hint" }, "Tap a cue to hear it, then tap a step to place it.")));
+    )), !interactive && /* @__PURE__ */ React.createElement("p", { className: "ch-hint" }, "Correct source BPM and bars in Inspector to audition or place cues. The source waveform remains visible and unchanged."), /* @__PURE__ */ React.createElement("p", { className: "ch-hint" }, /* @__PURE__ */ React.createElement("span", { className: "ch-desktop-hint" }, "Click a cue to hear it. Drag it to a step in the matrix."), /* @__PURE__ */ React.createElement("span", { className: "ch-mobile-hint" }, "Tap a cue to hear it, then tap a step to place it.")));
   }
 
   // src/chopper/components/PatternTimeline.tsx
@@ -12117,7 +12062,7 @@ ${error.message}`);
     onPattern,
     onFill
   }) {
-    return /* @__PURE__ */ React.createElement("details", { className: "ch-sequence-settings", open: true }, /* @__PURE__ */ React.createElement("summary", null, "Seed sequence preview \xB7 16 slots \xB7 Seed ", seed, " \xB7 ", Math.round(probability * 100), "% \xB7", " ", sequence ? "Seed playback on" : "pattern playback"), /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-hardware-note", "aria-label": "Chopper hardware knob mapping" }, /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-knob-map" }, /* @__PURE__ */ React.createElement("strong", null, "CHOPPER KNOBS"), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("i", { "aria-hidden": "true" }), " Mid-L \xB7 Seed"), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("i", { "aria-hidden": "true" }), " Mid-R \xB7 Variation probability")), /* @__PURE__ */ React.createElement("small", null, "Preview values are browser-only; they do not read or move the module\u2019s physical knobs.")), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-controls ch-sequence-controls" }, /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("details", { className: "ch-sequence-settings", open: true }, /* @__PURE__ */ React.createElement("summary", null, "Seed sequence preview \xB7 16 slots \xB7 Seed ", seed, " \xB7 ", Math.round(probability * 100), "% \xB7", " ", sequence ? "Seed playback on" : "pattern playback"), /* @__PURE__ */ React.createElement("div", { className: "ch-pattern-controls ch-sequence-controls" }, /* @__PURE__ */ React.createElement("small", { className: "ch-sequence-browser-note" }, "Seed and probability are browser-only preview values; they do not read or move the module\u2019s physical knobs."), /* @__PURE__ */ React.createElement(
       NumericField,
       {
         label: "Preview seed",
@@ -12171,6 +12116,13 @@ ${error.message}`);
   // src/chopper/components/EventInspector.tsx
   function EventInspector({
     event,
+    sourceBpm,
+    sourceBars,
+    timingValid,
+    timingMessage,
+    onSourceBpmChange,
+    onSourceBarsChange,
+    onApplyTiming,
     resolved,
     maxLength,
     maxPosition,
@@ -12212,7 +12164,7 @@ ${error.message}`);
         })
       },
       mode === "relative" ? "Relative (REL)" : "Fixed (ABS)"
-    )))), !event ? /* @__PURE__ */ React.createElement("p", null, "Select an event to hear and edit it.") : /* @__PURE__ */ React.createElement("div", { className: "ch-inspector-body" }, /* @__PURE__ */ React.createElement("p", null, resolved === null ? "Source unavailable" : `Source bar ${Math.floor(resolved / 4) + 1}, beat ${resolved % 4 + 1} \xB7 cue ${resolved + 1}`, /* @__PURE__ */ React.createElement("br", null), "Relative (REL) follows the loop as the pattern repeats. Fixed (ABS) always plays the same place in the original WAV."), numeric("Source cue (1\u201364)", "cue", 1, 64), numeric("Position (sixteenths)", "step", 1, maxPosition), numeric("Duration (sixteenths)", "length", 1, maxLength), numeric("Gain", "gain", 0, 2, 0.05), numeric("Pitch (semitones)", "pitch", -24, 24), numeric("Probability", "probability", 0, 1, 0.05), /* @__PURE__ */ React.createElement("fieldset", { className: "ch-event-actions" }, /* @__PURE__ */ React.createElement("legend", null, "Action markers on this event"), ["repeat", "roll"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, key === "repeat" ? "Retrigger" : "Roll", /* @__PURE__ */ React.createElement(
+    )))), /* @__PURE__ */ React.createElement("div", { className: "ch-inspector-body" }, /* @__PURE__ */ React.createElement("section", { className: "ch-source-timing", "aria-label": "Source timing Inspector" }, /* @__PURE__ */ React.createElement("h3", null, "Loop source timing \xB7 4/4"), /* @__PURE__ */ React.createElement("label", null, "Source BPM", /* @__PURE__ */ React.createElement("input", { "aria-label": "Source BPM", type: "number", min: "20", max: "400", step: "0.01", value: sourceBpm, disabled: !sourceBpm, onChange: (e) => onSourceBpmChange(e.target.value) })), /* @__PURE__ */ React.createElement("label", null, "Source bars", /* @__PURE__ */ React.createElement("input", { "aria-label": "Source bars", type: "number", min: "1", step: "1", value: sourceBars, disabled: !sourceBpm, onChange: (e) => onSourceBarsChange(e.target.value) })), /* @__PURE__ */ React.createElement("small", { role: timingValid ? "status" : "alert" }, timingMessage), /* @__PURE__ */ React.createElement("button", { type: "button", disabled: !timingValid, onClick: onApplyTiming }, "Apply source timing")), !event ? /* @__PURE__ */ React.createElement("p", null, "Select an event to hear and edit it.") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", null, resolved === null ? "Source unavailable" : `Source bar ${Math.floor(resolved / 4) + 1}, beat ${resolved % 4 + 1} \xB7 cue ${resolved + 1}`, /* @__PURE__ */ React.createElement("br", null), "Relative (REL) follows the loop as the pattern repeats. Fixed (ABS) always plays the same place in the original WAV."), numeric("Source cue (1\u201364)", "cue", 1, 64), numeric("Position (sixteenths)", "step", 1, maxPosition), numeric("Duration (sixteenths)", "length", 1, maxLength), numeric("Gain", "gain", 0, 2, 0.05), numeric("Pitch (semitones)", "pitch", -24, 24), numeric("Probability", "probability", 0, 1, 0.05), /* @__PURE__ */ React.createElement("fieldset", { className: "ch-event-actions" }, /* @__PURE__ */ React.createElement("legend", null, "Action markers on this event"), ["repeat", "roll"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, key === "repeat" ? "Retrigger" : "Roll", /* @__PURE__ */ React.createElement(
       "select",
       {
         "aria-label": key === "repeat" ? "Retrigger" : "Roll",
@@ -12237,7 +12189,7 @@ ${error.message}`);
         checked: event[key],
         onChange: (e) => onChange({ ...event, [key]: e.target.checked })
       }
-    ), key === "reverse" ? "Reverse" : "Gate at cue end")), /* @__PURE__ */ React.createElement("button", { onClick: onPin }, "Use last heard cue as fixed"), /* @__PURE__ */ React.createElement("button", { onClick: onPreview }, "Preview processed event"), /* @__PURE__ */ React.createElement("div", { className: "ch-edit-actions" }, /* @__PURE__ */ React.createElement("button", { onClick: onDuplicate }, "Duplicate"), /* @__PURE__ */ React.createElement("button", { disabled: event.length < 2, onClick: onSplit }, "Split"), /* @__PURE__ */ React.createElement("button", { onClick: onDelete }, "Delete"))));
+    ), key === "reverse" ? "Reverse" : "Gate at cue end")), /* @__PURE__ */ React.createElement("button", { onClick: onPin }, "Use last heard cue as fixed"), /* @__PURE__ */ React.createElement("button", { onClick: onPreview }, "Preview processed event"), /* @__PURE__ */ React.createElement("div", { className: "ch-edit-actions" }, /* @__PURE__ */ React.createElement("button", { onClick: onDuplicate }, "Duplicate"), /* @__PURE__ */ React.createElement("button", { disabled: event.length < 2, onClick: onSplit }, "Split"), /* @__PURE__ */ React.createElement("button", { onClick: onDelete }, "Delete")))));
   }
 
   // src/chopper/device.ts
@@ -12560,6 +12512,16 @@ ${error.message}`);
   }
 
   // src/chopper/ChopperApp.tsx
+  function sourceTimingDraft(source, fallbackBpm) {
+    const estimate = Number.isFinite(source.bpm) && source.bpm >= 20 && source.bpm <= 400 ? source.bpm : fallbackBpm;
+    try {
+      const timing = deriveSourceTiming(source.frames, source.sampleRate, estimate);
+      return { source: { ...source, bpm: timing.bpm }, bpm: timing.bpm, bars: timing.bars, beats: timing.beats, valid: true };
+    } catch {
+      const bars = Math.max(1, Math.round(source.frames / source.sampleRate * estimate / 240));
+      return { source: { ...source, bpm: estimate }, bpm: estimate, bars, beats: bars * 4, valid: false };
+    }
+  }
   var ChopperApp = class extends React.Component {
     constructor(props) {
       super(props);
@@ -12713,7 +12675,23 @@ ${error.message}`);
       this.patternSets = () => this.state.patternSets.map(
         (set, slot) => slot === this.state.slot ? { patterns: this.state.patterns, patternSource: this.state.patternSource } : set
       );
-      this.selectSlot = (slot) => {
+      this.activateBoundSource = (source, slot, timingValid) => {
+        const activate = () => {
+          if (!this.state.playing) return;
+          if (!timingValid) {
+            this.setState({ message: "Loop is bound, but live playback waits for valid source timing in Inspector.", error: true });
+            return;
+          }
+          try {
+            this.publish(this.pattern, source, true);
+          } catch (error) {
+            this.report(error);
+          }
+        };
+        if (this.state.slot === slot) activate();
+        else this.selectSlot(slot, activate);
+      };
+      this.selectSlot = (slot, done) => {
         const state = this.state;
         this.fileDropGeneration++;
         this.audio.editSlot = slot;
@@ -12727,9 +12705,8 @@ ${error.message}`);
           patternSource: set.patternSource,
           patternBindings: state.patternBindings.map((id, index) => index === slot ? selected.id : id),
           sourceBpm: source ? String(source.bpm) : "",
-          bars: source ? String(Math.round(source.frames / source.sampleRate * source.bpm / 240)) : "",
-          droppedSource: null,
-          prepare: false,
+          bars: source ? String(Math.max(1, Math.round(source.frames / source.sampleRate * source.bpm / 240))) : "",
+          timingEdit: null,
           sourceId: state.bindings[slot],
           patternId: selected.id,
           selected: null,
@@ -12740,7 +12717,7 @@ ${error.message}`);
           activeSourceId: "",
           activeSourceBeats: 0,
           library: !state.bindings[slot]
-        });
+        }, done);
       };
       this.addPattern = (role) => {
         if (this.state.patterns.length >= 20) return this.report(Error("Maximum 20 patterns per slot."));
@@ -13108,16 +13085,19 @@ ${error.message}`);
             audioLibrary.discard(source.id);
             return;
           }
-          this.selectSlot(slot);
-          this.setState((state) => ({
-            sources: [...state.sources, source],
-            droppedSource: source,
-            prepare: true,
-            library: false,
-            sourceBpm: String(source.bpm),
-            bars: String(Math.max(1, Math.round(source.frames / source.sampleRate * source.bpm / 240))),
-            message: `Confirm timing to bind ${source.name} to Loop ${slot === 0 ? "A" : "B"}.`,
-            error: false
+          const timing = sourceTimingDraft(source, this.state.bpm), prepared = timing.source;
+          this.selectSlot(slot, () => this.setState((state) => ({ sources: [...state.sources, prepared] }), () => {
+            this.remember();
+            this.setState((state) => ({
+              sourceId: prepared.id,
+              bindings: state.bindings.map((id, index) => index === slot ? prepared.id : id),
+              library: false,
+              sourceBpm: String(timing.bpm),
+              bars: String(timing.bars),
+              timingEdit: null,
+              message: timing.valid ? `Loop ${slot === 0 ? "A" : "B"} ready \xB7 ${timing.bars} bars at ${timing.bpm.toFixed(2)} BPM. Original audio untouched.` : `${prepared.name} bound to Loop ${slot === 0 ? "A" : "B"}; correct source timing in Inspector before playback.`,
+              error: !timing.valid
+            }), () => this.activateBoundSource(prepared, slot, timing.valid));
           }));
         } catch (error) {
           if (generation === this.fileDropGeneration && project === this.projectLoadGeneration)
@@ -13142,106 +13122,88 @@ ${error.message}`);
         });
       };
       this.addFiles = async (event) => {
-        const files = Array.from(event.currentTarget.files || []);
+        const files = Array.from(event.currentTarget.files || []), targetSlot = this.state.slot;
         event.currentTarget.value = "";
         try {
-          for (const file of files) {
-            const source = await audioLibrary.addFile(file, this.state.bpm);
-            this.setState((state) => ({
-              sources: [...state.sources, source]
-            }));
-            if (!this.state.sourceId) {
+          for (let index = 0; index < files.length; index++) {
+            const imported = await audioLibrary.addFile(files[index], this.state.bpm), timing = sourceTimingDraft(imported, this.state.bpm), source = timing.source;
+            this.setState((state) => ({ sources: [...state.sources, source] }), () => {
+              if (index !== 0) {
+                this.setState({ message: `${source.name} imported; choose it from Unbound audio to assign a loop.`, error: false });
+                return;
+              }
               this.remember();
-              this.setState({
+              this.setState((state) => ({
                 sourceId: source.id,
-                bindings: this.state.bindings.map(
-                  (id, slot) => slot === this.state.slot ? source.id : id
-                ),
+                bindings: state.bindings.map((id, slot) => slot === targetSlot ? source.id : id),
                 library: false,
-                prepare: true,
-                sourceBpm: String(source.bpm),
-                bars: String(
-                  Math.max(
-                    1,
-                    Math.round(
-                      source.frames / source.sampleRate * source.bpm / 240
-                    )
-                  )
-                )
-              });
-            }
+                sourceBpm: String(timing.bpm),
+                bars: String(timing.bars),
+                timingEdit: null,
+                message: timing.valid ? `Loop ${targetSlot === 0 ? "A" : "B"} ready \xB7 ${timing.bars} bars at ${timing.bpm.toFixed(2)} BPM. Original audio untouched.` : `${source.name} bound; correct source timing in Inspector before playback.`,
+                error: !timing.valid
+              }), () => this.activateBoundSource(source, targetSlot, timing.valid));
+            });
           }
-          this.setState({
-            message: "Confirm BPM and source bars in Prepare for Chopper before playing.",
-            error: false
-          });
         } catch (error) {
           this.report(error);
         }
       };
       this.selectSource = (source) => {
         try {
-          if (this.state.playing) this.publish(this.pattern, source, true);
-          if (source.id !== this.state.sourceId) this.remember();
+          const timing = sourceTimingDraft(source, this.state.bpm), prepared = timing.source;
+          if (this.state.playing && timing.valid) this.publish(this.pattern, prepared, true);
+          if (prepared.id !== this.state.sourceId) this.remember();
           this.setState({
-            sourceId: source.id,
-            droppedSource: null,
-            bindings: this.state.bindings.map(
-              (id, slot) => slot === this.state.slot ? source.id : id
-            ),
+            sources: this.state.sources.map((item) => item.id === prepared.id ? prepared : item),
+            sourceId: prepared.id,
+            bindings: this.state.bindings.map((id, slot) => slot === this.state.slot ? prepared.id : id),
             cue: null,
             armed: false,
-            sourceBpm: String(source.bpm),
-            bars: String(
-              Math.max(
-                1,
-                Math.round(
-                  source.frames / source.sampleRate * source.bpm / 240
-                )
-              )
-            ),
-            library: false
+            sourceBpm: String(timing.bpm),
+            bars: String(timing.bars),
+            timingEdit: null,
+            library: false,
+            message: timing.valid ? `Loop timing ready \xB7 ${timing.bars} bars at ${timing.bpm.toFixed(2)} BPM.` : "Source timing needs correction in Inspector before playback.",
+            error: !timing.valid
           });
         } catch (error) {
           this.report(error);
         }
       };
-      this.confirmTiming = () => {
+      this.changeSourceBpm = (sourceBpm) => this.setState({ sourceBpm, timingEdit: "bpm", error: false });
+      this.changeSourceBars = (bars) => this.setState({ bars, timingEdit: "bars", error: false });
+      this.applySourceTiming = () => {
         try {
-          const dropped = this.state.droppedSource;
-          const source = dropped ?? this.source;
-          if (!source) return;
-          const bpm = Number(this.state.sourceBpm), beats = sourceTiming(source.frames, source.sampleRate, bpm);
-          if (beats !== Number(this.state.bars) * 4)
-            throw Error(
-              "BPM and bars do not match the audio duration. No coordinates were changed."
-            );
-          const next = { ...source, bpm };
+          const source = this.source;
+          if (!source) throw Error("Select a loop source first.");
+          let timing;
+          if (this.state.timingEdit === "bars") {
+            const bars = Number(this.state.bars), bpm = bars * 240 / (source.frames / source.sampleRate);
+            if (!Number.isSafeInteger(bars) || bars < 1 || !Number.isFinite(bpm) || bpm < 20 || bpm > 400)
+              throw Error("Choose whole source bars whose exact BPM is within 20\u2013400.");
+            const beats = sourceTiming(source.frames, source.sampleRate, bpm);
+            timing = { bpm, bars, beats };
+          } else {
+            timing = deriveSourceTiming(source.frames, source.sampleRate, Number(this.state.sourceBpm));
+          }
+          const next = { ...source, bpm: timing.bpm };
           if (this.state.playing) this.plan(this.pattern, next);
-          if (dropped) this.remember();
-          this.setState(
-            {
-              sources: this.state.sources.map((s) => s.id === next.id ? next : s),
-              ...dropped ? {
-                sourceId: next.id,
-                bindings: this.state.bindings.map(
-                  (id, slot) => slot === this.state.slot ? next.id : id
-                ),
-                droppedSource: null
-              } : {},
-              bpm,
-              prepare: false,
-              message: `Prepared timing \xB7 ${beats / 4} bars at ${bpm} BPM. Original untouched.`,
-              error: false
-            },
-            () => {
-              try {
-                this.publish(this.pattern, next, true);
-              } catch (error) {
-                this.report(error);
-              }
+          this.remember();
+          this.setState({
+            sources: this.state.sources.map((item) => item.id === next.id ? next : item),
+            sourceBpm: String(timing.bpm),
+            bars: String(timing.bars),
+            timingEdit: null,
+            message: `Source grid \xB7 ${timing.bars} bars at ${timing.bpm.toFixed(2)} BPM. Original audio untouched.`,
+            error: false
+          }, () => {
+            try {
+              this.publish(this.pattern, next, true);
+            } catch (error) {
+              this.report(error);
             }
-          );
+          });
         } catch (error) {
           this.report(error);
         }
@@ -13484,8 +13446,7 @@ ${error.message}`);
           activePattern: null,
           activeSourceId: "",
           activeSourceBeats: 0,
-          prepare: false,
-          droppedSource: null,
+          timingEdit: null,
           compatibility: false,
           library: false,
           message: "Legacy project opened directly in Chopper. Exact-frame arrangement and originals preserved; no automatic cue conversion.",
@@ -13739,6 +13700,11 @@ ${error.message}`);
             sources: value.sources,
             loopEffects,
             sourceId: value.sourceId,
+            sourceBpm: value.sources.find((item) => item.id === value.sourceId)?.bpm.toString() ?? "",
+            bars: (() => {
+              const item = value.sources.find((source) => source.id === value.sourceId);
+              return item ? String(Math.max(1, Math.round(item.frames / item.sampleRate * item.bpm / 240))) : "";
+            })(),
             patterns: value.patterns,
             patternSets: loadedSets,
             patternSource: value.patternSource ?? null,
@@ -13749,8 +13715,7 @@ ${error.message}`);
             bindings: paired ? value.bindings : [value.sourceId, ""],
             patternBindings: paired ? value.patternBindings : [value.patternId, value.patternId],
             mode: paired ? value.mode : "A",
-            droppedSource: null,
-            prepare: false,
+            timingEdit: null,
             sequence: value.version >= 2 ? value.sequence : false,
             probability: value.version >= 2 ? value.probability : 0.5,
             selected: null,
@@ -13809,17 +13774,12 @@ ${error.message}`);
             patternBindings,
             patternId: selected.id,
             sourceId: source?.id ?? "",
+            sourceBpm: source ? String(source.bpm) : "",
+            bars: source ? String(Math.max(1, Math.round(source.frames / source.sampleRate * source.bpm / 240))) : "",
+            timingEdit: null,
             selected: null,
             cue: null,
             armed: false,
-            ...source ? {
-              sourceBpm: String(source.bpm),
-              bars: String(
-                Math.round(
-                  source.frames / source.sampleRate * source.bpm / 240
-                )
-              )
-            } : {},
             message: this.state.playing ? "Pending \xB7 Undo/Redo source and pattern transaction." : "History restored.",
             error: false
           });
@@ -13868,9 +13828,9 @@ ${error.message}`);
         library: false,
         transportMore: false,
         inspector: innerWidth >= 1200,
-        prepare: false,
         sourceBpm: "174",
         bars: "1",
+        timingEdit: null,
         transients: false,
         markerKind: null,
         markerVisibility: { kick: true, snare: true, hat: true, other: true },
@@ -13929,10 +13889,35 @@ ${error.message}`);
     }
     render() {
       const s = this.state, source = this.source, buffer = source && audioLibrary.get(source.id), pattern = this.pattern, event = this.event, playingEditedPattern = s.playing && !s.sequence && s.mode === (s.slot === 0 ? "A" : "B");
-      let beats = 0, resolved = null;
+      let beats = 0, waveformBeats = 0, timingDraftValid = false, timingMessage = source ? "Source timing needs validation." : "Select or import a loop to edit source timing.", resolved = null;
+      if (source) {
+        try {
+          if (s.timingEdit === "bars") {
+            const bars = Number(s.bars), bpm = bars * 240 / (source.frames / source.sampleRate);
+            if (!Number.isSafeInteger(bars) || bars < 1 || bpm < 20 || bpm > 400) throw Error("Choose whole bars with an exact BPM in 20\u2013400.");
+            sourceTiming(source.frames, source.sampleRate, bpm);
+          } else {
+            const estimate = Number(s.sourceBpm);
+            if (s.timingEdit === "bpm" || !Number.isFinite(source.bpm) || source.bpm < 20 || source.bpm > 400) deriveSourceTiming(source.frames, source.sampleRate, estimate);
+            else {
+              try {
+                sourceTiming(source.frames, source.sampleRate, source.bpm);
+              } catch {
+                deriveSourceTiming(source.frames, source.sampleRate, estimate);
+              }
+            }
+          }
+          timingDraftValid = true;
+          timingMessage = s.timingEdit ? "Valid 4/4 grid draft \xB7 apply to use for playback." : "Source timing is valid.";
+        } catch (error) {
+          timingMessage = error?.message ?? "Source timing is invalid.";
+        }
+      }
       try {
-        if (source)
+        if (source) {
           beats = sourceTiming(source.frames, source.sampleRate, source.bpm);
+          waveformBeats = beats;
+        }
         if (event && beats)
           resolved = resolveCue(
             event.cue,
@@ -13943,7 +13928,9 @@ ${error.message}`);
             this.windowOrigin()
           );
       } catch {
+        if (source) waveformBeats = sourceTimingDraft(source, this.state.bpm).beats;
       }
+      if (s.timingEdit) beats = 0;
       return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
         "main",
         {
@@ -13961,16 +13948,6 @@ ${error.message}`);
             className: "ch-transport " + (s.transportMore ? "more-open" : "")
           },
           /* @__PURE__ */ React.createElement("h1", null, /* @__PURE__ */ React.createElement("small", null, "PENTAVOX"), " Chopper"),
-          /* @__PURE__ */ React.createElement("label", { className: "ch-secondary" }, "Edit slot", " ", /* @__PURE__ */ React.createElement(
-            "select",
-            {
-              "aria-label": "Edit slot",
-              value: s.slot,
-              onChange: (e) => this.selectSlot(+e.target.value)
-            },
-            /* @__PURE__ */ React.createElement("option", { value: "0" }, "A"),
-            /* @__PURE__ */ React.createElement("option", { value: "1" }, "B")
-          )),
           /* @__PURE__ */ React.createElement("label", { className: "ch-secondary ch-mobile-listen" }, "Listen", " ", /* @__PURE__ */ React.createElement(
             "select",
             {
@@ -13992,11 +13969,12 @@ ${error.message}`);
             },
             mode
           ))),
-          /* @__PURE__ */ React.createElement("button", { className: "ch-play", onClick: this.toggle }, s.playing ? "Stop" : s.sequence ? "Play Seed" : "Play pattern"),
+          /* @__PURE__ */ React.createElement("button", { className: "ch-play", disabled: !s.playing && !beats, onClick: this.toggle }, s.playing ? "Stop" : s.sequence ? "Play Seed" : "Play pattern"),
           /* @__PURE__ */ React.createElement(
             "button",
             {
               className: "ch-secondary",
+              disabled: !s.playing && !beats,
               onClick: () => {
                 this.audio.stop();
                 this.setState({ playing: false }, this.toggle);
@@ -14101,7 +14079,7 @@ ${error.message}`);
             s.message
           )
         ),
-        /* @__PURE__ */ React.createElement("aside", { className: "ch-library" }, /* @__PURE__ */ React.createElement("h2", null, "Samples"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.input.click() }, "Import audio"), s.sources.map((item) => /* @__PURE__ */ React.createElement(
+        /* @__PURE__ */ React.createElement("aside", { className: "ch-library" }, /* @__PURE__ */ React.createElement("h2", null, "Samples"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.input.click() }, "Import audio"), s.sources.filter((item) => !s.bindings.includes(item.id)).map((item) => /* @__PURE__ */ React.createElement(
           "button",
           {
             key: item.id,
@@ -14109,8 +14087,7 @@ ${error.message}`);
             "aria-pressed": item.id === s.sourceId,
             onClick: () => this.selectSource(item)
           },
-          /* @__PURE__ */ React.createElement("span", { className: "ch-sample-name", title: item.name }, item.name),
-          /* @__PURE__ */ React.createElement("span", { className: "ch-sample-slots" }, s.bindings.map((id, slot) => id === item.id && /* @__PURE__ */ React.createElement("span", { key: slot, "data-slot": slot }, slot === 0 ? "A" : "B")))
+          /* @__PURE__ */ React.createElement("span", { className: "ch-sample-name", title: item.name }, item.name)
         )), /* @__PURE__ */ React.createElement("div", { className: "ch-loop-switcher", role: "group", "aria-label": "Edit loop slot" }, [0, 1].map((slot) => {
           const name = slot === 0 ? "A" : "B";
           const bound = s.sources.find((item) => item.id === s.bindings[slot]);
@@ -14202,40 +14179,7 @@ ${error.message}`);
             onExport: this.exportLegacy,
             onOriginal: this.exportLegacyOriginal
           }
-        ), s.prepare && (s.droppedSource ?? source) && /* @__PURE__ */ React.createElement("section", { className: "ch-prepare" }, /* @__PURE__ */ React.createElement("h2", null, "Prepare for Chopper"), s.droppedSource && /* @__PURE__ */ React.createElement("p", null, "Bind ", s.droppedSource.name, " to Loop ", s.slot === 0 ? "A" : "B"), /* @__PURE__ */ React.createElement("label", null, "Source BPM", " ", /* @__PURE__ */ React.createElement(
-          "input",
-          {
-            "aria-label": "Source BPM",
-            type: "number",
-            value: s.sourceBpm,
-            onChange: (e) => this.setState({ sourceBpm: e.target.value })
-          }
-        )), /* @__PURE__ */ React.createElement("label", null, "Source bars (4/4)", " ", /* @__PURE__ */ React.createElement(
-          "input",
-          {
-            "aria-label": "Source bars",
-            type: "number",
-            min: "1",
-            value: s.bars,
-            onChange: (e) => this.setState({ bars: e.target.value })
-          }
-        )), /* @__PURE__ */ React.createElement(
-          "button",
-          {
-            onClick: () => {
-              const source2 = s.droppedSource ?? this.source;
-              if (source2 && Number(s.bars) > 0) {
-                const bpm = Number(s.bars) * 4 * 60 * source2.sampleRate / source2.frames;
-                this.setState({
-                  sourceBpm: String(bpm),
-                  message: `Derived ${bpm.toFixed(6)} BPM from ${s.bars} bars. Confirm to apply.`,
-                  error: false
-                });
-              }
-            }
-          },
-          "Derive BPM from bars"
-        ), /* @__PURE__ */ React.createElement("button", { onClick: this.confirmTiming }, "Confirm timing"), s.droppedSource && /* @__PURE__ */ React.createElement("button", { onClick: () => this.setState({ droppedSource: null, prepare: false }) }, "Cancel replacement")), source && buffer && beats ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+        ), source && buffer ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
           Waveform,
           {
             slot: s.slot,
@@ -14244,7 +14188,8 @@ ${error.message}`);
             bindingStatus: !s.playing ? "selected" : s.activeSourceId === source.id ? "active binding" : "selected \xB7 binding pending / not audible",
             source,
             buffer,
-            beats,
+            beats: waveformBeats,
+            interactive: Boolean(beats),
             selected: s.cue,
             playingCue: s.playingCue ?? (s.playing && s.activeSourceId === source.id ? s.sourceCue : null),
             transients: s.transients,
@@ -14403,6 +14348,13 @@ ${error.message}`);
           {
             onClose: this.closeInspector,
             event,
+            sourceBpm: source ? s.sourceBpm : "",
+            sourceBars: source ? s.bars : "",
+            timingValid: timingDraftValid,
+            timingMessage,
+            onSourceBpmChange: this.changeSourceBpm,
+            onSourceBarsChange: this.changeSourceBars,
+            onApplyTiming: this.applySourceTiming,
             resolved,
             maxLength: event ? Math.min(
               pattern.beats * 4,
