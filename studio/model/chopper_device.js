@@ -15,7 +15,7 @@ const HEADER_MIN=33;
 export class ChopperDeviceService {
  constructor({getClient,getInfo,getDescriptor,runJob=async(_label,job)=>job(),makeFiles=(client,info)=>new SdFilesClient(client,info)}){Object.assign(this,{getClient,getInfo,getDescriptor,runJob,makeFiles});}
  owner(){const client=this.getClient(),info=this.getInfo(),descriptor=this.getDescriptor();if(!client||!info)throw Error('Connect the module using the existing Studio connection first.');return {client,info,descriptor,files:this.makeFiles(client,info)};}
- async request(request){
+ async request(request,{onProgress=()=>{}}={}){
   const owner=this.owner(),{files,descriptor}=owner;
   // No command is invented for new REL/ABS. Filesystem access is verified by
   // FS_INFO, rather than inferred from the existence of a Javascript method.
@@ -24,7 +24,8 @@ export class ChopperDeviceService {
    if(owner.client!==this.getClient()||owner.info!==this.getInfo())throw Error('Connection changed; retry.');
    const loops=loopIoVersion(descriptor)>0;
    const patternStores=descriptor?.chopper?.pvxeFile===1,patternLive=descriptor?.pvxeUpload?.playable===true;
-   if(request.type==='capabilities')return {sampleUpload:loops,sampleDownload:loops,legacyPatternDownload:descriptor?.chopper?.cueFileVersion===1,newPatternUpload:patternStores||patternLive,patternFileStorage:patternStores,patternLiveUpload:patternLive,reason:patternStores||patternLive?'This firmware accepts a PVXE pattern bank and stores it per slot; the legacy PVXP bank keeps its own file and semantics.':'REL/ABS pattern upload requires compatible firmware; current PVXP v1–v4 is not reinterpreted.'};
+   const patternVersion=Number.isInteger(descriptor?.chopper?.pvxeVersion)?descriptor.chopper.pvxeVersion:1;
+   if(request.type==='capabilities')return {sampleUpload:loops,sampleDownload:loops,legacyPatternDownload:descriptor?.chopper?.cueFileVersion===1,newPatternUpload:patternStores||patternLive,patternFileStorage:patternStores,patternLiveUpload:patternLive,patternVersion,reason:patternStores||patternLive?'This firmware accepts a PVXE pattern bank and stores it per slot; the legacy PVXP bank keeps its own file and semantics.':'REL/ABS pattern upload requires compatible firmware; current PVXP v1–v4 is not reinterpreted.'};
    if(request.type==='read-pattern-banks'){
     if(!patternStores)throw Error('This firmware does not advertise PVXE storage.');
     let entries;try{entries=await files.list('/CHOPPER');}catch(error){if(error?.status===12)entries=[];else throw error;}
@@ -38,7 +39,7 @@ export class ChopperDeviceService {
       const bytes=await files.download(entry.path,{maxBytes:limit});
       if(bytes.length!==entry.size)throw Error('File changed during download.');
       if(owner.client!==this.getClient()||owner.info!==this.getInfo())throw Error('Connection changed.');
-      const bank=decodeBank(bytes);if(bank.patterns.filter(p=>p.role==='base').length!==1)throw Error('PVXE requires one BASE.');
+      const bank=decodeBank(bytes);if(bank.version>patternVersion)throw Error(`Stored PVXE v${bank.version} requires firmware version ${bank.version}.`);if(bank.patterns.filter(p=>p.role==='base').length!==1)throw Error('PVXE requires one BASE.');
       banks.push({slot,bytes:bytes.slice().buffer});
      }catch(error){errors.push({slot,message:error?.message||String(error)});}
     }
@@ -59,7 +60,17 @@ export class ChopperDeviceService {
     const existing=loopFiles(entries),number=existing.reduce((highest,file)=>Math.max(highest,file.number),0)+1;
     if(number>9999)throw Error('No free loop number after the existing files. Nothing was overwritten.');
     const path=`/LOOPS/${loopFileName(number)}`;
-    await files.upload(path,bytes,{overwrite:false,makeParents:true});
+    let acknowledged=-1;
+    const progress=fraction=>{
+     if(!Number.isFinite(fraction))return;
+     const completedBytes=Math.round(Math.max(0,Math.min(1,fraction))*bytes.length);
+     if(completedBytes<=acknowledged)return;acknowledged=completedBytes;
+     // Acknowledged data is not a successful SD commit. Only upload's resolved
+     // result below confirms storage; progress observers must not abort a write.
+     try{onProgress({phase:completedBytes===bytes.length?'committing':'writing',path,completedBytes,totalBytes:bytes.length});}catch{}
+    };
+    progress(0);
+    await files.upload(path,bytes,{overwrite:false,makeParents:true,onProgress:progress});
     return {state:'uploaded',path,selected:false,audiblyActive:false};
    }
    if(request.type==='upload-pattern'||request.type==='convert-pattern'){
@@ -92,7 +103,8 @@ export class ChopperDeviceService {
     if(bytes.length<HEADER_MIN||bytes.length>MAX_BANK_BYTES)throw Error(`A PVXE bank is ${HEADER_MIN} to ${MAX_BANK_BYTES} bytes.`);
     // Decoding here is not a courtesy: it is the same envelope check the module runs, so a bank the firmware
     // would refuse never reaches the card and cannot replace a pattern that is already stored.
-    let bank;try{bank=decodeBank(bytes);}catch(error){throw Error(`The pattern is not a usable PVXE v1 bank (${error?.message||error}). Nothing was written.`);}
+    let bank;try{bank=decodeBank(bytes);}catch(error){throw Error(`The pattern is not a usable PVXE bank (${error?.message||error}). Nothing was written.`);}
+    if(bank.version>patternVersion)throw Error(`PVXE v${bank.version} requires compatible firmware (advertised version ${patternVersion}). Nothing was written.`);
     if(bank.patterns.filter(p=>p.role==='base').length!==1)throw Error('Playback needs exactly one BASE pattern. Nothing was written.');
     if(!patternStores&&!patternLive)throw Error('This firmware neither stores nor accepts a PVXE pattern bank. Nothing was written.');
     const maxPatterns=Number.isInteger(descriptor?.chopper?.pvxeMaxPatterns)?descriptor.chopper.pvxeMaxPatterns:8;

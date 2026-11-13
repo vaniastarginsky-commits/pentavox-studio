@@ -3,10 +3,10 @@ import {MAX_BANK_BYTES} from '../model/chopper_event_bank.js';
 export const CHOPPER_DEVICE_PROTOCOL='pentavox-chopper-device-v1';
 const TYPES=new Set(['capabilities','list-samples','upload-sample','download-sample','download-pattern','upload-pattern','convert-pattern','read-pattern-banks']);
 export function mountChopperDeviceBridge({frame,request,window:win=window}){
- let busy=false;const completed=new Map();
+ let busy=false,activeId=null,disposed=false,generation=0;const completed=new Map();
  const receive=async event=>{
   const message=event.data;
-  if(event.source!==frame.contentWindow||event.origin!==win.location.origin||win.location.protocol==='file:'||message?.protocol!==CHOPPER_DEVICE_PROTOCOL||!TYPES.has(message.type)||typeof message.id!=='string'||message.id.length<1||message.id.length>100)return;
+  if(disposed||event.source!==frame.contentWindow||event.origin!==win.location.origin||win.location.protocol==='file:'||message?.protocol!==CHOPPER_DEVICE_PROTOCOL||!TYPES.has(message.type)||typeof message.id!=='string'||message.id.length<1||message.id.length>100)return;
   if(message.type==='upload-sample'&&(!(message.bytes instanceof ArrayBuffer)||message.bytes.byteLength>6_000_000))return;
   // A pattern arrives as an encoded bank, as the editor's document plus the loop it was authored against, or as a
   // legacy PVXP bank plus the slice geometry it was cut on. All three are bounded here, so an absurd frame never
@@ -25,20 +25,24 @@ export function mountChopperDeviceBridge({frame,request,window:win=window}){
     if(!encoded&&!document&&!banks)return;
    }
   }
-  const reply=result=>event.source.postMessage({protocol:CHOPPER_DEVICE_PROTOCOL,id:message.id,type:'result',...result},event.origin);
+  const requestGeneration=generation;
+  const current=()=>!disposed&&generation===requestGeneration&&event.source===frame.contentWindow;
+  const reply=result=>{if(current())event.source.postMessage({protocol:CHOPPER_DEVICE_PROTOCOL,id:message.id,type:'result',...result},event.origin);};
   if(completed.has(message.id)){reply(completed.get(message.id));return;}
-  if(busy){reply({ok:false,error:'Another device operation is in progress.'});return;}
-  busy=true;let result;
-  try{result={ok:true,value:await request(message)};}catch(error){result={ok:false,error:error?.message||String(error)};}
-  finally{busy=false;}
+  if(busy){if(activeId!==message.id)reply({ok:false,error:'Another device operation is in progress.'});return;}
+  busy=true;activeId=message.id;let result,active=true;
+  const onProgress=value=>{if(active&&current())event.source.postMessage({protocol:CHOPPER_DEVICE_PROTOCOL,id:message.id,type:'progress',value},event.origin);};
+  try{result={ok:true,value:await request(message,{onProgress})};}catch(error){result={ok:false,error:error?.message||String(error)};}
+  finally{active=false;busy=false;activeId=null;}
   // Bounded deduplication prevents an upload retry with the SAME request ID
   // creating a second numbered file. New explicit actions get new IDs.
   completed.set(message.id,result);while(completed.size>8)completed.delete(completed.keys().next().value);reply(result);
  };
  let connected=false;
  const notify=()=>{if(win.location.protocol!=='file:')frame.contentWindow?.postMessage({protocol:CHOPPER_DEVICE_PROTOCOL,type:'connection',connected},win.location.origin);};
- frame.addEventListener?.('load',notify);
+ const loaded=()=>{++generation;notify();};
+ frame.addEventListener?.('load',loaded);
  win.addEventListener('message',receive);
- const dispose=()=>{win.removeEventListener('message',receive);frame.removeEventListener?.('load',notify);};
+ const dispose=()=>{disposed=true;win.removeEventListener('message',receive);frame.removeEventListener?.('load',loaded);};
  dispose.setConnectionState=value=>{connected=Boolean(value);notify();};return dispose;
 }

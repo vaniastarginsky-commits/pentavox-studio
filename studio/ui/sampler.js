@@ -692,7 +692,7 @@ export function mountSampler(root, { onError = (error) => console.error(error), 
   const dispose = () => { ++state.generation; state.upload?.controller.abort(); state.card?.controller.abort(); breakPanel?.destroy(); sliceBar?.destroy(); editor?.destroy(); themeWatch.disconnect(); root.replaceChildren(); };
   dispose.stageArtifact = async file => {if(state.upload||state.card||state.importing)throw new Error('Finish the current sampler operation before staging a snapshot.');const bytes=new Uint8Array(await file.arrayBuffer()),marks=readWavMarkers(bytes);if(!marks||marks.sampleRate!==48000||marks.frames<=0||marks.frames>1440000||marks.slices.length>64)throw new Error('Invalid prepared Samples WAV.');const item=await decodedFile(file);item.normalize=false;item.frozenWav=bytes;item.name=file.name.replace(/\.wav$/i,'');state.items.push(item);state.selected=item;renderEditor();refreshSide();};
   const chopperDevice=new ChopperDeviceService({getClient,getInfo,getDescriptor,runJob:async(label,job)=>{if(loop.busy||state.card||state.upload||state.importing||activeLinkJob())throw new Error('Another transfer is in progress.');loop.busy=true;const end=beginLinkJob(label);try{return await job();}finally{end();loop.busy=false;refreshSide();}}});
-  dispose.chopperDeviceRequest = request=>chopperDevice.request(request);
+  dispose.chopperDeviceRequest = (request,options)=>chopperDevice.request(request,options);
   dispose.installCueBank = installCueBank;
   dispose.reloadCueBank = reloadCueBank;
   dispose.show = () => loadCard();

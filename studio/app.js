@@ -201,7 +201,7 @@ samplerMount = mountSampler(document.querySelector('#sampler-root'), {
 });
 
 mountSamplesBridge({frame:document.querySelector('.slice-lab-frame'),stage:file=>samplerMount.stageArtifact(file),installCue:(file,slot)=>samplerMount.installCueBank(file,slot),reloadCue:slot=>samplerMount.reloadCueBank(slot),navigate:()=>samplesDelivery.open()});
-const chopperBridge=mountChopperDeviceBridge({frame:document.querySelector('.slice-lab-frame'),request:request=>samplerMount.chopperDeviceRequest(request)});
+const chopperBridge=mountChopperDeviceBridge({frame:document.querySelector('.slice-lab-frame'),request:(request,options)=>samplerMount.chopperDeviceRequest(request,options)});
 
 locksMount = mountKnobLocks(document.querySelector('#locks-root'), {
   getSession: () => connectionStatus.dataset.state === 'on' ? session : null,

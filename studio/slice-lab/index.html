@@ -9247,12 +9247,16 @@ ${error.message}`);
   // src/chopper/model.ts
   var newPattern = (name = "BASE", role = "base") => ({ id: crypto.randomUUID(), name, role, beats: 32, events: [] });
   var newEvent = (step, cue) => ({ id: crypto.randomUUID(), step, length: 1, cue, mode: "relative", gain: 1, pitch: 0, reverse: false, repeat: 1, roll: 1, gate: true, probability: 1 });
-  function validatePattern(pattern) {
+  var hasSlicerEffect = (e) => Boolean(e.retriggerProbability || e.pitchedRush || e.tapeStop);
+  var patternVersion = (patterns) => patterns.some((p) => p.events.some(hasSlicerEffect)) ? 2 : 1;
+  function validatePattern(pattern, options = {}) {
     if (!pattern || typeof pattern.id !== "string" || typeof pattern.name !== "string" || !["base", "variation", "fill"].includes(pattern.role) || !Number.isInteger(pattern.beats) || pattern.beats < 4 || pattern.beats > 64 || pattern.beats % 4 || !Array.isArray(pattern.events) || pattern.events.length > 256) throw Error("Invalid Chopper pattern.");
     const ids = /* @__PURE__ */ new Set();
     let end = 0;
     for (const e of [...pattern.events].sort((a, b) => a.step - b.step)) {
       if (!e || typeof e.id !== "string" || ids.has(e.id) || !Number.isInteger(e.step) || e.step < end || !Number.isInteger(e.length) || e.length < 1 || e.step + e.length > pattern.beats * 4 || !Number.isInteger(e.cue) || e.cue < 0 || e.cue > 63 || !["relative", "absolute"].includes(e.mode) || ![e.gain, e.pitch, e.probability].every(Number.isFinite) || e.gain < 0 || e.gain > 2 || e.pitch < -24 || e.pitch > 24 || e.probability < 0 || e.probability > 1 || ![1, 2, 3, 4, 6, 8].includes(e.repeat) || ![1, 2, 4, 8].includes(e.roll) || e.tapeStop !== void 0 && typeof e.tapeStop !== "boolean" || typeof e.reverse !== "boolean" || typeof e.gate !== "boolean") throw Error("Invalid, overlapping or out-of-range Chopper event.");
+      const rp = e.retriggerProbability ?? 0;
+      if (!Number.isFinite(rp) || rp < 0 || rp > 1 || Math.abs(rp * 100 - Math.round(rp * 100)) > 1e-6 || e.pitchedRush !== void 0 && typeof e.pitchedRush !== "boolean" || (e.pitchedRush ? ![2, 4, 8].includes(e.rushHits) : e.rushHits !== void 0 && e.rushHits !== 0) || e.pitchedRush && e.length * 4 < e.rushHits * e.roll || !options.allowLegacyEffectConflict && (Number(rp > 0) + Number(!!e.pitchedRush) + Number(!!e.tapeStop) > 1 || hasSlicerEffect(e) && e.reverse)) throw Error("Invalid slicer effect combination or argument.");
       ids.add(e.id);
       end = e.step + e.length;
     }
@@ -9297,10 +9301,10 @@ ${error.message}`);
   }
   function parsePatterns(text) {
     const value = JSON.parse(text);
-    if (value?.format !== "pentavox-chopper-pattern" || value.version !== 1 || value.cueGrid !== "quarter" || !Array.isArray(value.patterns) || value.patterns.length < 1 || value.patterns.length > 20) throw Error("Not a supported Chopper pattern file. Legacy files must be opened in Compatibility.");
+    if (value?.format !== "pentavox-chopper-pattern" || ![1, 2].includes(value.version) || value.cueGrid !== "quarter" || !Array.isArray(value.patterns) || value.patterns.length < 1 || value.patterns.length > 20) throw Error("Not a supported Chopper pattern file. Legacy files must be opened in Compatibility.");
     const ids = /* @__PURE__ */ new Set();
     for (const p of value.patterns) {
-      validatePattern(p);
+      validatePattern(p, { allowLegacyEffectConflict: value.version === 1 });
       if (ids.has(p.id)) throw Error("Duplicate pattern identifier.");
       ids.add(p.id);
     }
@@ -10415,6 +10419,8 @@ ${error.message}`);
       this.targetGain = 0.7;
       this.soundingCue = 0;
       this.soundingEvent = null;
+      this.tapePhase = 0;
+      this.tapeGain = 1;
       this.patternStart = 0;
       this.sequenceSlot = 0;
       this.manual = null;
@@ -10424,6 +10430,8 @@ ${error.message}`);
       this.accepted = false;
       this.eventGain = 1;
       this.targetEventGain = 1;
+      this.effectRepeats = 1;
+      this.retriggerHit = false;
       this.active = plan;
       this.pattern = plan.pattern;
       this.locate();
@@ -10530,6 +10538,8 @@ ${error.message}`);
       this.eventGain += (this.targetEventGain - this.eventGain) * Math.min(1, 1 / (this.rate * 5e-3));
     }
     sample(data) {
+      this.tapePhase = 0;
+      this.tapeGain = 1;
       this.locate();
       const plan = this.active, p = this.pattern, phase = this.beat - this.patternStart;
       let index = -1;
@@ -10546,6 +10556,29 @@ ${error.message}`);
         this.eventStart = start;
         const step = Math.round(start * 4), draw = plan.eventDraws ? plan.eventDraws[step % plan.eventDraws.length] : _ChopperKernel.random(plan.seed, step);
         this.accepted = index >= 0 && draw < p.events[index].probability;
+        const e = index >= 0 ? p.events[index] : null;
+        this.effectRepeats = e?.repeat ?? 1;
+        this.retriggerHit = false;
+        if (e && this.accepted && e.retriggerProbability) {
+          let x = draw * 4294967296 >>> 0 ^ 1675113877;
+          x ^= x << 13;
+          x ^= x >>> 17;
+          x ^= x << 5;
+          x >>>= 0;
+          if (x / 4294967296 < e.retriggerProbability) {
+            let fits = 0;
+            for (let n = 2; n <= 8; n *= 2) if (e.length / 4 / (n * e.roll) >= 1 / 16) fits++;
+            if (fits) {
+              x ^= x << 13;
+              x ^= x >>> 17;
+              x ^= x << 5;
+              x >>>= 0;
+              this.effectRepeats = 2 << x % fits;
+              this.retriggerHit = true;
+            }
+          }
+        }
+        if (e?.pitchedRush) this.effectRepeats = e.rushHits;
         this.targetEventGain = index < 0 ? 1 : p.events[index].gain;
         this.eventGain = this.targetEventGain;
       }
@@ -10554,9 +10587,14 @@ ${error.message}`);
       this.soundingCue = Math.floor(this.beat % plan.sourceBeats);
       this.soundingEvent = null;
       if (index >= 0 && this.accepted) {
-        const e = p.events[index], elapsed = this.beat - start, span3 = e.length / 4, period = span3 / (e.repeat * e.roll), local = elapsed % period;
+        const e = p.events[index], elapsed = this.beat - start, span3 = e.length / 4, hitPeriod = span3 / this.effectRepeats, hit2 = Math.floor(elapsed / hitPeriod), period = hitPeriod / e.roll, local = elapsed % period;
+        const effectGain = e.pitchedRush ? 0.45 + 0.55 * hit2 / (this.effectRepeats - 1) : this.retriggerHit ? Math.pow(0.85, hit2) : 1;
         const cue = e.mode === "absolute" ? e.cue : (this.patternStart + e.cue) % plan.sourceBeats;
-        const ratio = Math.pow(2, e.pitch / 12), readBeat = local * ratio;
+        const ratio = Math.pow(2, (e.pitch + (e.pitchedRush ? 1.5 * hit2 : 0)) / 12), phaseRead = local * ratio;
+        const t = Math.min(1, phaseRead / period), u = Math.max(0, Math.min(1, (t - 0.75) * 4));
+        this.tapePhase = e.tapeStop ? t : 0;
+        this.tapeGain = e.tapeStop ? 1 - u * u * (3 - 2 * u) : 1;
+        const readBeat = e.tapeStop ? phaseRead * (1 - 0.5 * t) : phaseRead, tail = this.tapeGain;
         const reach = period * ratio;
         if (!e.gate || readBeat < reach) {
           const pos = (cue + (e.reverse ? reach - readBeat : readBeat)) % plan.sourceBeats, frame = (pos + plan.sourceBeats) % plan.sourceBeats / plan.sourceBeats * data.length;
@@ -10564,7 +10602,7 @@ ${error.message}`);
           const envelope = Math.max(0, Math.min(1, elapsed / ramp2, (span3 - elapsed) / ramp2, local / ramp2, (period - local) / ramp2, gateTail));
           this.soundingCue = Math.floor((pos + plan.sourceBeats) % plan.sourceBeats);
           this.soundingEvent = e.id;
-          value = value * (1 - envelope) + this.read(data, frame) * this.eventGain * envelope;
+          value = value * (1 - envelope) + this.read(data, frame) * this.eventGain * effectGain * tail * envelope;
         }
       }
       const ramp = plan.bpm / 60 * 3e-3;
@@ -12525,29 +12563,59 @@ ${error.message}`);
         })
       },
       mode === "relative" ? "Relative (REL)" : "Fixed (ABS)"
-    )))), /* @__PURE__ */ React.createElement("div", { className: "ch-inspector-body" }, /* @__PURE__ */ React.createElement("section", { className: "ch-source-timing", "aria-label": "Source timing Inspector" }, /* @__PURE__ */ React.createElement("h3", null, "Loop source timing \xB7 4/4"), /* @__PURE__ */ React.createElement("label", null, "Source BPM", /* @__PURE__ */ React.createElement("input", { "aria-label": "Source BPM", type: "number", min: "20", max: "400", step: "0.01", value: sourceBpm, disabled: !sourceBpm, onChange: (e) => onSourceBpmChange(e.target.value) })), /* @__PURE__ */ React.createElement("label", null, "Source bars", /* @__PURE__ */ React.createElement("input", { "aria-label": "Source bars", type: "number", min: "1", step: "1", value: sourceBars, disabled: !sourceBpm, onChange: (e) => onSourceBarsChange(e.target.value) })), /* @__PURE__ */ React.createElement("small", { role: timingValid ? "status" : "alert" }, timingMessage), /* @__PURE__ */ React.createElement("button", { type: "button", disabled: !timingValid, onClick: onApplyTiming }, "Apply source timing")), !event ? /* @__PURE__ */ React.createElement("p", null, "Select an event to hear and edit it.") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", null, resolved === null ? "Source unavailable" : `Source bar ${Math.floor(resolved / 4) + 1}, beat ${resolved % 4 + 1} \xB7 cue ${resolved + 1}`, /* @__PURE__ */ React.createElement("br", null), "Relative (REL) follows the loop as the pattern repeats. Fixed (ABS) always plays the same place in the original WAV."), numeric("Source cue (1\u201364)", "cue", 1, 64), numeric("Position (sixteenths)", "step", 1, maxPosition), numeric("Duration (sixteenths)", "length", 1, maxLength), numeric("Gain", "gain", 0, 2, 0.05), numeric("Pitch (semitones)", "pitch", -24, 24), numeric("Probability", "probability", 0, 1, 0.05), /* @__PURE__ */ React.createElement("fieldset", { className: "ch-event-actions" }, /* @__PURE__ */ React.createElement("legend", null, "Action markers on this event"), ["repeat", "roll"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, key === "repeat" ? "Retrigger" : "Roll", /* @__PURE__ */ React.createElement(
+    )))), /* @__PURE__ */ React.createElement("div", { className: "ch-inspector-body" }, /* @__PURE__ */ React.createElement("section", { className: "ch-source-timing", "aria-label": "Source timing Inspector" }, /* @__PURE__ */ React.createElement("h3", null, "Loop source timing \xB7 4/4"), /* @__PURE__ */ React.createElement("label", null, "Source BPM", /* @__PURE__ */ React.createElement("input", { "aria-label": "Source BPM", type: "number", min: "20", max: "400", step: "0.01", value: sourceBpm, disabled: !sourceBpm, onChange: (e) => onSourceBpmChange(e.target.value) })), /* @__PURE__ */ React.createElement("label", null, "Source bars", /* @__PURE__ */ React.createElement("input", { "aria-label": "Source bars", type: "number", min: "1", step: "1", value: sourceBars, disabled: !sourceBpm, onChange: (e) => onSourceBarsChange(e.target.value) })), /* @__PURE__ */ React.createElement("small", { role: timingValid ? "status" : "alert" }, timingMessage), /* @__PURE__ */ React.createElement("button", { type: "button", disabled: !timingValid, onClick: onApplyTiming }, "Apply source timing")), !event ? /* @__PURE__ */ React.createElement("p", null, "Select an event to hear and edit it.") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", null, resolved === null ? "Source unavailable" : `Source bar ${Math.floor(resolved / 4) + 1}, beat ${resolved % 4 + 1} \xB7 cue ${resolved + 1}`, /* @__PURE__ */ React.createElement("br", null), "Relative (REL) follows the loop as the pattern repeats. Fixed (ABS) always plays the same place in the original WAV."), numeric("Source cue (1\u201364)", "cue", 1, 64), numeric("Position (sixteenths)", "step", 1, maxPosition), numeric("Duration (sixteenths)", "length", 1, maxLength), numeric("Gain", "gain", 0, 2, 0.05), numeric("Pitch (semitones)", "pitch", -24, 24), numeric("Probability", "probability", 0, 1, 0.05), /* @__PURE__ */ React.createElement("fieldset", { className: "ch-event-actions" }, /* @__PURE__ */ React.createElement("legend", null, "Action markers on this event"), ["repeat", "roll"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, key === "repeat" ? "Fixed repeat (legacy fallback)" : "Roll", /* @__PURE__ */ React.createElement(
       "select",
       {
-        "aria-label": key === "repeat" ? "Retrigger" : "Roll",
+        "aria-label": key === "repeat" ? "Fixed repeat (legacy fallback)" : "Roll",
         value: event[key],
         onChange: (e) => onChange({ ...event, [key]: +e.target.value })
       },
       (key === "repeat" ? [1, 2, 3, 4, 6, 8] : [1, 2, 4, 8]).map(
         (n) => /* @__PURE__ */ React.createElement("option", { key: n, value: n }, n === 1 ? "Off" : `${n}\xD7`)
       )
-    ))), /* @__PURE__ */ React.createElement("label", { title: "Not yet part of the PVXE bank format: the module cannot receive this effect" }, /* @__PURE__ */ React.createElement(
-      "input",
+    ))), /* @__PURE__ */ React.createElement("label", null, "Slicer effect", /* @__PURE__ */ React.createElement(
+      "select",
       {
-        type: "checkbox",
-        checked: Boolean(event.tapeStop),
-        disabled: true,
-        onChange: (e) => onChange({ ...event, tapeStop: e.target.checked })
+        "aria-label": "Slicer effect",
+        value: event.retriggerProbability ? "retrigger" : event.pitchedRush ? "rush" : event.tapeStop ? "stop" : "none",
+        onChange: (e) => onChange({
+          ...event,
+          reverse: e.target.value === "none" ? event.reverse : false,
+          retriggerProbability: e.target.value === "retrigger" ? 1 : 0,
+          pitchedRush: e.target.value === "rush",
+          rushHits: e.target.value === "rush" ? 4 : 0,
+          tapeStop: e.target.value === "stop"
+        })
+      },
+      /* @__PURE__ */ React.createElement("option", { value: "none" }, "Off"),
+      /* @__PURE__ */ React.createElement("option", { value: "retrigger" }, "Slicer Retrigger"),
+      /* @__PURE__ */ React.createElement("option", { value: "rush" }, "Pitched Rush"),
+      /* @__PURE__ */ React.createElement("option", { value: "stop" }, "Tape Stop")
+    )), !!event.retriggerProbability && /* @__PURE__ */ React.createElement(
+      NumericField,
+      {
+        label: "Slicer Retrigger (%)",
+        min: 1,
+        max: 100,
+        step: 1,
+        value: Math.round(event.retriggerProbability * 100),
+        onCommit: (value) => onChange({ ...event, retriggerProbability: value / 100 })
       }
-    ), "Tape stop")), ["reverse", "gate"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, /* @__PURE__ */ React.createElement(
+    ), event.pitchedRush && /* @__PURE__ */ React.createElement("label", null, "Pitched Rush hits", /* @__PURE__ */ React.createElement(
+      "select",
+      {
+        "aria-label": "Pitched Rush hits",
+        value: event.rushHits,
+        onChange: (e) => onChange({ ...event, rushHits: +e.target.value })
+      },
+      [2, 4, 8].map((n) => /* @__PURE__ */ React.createElement("option", { key: n, value: n }, n, "\xD7"))
+    )), /* @__PURE__ */ React.createElement("small", null, "Only this event is marked. Roll stays independent. Slicer effects require PVXE v2 firmware.")), ["reverse", "gate"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, /* @__PURE__ */ React.createElement(
       "input",
       {
         type: "checkbox",
         checked: event[key],
+        "aria-label": key === "reverse" ? "Reverse" : "Gate at cue end",
+        disabled: key === "reverse" && Boolean(event.retriggerProbability || event.pitchedRush || event.tapeStop),
         onChange: (e) => onChange({ ...event, [key]: e.target.checked })
       }
     ), key === "reverse" ? "Reverse" : "Gate at cue end")), /* @__PURE__ */ React.createElement("button", { onClick: onPin }, "Use last heard cue as fixed"), /* @__PURE__ */ React.createElement("button", { onClick: onPreview }, "Preview processed event"), /* @__PURE__ */ React.createElement("div", { className: "ch-edit-actions" }, /* @__PURE__ */ React.createElement("button", { onClick: onDuplicate }, "Duplicate"), /* @__PURE__ */ React.createElement("button", { disabled: event.length < 2, onClick: onSplit }, "Split"), /* @__PURE__ */ React.createElement("button", { onClick: onDelete }, "Delete")))));
@@ -12555,17 +12623,37 @@ ${error.message}`);
 
   // src/chopper/device.ts
   var protocol = "pentavox-chopper-device-v1";
-  function deviceRequest(type, data = {}) {
+  function deviceRequest(type, data = {}, options = {}) {
     if (window.parent === window || location.protocol === "file:") return Promise.reject(Error("Device access requires this preview embedded in a compatible Studio using its existing connection. Standalone Import/Export remains available."));
     const id = crypto.randomUUID(), origin = location.origin;
     return new Promise((resolve, reject) => {
+      let last;
       const cleanup = () => {
         clearTimeout(timer);
         window.removeEventListener("message", receive);
       };
       const receive = (event) => {
         const m = event.data;
-        if (event.source !== window.parent || event.origin !== origin || m?.protocol !== protocol || m.type !== "result" || m.id !== id) return;
+        if (event.source !== window.parent || event.origin !== origin || m?.protocol !== protocol) return;
+        if (m.type === "connection" && m.connected === false) {
+          cleanup();
+          reject(Error("Device disconnected. Inspect module SD before retrying; any transfer may be partially committed."));
+          return;
+        }
+        if (m.id !== id) return;
+        if (m.type === "progress") {
+          const p = m.value;
+          if (type !== "upload-sample" || !p || !["writing", "committing"].includes(p.phase) || typeof p.path !== "string" || !/^\/LOOPS\/(?!0000)\d{4}\.WAV$/i.test(p.path) || !Number.isSafeInteger(p.totalBytes) || p.totalBytes < 1 || p.totalBytes > 6e6 || !Number.isSafeInteger(p.completedBytes) || p.completedBytes < 0 || p.completedBytes > p.totalBytes) return;
+          if (p.phase === "committing" !== (p.completedBytes === p.totalBytes)) return;
+          if (last && (p.path !== last.path || p.totalBytes !== last.totalBytes || p.completedBytes <= last.completedBytes)) return;
+          last = { phase: p.phase, path: p.path, completedBytes: p.completedBytes, totalBytes: p.totalBytes };
+          try {
+            options.onProgress?.(last);
+          } catch {
+          }
+          return;
+        }
+        if (m.type !== "result") return;
         cleanup();
         m.ok ? resolve(m.value) : reject(Error(m.error || "Device operation failed."));
       };
@@ -12575,7 +12663,12 @@ ${error.message}`);
         reject(Error(type === "read-pattern-banks" ? "Reading pattern banks timed out; no writes were requested." : longTransfer ? `${type === "upload-pattern" ? "Pattern upload" : "Upload"} timed out; the transfer may already be partway committed. Inspect the module before retrying.` : "No compatible Studio response. Connect the module in the parent Studio and retry."));
       }, longTransfer ? 18e4 : 15e3);
       window.addEventListener("message", receive);
-      window.parent.postMessage({ protocol, type, id, ...data }, origin);
+      try {
+        window.parent.postMessage({ ...data, protocol, type, id }, origin);
+      } catch (error) {
+        cleanup();
+        reject(error);
+      }
     });
   }
 
@@ -12611,14 +12704,19 @@ ${error.message}`);
   // src/chopper/components/DeviceActions.tsx
   function DeviceActions({ bankCounts, sample, sampleAvailable, patterns, patternsAvailable, onMessage, onError }) {
     const [caps, setCaps] = React.useState(null), [busy, setBusy] = React.useState(false), [files, setFiles] = React.useState([]), [selected, setSelected] = React.useState("");
+    const [feedback, setFeedback] = React.useState(null), running = React.useRef(false);
     const run = async (job) => {
-      if (busy) return;
+      if (running.current) return;
+      running.current = true;
       setBusy(true);
+      setFeedback(null);
       try {
         await job();
       } catch (error) {
+        setFeedback({ message: error instanceof Error ? error.message : String(error), error: true });
         onError(error);
       } finally {
+        running.current = false;
         setBusy(false);
       }
     };
@@ -12627,12 +12725,22 @@ ${error.message}`);
       setCaps(capabilities);
       onMessage("Device SD capabilities checked. No files transferred.");
     }) }, "Check device connection"), /* @__PURE__ */ React.createElement("button", { disabled: busy || !sampleAvailable || !caps?.sampleUpload, onClick: () => run(async () => {
+      setFeedback({ message: "Preparing sample\u2026", pending: true });
       const bytes = await sample();
-      if (!confirm("Upload this prepared sample to a new /LOOPS file on the module SD? Existing files will not be replaced. This does not select it for playback.")) return;
-      const result = await deviceRequest("upload-sample", { bytes: bytes.slice().buffer });
-      if (result?.state !== "uploaded" || typeof result.path !== "string") throw Error("Invalid upload confirmation. Inspect module SD before retrying.");
-      onMessage(`Uploaded to device SD: ${result.path}. Not selected; audibly active is unverified.`);
-    }) }, "Upload sample to device"), /* @__PURE__ */ React.createElement("button", { disabled: busy || !caps?.sampleDownload, onClick: () => run(async () => {
+      if (!confirm("Upload this prepared sample to a new /LOOPS file on the module SD? Existing files will not be replaced. This does not select it for playback.")) {
+        setFeedback({ message: "Upload cancelled; no device upload was requested." });
+        return;
+      }
+      setFeedback({ message: "Waiting for device SD transfer\u2026", pending: true });
+      const result = await deviceRequest("upload-sample", { bytes: bytes.slice().buffer }, { onProgress: (progress) => {
+        const percent = Math.floor(progress.completedBytes / progress.totalBytes * 100);
+        setFeedback({ message: progress.phase === "committing" ? `Awaiting SD commit confirmation: ${progress.path}\u2026` : `Writing ${progress.path}: ${percent}% \xB7 ${progress.completedBytes} / ${progress.totalBytes} bytes acknowledged`, pending: true, progress });
+      } });
+      if (result?.state !== "uploaded" || typeof result.path !== "string" || !/^\/LOOPS\/(?!0000)\d{4}\.WAV$/i.test(result.path)) throw Error("Invalid upload confirmation. Inspect module SD before retrying.");
+      const message = `Stored on SD: ${result.path}. Not loaded into a Looper slot; playback is unverified.`;
+      setFeedback({ message });
+      onMessage(message);
+    }) }, "Upload sample to device"), feedback && /* @__PURE__ */ React.createElement("div", { className: "ch-device-feedback", role: feedback.error ? "alert" : "status", "aria-live": feedback.error ? "assertive" : "polite" }, /* @__PURE__ */ React.createElement("p", null, feedback.message), feedback.pending && (feedback.progress?.phase === "writing" ? /* @__PURE__ */ React.createElement("progress", { "aria-label": "Sample SD upload", max: feedback.progress.totalBytes, value: feedback.progress.completedBytes }) : /* @__PURE__ */ React.createElement("progress", { "aria-label": feedback.progress?.phase === "committing" ? "Awaiting SD commit" : "Preparing or waiting for sample upload" }))), /* @__PURE__ */ React.createElement("button", { disabled: busy || !caps?.sampleDownload, onClick: () => run(async () => {
       const result = await deviceRequest("list-samples");
       if (!Array.isArray(result.files)) throw Error("Invalid device file listing.");
       setFiles(result.files);
@@ -12678,7 +12786,12 @@ ${error.message}`);
   }
 
   // ../../studio/model/chopper_event_bank.js
-  var PVXE_VERSION = 1;
+  var hasEffect = (e) => (e.retriggerProbability ?? 0) !== 0 || e.pitchedRush === true || e.tapeStop === true;
+  var bankVersion = (bank) => {
+    const version = bank.version ?? 1;
+    if (version !== 1 && version !== 2) fail("unsupported version");
+    return bank.patterns.some((p) => p.events.some(hasEffect)) ? 2 : version;
+  };
   var HEADER_BYTES = 32;
   var EVENT_BYTES = 12;
   var MAX_PATTERNS2 = 20;
@@ -12695,19 +12808,24 @@ ${error.message}`);
   function checkSource(source) {
     if (!source || !isU(source.sampleRate, 4294967295) || source.sampleRate < 1 || !isU(source.frames, 4294967295) || source.frames < 1 || ![1, 2].includes(source.channels) || !isU(source.beats, 65535) || source.beats < 4 || source.beats % 4 || !isU(source.pcmCrc, 4294967295)) fail("invalid source identity");
   }
-  function checkEvent(e, beats, sourceBeats, end) {
+  function checkEvent(e, beats, sourceBeats, end, version) {
+    const retrigger = e?.retriggerProbability ?? 0, rush = e?.pitchedRush ?? false, stop = e?.tapeStop ?? false;
+    if (!isU(retrigger, 100) || typeof rush !== "boolean" || typeof stop !== "boolean" || Number(retrigger > 0) + Number(rush) + Number(stop) > 1 || (rush ? ![2, 4, 8].includes(e.rushHits) : e?.rushHits !== void 0 && e.rushHits !== 0) || hasEffect(e ?? {}) && (version !== 2 || e.reverse)) fail("invalid effect combination or argument");
     if (!e || !isU(e.step, 65535) || !isU(e.length, 65535) || e.step < end || e.length < 1 || e.step + e.length > beats * 4 || !isU(e.cue, MAX_CUE) || typeof e.absolute !== "boolean" || typeof e.reverse !== "boolean" || typeof e.gate !== "boolean" || e.absolute && e.cue >= sourceBeats || !REPEATS.includes(e.repeat) || !ROLLS.includes(e.roll) || !Number.isInteger(e.pitch) || e.pitch < -24 || e.pitch > 24 || !isU(e.gain, 200) || !isU(e.probability, 100)) fail("invalid or overlapping event");
+    if (rush && e.length * 4 < e.rushHits * e.roll) fail("Pitched Rush hit is shorter than the slicer minimum duration");
     return e.step + e.length;
   }
   function validateBank(bank) {
     checkSource(bank?.source);
+    const version = bankVersion(bank);
+    if (version !== 1 && version !== 2) fail("unsupported version");
     if (!isU(bank.revision, 4294967295) || !Array.isArray(bank.patterns) || bank.patterns.length < 1 || bank.patterns.length > MAX_PATTERNS2) fail("invalid pattern count");
     let base = false;
     for (const p of bank.patterns) {
       if (!ROLES.includes(p?.role) || !Number.isInteger(p.beats) || p.beats < 4 || p.beats > 64 || p.beats % 4 || !Array.isArray(p.events) || p.events.length > MAX_EVENTS2) fail("invalid pattern");
       base || (base = p.role === "base");
       let end = 0;
-      for (const e of p.events) end = checkEvent(e, p.beats, bank.source.beats, end);
+      for (const e of p.events) end = checkEvent(e, p.beats, bank.source.beats, end, version);
     }
     if (!base) fail("a base pattern is required");
   }
@@ -12716,13 +12834,14 @@ ${error.message}`);
     if (bytes.length < HEADER_BYTES) fail("truncated");
     if (String.fromCharCode(...bytes.subarray(0, 4)) !== "PVXE") fail("bad magic");
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    if (bytes[4] !== PVXE_VERSION) fail("unsupported version");
+    if (bytes[4] !== 1 && bytes[4] !== 2) fail("unsupported version");
     if (bytes[5] !== 0) fail("unsupported flags");
     const payload = bytes.length - HEADER_BYTES;
     if (view.getUint16(6, true) !== payload) fail("length mismatch");
     if (view.getUint32(8, true) !== crc322(bytes.subarray(HEADER_BYTES))) fail("checksum mismatch");
     const count = bytes[21];
     const bank = {
+      version: bytes[4],
       source: {
         sampleRate: view.getUint32(12, true),
         frames: view.getUint32(16, true),
@@ -12742,7 +12861,9 @@ ${error.message}`);
       if (n > MAX_EVENTS2 || bytes.length - at < n * EVENT_BYTES) fail("truncated");
       for (let i = 0; i < n; i += 1, at += EVENT_BYTES) {
         const flags = bytes[at + 5];
-        if ((flags & ~7) !== 0 || bytes[at + 11] !== 0) fail("reserved bits set");
+        if (bytes[4] === 1 && ((flags & ~7) !== 0 || bytes[at + 11] !== 0)) fail("reserved bits set");
+        const mode = flags & 56, arg = bytes[at + 11];
+        if (bytes[4] === 2 && (flags & ~63 || ![0, 8, 16, 32].includes(mode) || mode === 8 && (arg < 1 || arg > 100) || mode === 16 && ![2, 4, 8].includes(arg) || (mode === 0 || mode === 32) && arg !== 0)) fail("invalid effect flags or argument");
         pattern.events.push({
           step: view.getUint16(at, true),
           length: view.getUint16(at + 2, true),
@@ -12754,7 +12875,8 @@ ${error.message}`);
           roll: bytes[at + 7],
           pitch: bytes[at + 8] << 24 >> 24,
           gain: bytes[at + 9],
-          probability: bytes[at + 10]
+          probability: bytes[at + 10],
+          ...mode === 8 ? { retriggerProbability: arg } : mode === 16 ? { pitchedRush: true, rushHits: arg } : mode === 32 ? { tapeStop: true } : {}
         });
       }
       bank.patterns.push(pattern);
@@ -12782,7 +12904,11 @@ ${error.message}`);
       roll: e.roll,
       pitch: e.pitch,
       gain: grid(e.gain, 100, "gain"),
-      probability: grid(e.probability, 100, "probability")
+      probability: grid(e.probability, 100, "probability"),
+      ...e.retriggerProbability !== void 0 ? { retriggerProbability: grid(e.retriggerProbability, 100, "Retrigger probability") } : {},
+      ...e.pitchedRush !== void 0 ? { pitchedRush: e.pitchedRush } : {},
+      ...e.rushHits !== void 0 ? { rushHits: e.rushHits } : {},
+      ...e.tapeStop !== void 0 ? { tapeStop: e.tapeStop } : {}
     };
   }
   function bankFromEditor({ patterns, source, revision = 1 }) {
@@ -12826,11 +12952,9 @@ ${error.message}`);
       } catch {
       }
     }
-    return { format: "pentavox-chopper-pattern", version: 1, cueGrid: "quarter", patterns, ...source ? { source } : {} };
+    return { format: "pentavox-chopper-pattern", version: patternVersion(patterns), cueGrid: "quarter", patterns, ...source ? { source } : {} };
   }
   function transferPatterns(patterns, imported, audio) {
-    if (patterns.some((p) => p.events.some((e) => e.tapeStop)))
-      throw Error("This pattern uses tape stop, which the module cannot receive yet. Clear it, or keep it in this editor.");
     const source = imported ?? (audio ? {
       beats: sourceTiming(audio.frames, audio.sampleRate, audio.bpm),
       sampleRate: audio.sampleRate,
@@ -12866,7 +12990,10 @@ ${error.message}`);
         roll: e.roll,
         pitch: e.pitch,
         gain: e.gain / 100,
-        probability: e.probability / 100
+        probability: e.probability / 100,
+        ...e.retriggerProbability !== void 0 ? { retriggerProbability: e.retriggerProbability / 100 } : {},
+        ...e.pitchedRush ? { pitchedRush: true, rushHits: e.rushHits } : {},
+        ...e.tapeStop ? { tapeStop: true } : {}
       }))
     }));
     return validateTransfer(patterns, bank.source);
@@ -13839,7 +13966,7 @@ ${error.message}`);
         }
         const extendedData = state.sources.some((source) => (source.drumMarkers?.length ?? 0) > 0) || JSON.stringify(state.loopEffects) !== JSON.stringify([defaultLoopEffects(), defaultLoopEffects()]);
         const sets = this.patternSets();
-        const projectVersion = previousVersion >= 6 || JSON.stringify(sets[0]) !== JSON.stringify(sets[1]) ? 6 : extendedData || previousVersion >= 5 ? 5 : 4;
+        const projectVersion = previousVersion >= 7 || sets.some((set) => set.patterns.some((p) => p.events.some((e) => e.retriggerProbability || e.pitchedRush || e.tapeStop))) ? 7 : previousVersion >= 6 || JSON.stringify(sets[0]) !== JSON.stringify(sets[1]) ? 6 : extendedData || previousVersion >= 5 ? 5 : 4;
         if (state.legacy && !files.has(state.legacy.archivePath))
           throw Error("Original legacy archive missing; save cancelled.");
         files.set("chopper.json", new TextEncoder().encode(mergeJson(this.projectText, {
@@ -14048,7 +14175,7 @@ ${error.message}`);
           const loopEffects = value.loopEffects === void 0 ? [defaultLoopEffects(), defaultLoopEffects()] : Array.isArray(value.loopEffects) && value.loopEffects.length === 2 ? [validateLoopEffects(value.loopEffects[0]), validateLoopEffects(value.loopEffects[1])] : (() => {
             throw Error("Invalid per-loop effects.");
           })();
-          if (value.format !== "pentavox-chopper-project" || ![1, 2, 3, 4, 5, 6].includes(value.version) || value.version >= 2 && (typeof value.sequence !== "boolean" || !Number.isFinite(value.probability) || value.probability < 0 || value.probability > 1) || value.previewLevel !== void 0 && (!Number.isFinite(value.previewLevel) || value.previewLevel < 0 || value.previewLevel > 1) || !Array.isArray(value.sources) || value.sources.length > 64 || !Number.isFinite(value.bpm) || value.bpm < 20 || value.bpm > 400 || !Number.isInteger(value.seed) || value.seed < 0 || value.seed > 4294967295)
+          if (value.format !== "pentavox-chopper-project" || ![1, 2, 3, 4, 5, 6, 7].includes(value.version) || value.version >= 2 && (typeof value.sequence !== "boolean" || !Number.isFinite(value.probability) || value.probability < 0 || value.probability > 1) || value.previewLevel !== void 0 && (!Number.isFinite(value.previewLevel) || value.previewLevel < 0 || value.previewLevel > 1) || !Array.isArray(value.sources) || value.sources.length > 64 || !Number.isFinite(value.bpm) || value.bpm < 20 || value.bpm > 400 || !Number.isInteger(value.seed) || value.seed < 0 || value.seed > 4294967295)
             throw Error("Invalid Chopper project.");
           parsePatterns(
             JSON.stringify({
