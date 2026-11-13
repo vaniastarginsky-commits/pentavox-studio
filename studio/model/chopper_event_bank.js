@@ -7,7 +7,7 @@ import { crc32 } from '../hostlink/frame.js';
 export const PVXE_VERSION = 1;
 export const HEADER_BYTES = 32;
 export const EVENT_BYTES = 12;
-export const MAX_PATTERNS = 8;
+export const MAX_PATTERNS = 20;
 export const MAX_EVENTS = 256;
 export const MAX_CUE = 63;
 // The largest bank this model can produce, straight from the wire layout in the header comment. The transport

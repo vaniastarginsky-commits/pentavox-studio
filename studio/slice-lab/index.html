@@ -9187,7 +9187,7 @@ ${error.message}`);
   }
   function parsePatterns(text) {
     const value = JSON.parse(text);
-    if (value?.format !== "pentavox-chopper-pattern" || value.version !== 1 || value.cueGrid !== "quarter" || !Array.isArray(value.patterns) || value.patterns.length < 1 || value.patterns.length > 8) throw Error("Not a supported Chopper pattern file. Legacy files must be opened in Compatibility.");
+    if (value?.format !== "pentavox-chopper-pattern" || value.version !== 1 || value.cueGrid !== "quarter" || !Array.isArray(value.patterns) || value.patterns.length < 1 || value.patterns.length > 20) throw Error("Not a supported Chopper pattern file. Legacy files must be opened in Compatibility.");
     const ids = /* @__PURE__ */ new Set();
     for (const p of value.patterns) {
       validatePattern(p);
@@ -11104,7 +11104,7 @@ ${error.message}`);
 
   // src/chopper/scheduler.ts
   function compileSequence(patterns, seed, probability) {
-    if (!Array.isArray(patterns) || patterns.length < 1 || patterns.length > 8) throw Error("A Seed bank needs 1\u20138 patterns.");
+    if (!Array.isArray(patterns) || patterns.length < 1 || patterns.length > 20) throw Error("A Seed bank needs 1\u201320 patterns.");
     const ids = /* @__PURE__ */ new Set();
     for (const p of patterns) {
       validatePattern(p);
@@ -12268,7 +12268,7 @@ ${error.message}`);
 
   // ../../studio/model/chopper_upload_result.js
   function describePatternUpload(result) {
-    if (!result || !["uploaded", "sent"].includes(result.state))
+    if (!result || !["uploaded", "sent", "failed"].includes(result.state))
       throw Error("Invalid pattern upload confirmation. Inspect module SD before retrying.");
     const stored = Array.isArray(result.stored) ? result.stored : [];
     const live = Array.isArray(result.live) ? result.live : [];
@@ -12278,21 +12278,25 @@ ${error.message}`);
       if (entry.result === "noGrid") return `Chopper ${name}: not staged \u2014 no loop grid in this module slot`;
       return `Chopper ${name}: ${entry.result}${entry.windowQuarters ? ` on a ${entry.windowQuarters}-quarter grid` : ""}`;
     });
+    const storageErrors = Array.isArray(result.storage) ? result.storage.filter((s) => s.error) : [];
+    const expectedFiles = Array.isArray(result.banks) ? result.banks.length : 2;
     const waiting = live.some((entry) => entry.result === "noGrid");
     const failed = live.some((entry) => entry.error || !["staged", "gridAdapted", "noGrid"].includes(entry.result));
     const text = [
       stored.length ? `Stored ${stored.join(" and ")} on module SD.` : "No pattern files stored on SD.",
+      ...storageErrors.map((s) => `SD ${s.slot ? "B" : "A"}: no complete write confirmation (${s.error}); inspect the file before retrying.`),
+      ...Array.isArray(result.banks) ? result.banks.map((b) => `Requested bank ${b.slot ? "B" : "A"}: ${b.patterns} patterns, ${b.bytes} bytes${b.names?.length ? ` (${b.names.join(", ")})` : ""}.`) : [],
       ...answers,
       !live.length ? "Not staged live." : "",
       waiting ? "Load or record a loop in the indicated module slots, then send the patterns again. A WAV in Studio is not a loop loaded in the module. No reboot is required for live staging." : "",
       failed ? "A live transfer failed. Inspect the connection before retrying; successful slots may already have changed." : "",
       "Boot loading and audible playback are not verified by this transfer."
     ].filter(Boolean).join(" ");
-    return { message: text, error: failed || waiting && stored.length !== 2 };
+    return { message: text, error: result.state === "failed" || storageErrors.length > 0 || failed || waiting && stored.length !== expectedFiles };
   }
 
   // src/chopper/components/DeviceActions.tsx
-  function DeviceActions({ sample, sampleAvailable, patterns, patternsAvailable, onMessage, onError }) {
+  function DeviceActions({ bankCounts, sample, sampleAvailable, patterns, patternsAvailable, onMessage, onError }) {
     const [caps, setCaps] = React.useState(null), [busy, setBusy] = React.useState(false), [files, setFiles] = React.useState([]), [selected, setSelected] = React.useState("");
     const run = async (job) => {
       if (busy) return;
@@ -12305,7 +12309,7 @@ ${error.message}`);
         setBusy(false);
       }
     };
-    return /* @__PURE__ */ React.createElement("details", { className: "ch-device-actions" }, /* @__PURE__ */ React.createElement("summary", null, "Samples / Patterns \xB7 Device"), /* @__PURE__ */ React.createElement("p", null, "Uses the existing Studio connection. Upload writes a file to module SD; it does not select or start it."), /* @__PURE__ */ React.createElement("button", { disabled: busy, onClick: () => run(async () => {
+    return /* @__PURE__ */ React.createElement("details", { className: "ch-device-actions" }, /* @__PURE__ */ React.createElement("summary", null, "Samples / Patterns \xB7 Device"), /* @__PURE__ */ React.createElement("p", null, "Uses the existing Studio connection. SD storage and live staging are separate outcomes, not playback confirmation."), /* @__PURE__ */ React.createElement("p", null, "Module Both mode requires both Choppers to be ready and coherent. If one is not ready, chopping is withheld for both; there is no automatic single-slot fallback."), /* @__PURE__ */ React.createElement("button", { disabled: busy, onClick: () => run(async () => {
       const capabilities = await deviceRequest("capabilities");
       setCaps(capabilities);
       onMessage("Device SD capabilities checked. No files transferred.");
@@ -12325,14 +12329,14 @@ ${error.message}`);
       if (!(result.bytes instanceof ArrayBuffer)) throw Error("Invalid sample download.");
       download(new Blob([result.bytes], { type: "audio/wav" }), selected.split("/").pop());
       onMessage(`Downloaded ${selected} byte-for-byte from device. Import the saved WAV to edit it; no automatic migration.`);
-    }) }, "Download sample from device")), caps && !caps.newPatternUpload && /* @__PURE__ */ React.createElement("p", null, "This module does not advertise PVXE pattern upload. Export patterns locally; no lossy conversion."), /* @__PURE__ */ React.createElement("button", { disabled: busy || !patternsAvailable || !caps?.newPatternUpload, onClick: () => run(async () => {
-      const payload = await patterns();
-      if (!confirm(`Send ${payload.patterns.length} pattern(s) to BOTH Choppers? ${caps?.patternFileStorage ? "This replaces /CHOPPER/A.PVXE and /CHOPPER/B.PVXE on module SD." : "This firmware does not store pattern files."} ${caps?.patternLiveUpload ? "Live staging will be attempted separately for A and B; each needs a loop loaded in the module." : "No live staging is available."} Pattern names stay in this editor: the module keys patterns by role.`)) return;
-      const result = await deviceRequest("upload-pattern", payload);
+    }) }, "Download sample from device")), caps && !caps.newPatternUpload && /* @__PURE__ */ React.createElement("p", null, "This module does not advertise PVXE pattern upload. Export patterns locally; no lossy conversion."), bankCounts && /* @__PURE__ */ React.createElement("p", null, "Pattern banks \xB7 A (", bankCounts[0], "/20) \xB7 B (", bankCounts[1], "/20). Each send replaces a complete bank."), ["both", "A", "B"].map((target2) => /* @__PURE__ */ React.createElement("button", { key: target2, disabled: busy || !patternsAvailable || !caps?.newPatternUpload, onClick: () => run(async () => {
+      const payload = await patterns(target2);
+      if (!confirm(`Replace the complete pattern bank for ${target2 === "both" ? "A and B" : target2}? ${target2 === "both" ? "Each receives its own set." : "The other slot is not changed."} SD storage and live staging are reported separately; no playback is confirmed.`)) return;
+      const result = await deviceRequest("upload-pattern", { ...payload, ...payload.banks ? { target: target2 } : {} });
       const summary = describePatternUpload(result);
       if (summary.error) throw Error(summary.message);
       onMessage(summary.message);
-    }) }, "Send patterns to A + B"), ["A", "B"].map((slot) => /* @__PURE__ */ React.createElement("button", { key: slot, disabled: busy || !caps?.legacyPatternDownload, onClick: () => run(async () => {
+    }) }, `Send patterns to ${target2 === "both" ? "A + B" : target2}`)), ["A", "B"].map((slot) => /* @__PURE__ */ React.createElement("button", { key: slot, disabled: busy || !caps?.legacyPatternDownload, onClick: () => run(async () => {
       const path = `/CHOPPER/${slot}.PVXP`, result = await deviceRequest("download-pattern", { path });
       if (!(result.bytes instanceof ArrayBuffer)) throw Error("Invalid pattern download.");
       download(new Blob([result.bytes], { type: "application/octet-stream" }), `${slot}.PVXP`);
@@ -12364,7 +12368,7 @@ ${error.message}`);
   var PVXE_VERSION = 1;
   var HEADER_BYTES = 32;
   var EVENT_BYTES = 12;
-  var MAX_PATTERNS2 = 8;
+  var MAX_PATTERNS2 = 20;
   var MAX_EVENTS2 = 256;
   var MAX_CUE = 63;
   var MAX_BANK_BYTES = HEADER_BYTES + MAX_PATTERNS2 * (4 + MAX_EVENTS2 * EVENT_BYTES);
@@ -12498,6 +12502,7 @@ ${error.message}`);
   // src/chopper/pattern-transfer.ts
   function validateTransfer(patterns, source) {
     bankFromEditor({ patterns, source });
+    if (patterns.filter((p) => p.role === "base").length !== 1) throw Error("Playback needs exactly one BASE pattern.");
     return { patterns, source };
   }
   function patternDocument(patterns, imported, audio) {
@@ -12563,6 +12568,7 @@ ${error.message}`);
       this.redo = [];
       this.snapshot = () => structuredClone({
         legacy: this.state.legacy,
+        patternSets: this.patternSets(),
         patternSource: this.state.patternSource,
         sources: this.state.sources,
         patterns: this.state.patterns,
@@ -12703,16 +12709,29 @@ ${error.message}`);
           this.report(error);
         }
       };
+      // Materialize the active editor view at persistence/slot boundaries.
+      this.patternSets = () => this.state.patternSets.map(
+        (set, slot) => slot === this.state.slot ? { patterns: this.state.patterns, patternSource: this.state.patternSource } : set
+      );
       this.selectSlot = (slot) => {
         const state = this.state;
         this.fileDropGeneration++;
         this.audio.editSlot = slot;
+        const patternSets = this.patternSets(), set = patternSets[slot];
+        const selected = set.patterns.find((p) => p.id === state.patternBindings[slot]) ?? set.patterns[0];
+        const source = state.sources.find((s) => s.id === state.bindings[slot]);
         this.setState({
           slot,
+          patternSets,
+          patterns: set.patterns,
+          patternSource: set.patternSource,
+          patternBindings: state.patternBindings.map((id, index) => index === slot ? selected.id : id),
+          sourceBpm: source ? String(source.bpm) : "",
+          bars: source ? String(Math.round(source.frames / source.sampleRate * source.bpm / 240)) : "",
           droppedSource: null,
           prepare: false,
           sourceId: state.bindings[slot],
-          patternId: state.patternBindings[slot] && state.patterns.some((p) => p.id === state.patternBindings[slot]) ? state.patternBindings[slot] : state.patterns[0].id,
+          patternId: selected.id,
           selected: null,
           cue: null,
           armed: false,
@@ -12724,7 +12743,7 @@ ${error.message}`);
         });
       };
       this.addPattern = (role) => {
-        if (this.state.patterns.length >= 8) return;
+        if (this.state.patterns.length >= 20) return this.report(Error("Maximum 20 patterns per slot."));
         const pattern = {
           ...newPattern(
             `${role === "fill" ? "FILL" : "Variation"} ${this.state.patterns.length}`,
@@ -12751,6 +12770,30 @@ ${error.message}`);
             }
           }
         );
+      };
+      this.copyPatternToOther = (wholeSet = false) => {
+        try {
+          const sets = structuredClone(this.patternSets()), other = 1 - this.state.slot;
+          const from = sets[this.state.slot], destination = sets[other];
+          const audio = this.state.sources.find((s) => s.id === this.state.bindings[this.state.slot]);
+          const origin = patternDocument(from.patterns, from.patternSource, audio).source ?? null;
+          const targetAudio = this.state.sources.find((s) => s.id === this.state.bindings[other]);
+          const targetSource = wholeSet ? origin : patternDocument(destination.patterns, destination.patternSource, targetAudio).source ?? origin;
+          const copies = structuredClone(wholeSet ? from.patterns : [this.pattern]);
+          for (const p of copies) {
+            p.id = crypto.randomUUID();
+            for (const e of p.events) e.id = crypto.randomUUID();
+          }
+          const patterns = wholeSet ? copies : [...destination.patterns.filter((p) => !(copies[0].role === "base" && p.role === "base")), ...copies];
+          if (patterns.length > 20) throw Error("Destination exceeds 20 patterns.");
+          if (targetSource) validateTransfer(patterns, targetSource);
+          if (!confirm(wholeSet ? "Replace the other Studio pattern set with an independent copy? No device action." : "Copy this pattern to the other Studio set? Its authored grid applies; an incoming BASE replaces its BASE. No device action.")) return;
+          this.remember();
+          sets[other] = { patterns, patternSource: targetSource };
+          this.setState({ patternSets: sets, patternBindings: this.state.patternBindings.map((id, slot) => slot === other ? patterns.find((p) => p.id === id)?.id ?? patterns[0].id : id), message: "Copied in Studio only; send the destination bank to replace it on the module.", error: false });
+        } catch (error) {
+          this.report(error);
+        }
       };
       this.changePatternBeats = (beats) => {
         const pattern = this.pattern;
@@ -12859,10 +12902,10 @@ ${error.message}`);
         if (this.state.playing) {
           const next = this.plan(pattern, source, patterns), other = 1 - this.state.slot, otherSource = this.state.sources.find(
             (s) => s.id === this.state.bindings[other]
-          ), otherPattern = patterns.find((p) => p.id === this.state.patternBindings[other]) ?? patterns[0], otherPlan = otherSource ? this.plan(
+          ), otherPatterns = this.patternSets()[other].patterns, otherPattern = otherPatterns.find((p) => p.id === this.state.patternBindings[other]) ?? otherPatterns[0], otherPlan = otherSource ? this.plan(
             otherPattern,
             otherSource,
-            patterns.map((p) => p.id === pattern.id ? pattern : p)
+            otherPatterns
           ) : null;
           const audio = replaceSource && source ? audioLibrary.get(source.id) : void 0;
           if (replaceSource && !audio)
@@ -13023,12 +13066,12 @@ ${error.message}`);
               (source2) => source2.id === this.state.bindings[slot]
             );
             if (!source) continue;
-            const pattern = this.state.patterns.find(
+            const pattern = this.patternSets()[slot].patterns.find(
               (p) => p.id === this.state.patternBindings[slot]
-            ) ?? this.pattern;
+            ) ?? this.patternSets()[slot].patterns[0];
             const audio = audioLibrary.get(source.id);
             if (!audio) throw Error("Bound source audio unavailable.");
-            bindings[slot] = { plan: this.plan(pattern, source), buffer: audio, effects: this.state.loopEffects[slot] };
+            bindings[slot] = { plan: this.plan(pattern, source, this.patternSets()[slot].patterns), buffer: audio, effects: this.state.loopEffects[slot] };
           }
           if (this.state.mode === "A" && !bindings[0] || this.state.mode === "B" && !bindings[1])
             throw Error(
@@ -13232,7 +13275,7 @@ ${error.message}`);
             patterns,
             patternSource,
             patternId: patterns[0].id,
-            patternBindings: [patterns[0].id, patterns[0].id],
+            patternBindings: this.state.patternBindings.map((id, slot) => slot === this.state.slot ? patterns[0].id : id),
             selected: null,
             error: false,
             message: patternSource ? "Patterns imported with their authored grid. Sending to the module does not require a local WAV. PVXE names are role labels." : "Patterns imported. To send without a WAV, import A.PVXE / B.PVXE or a JSON carrying source metadata."
@@ -13327,7 +13370,8 @@ ${error.message}`);
           } catch {
           }
           const extendedData = state.sources.some((source) => (source.drumMarkers?.length ?? 0) > 0) || JSON.stringify(state.loopEffects) !== JSON.stringify([defaultLoopEffects(), defaultLoopEffects()]);
-          const projectVersion = extendedData || previousVersion >= 5 ? 5 : 4;
+          const sets = this.patternSets();
+          const projectVersion = previousVersion >= 6 || JSON.stringify(sets[0]) !== JSON.stringify(sets[1]) ? 6 : extendedData || previousVersion >= 5 ? 5 : 4;
           if (state.legacy && !files.has(state.legacy.archivePath))
             throw Error("Original legacy archive missing; save cancelled.");
           files.set(
@@ -13345,6 +13389,7 @@ ${error.message}`);
                 probability: state.probability,
                 sources: state.sources,
                 patterns: state.patterns,
+                ...projectVersion >= 6 ? { patternSets: sets } : {},
                 ...state.patternSource || previousHasPatternSource ? { patternSource: state.patternSource } : {},
                 sourceId: state.sourceId,
                 patternId: state.patternId,
@@ -13421,6 +13466,7 @@ ${error.message}`);
           bindings: [source?.id ?? "", ""],
           patternSource: null,
           patterns: [base],
+          patternSets: structuredClone([{ patterns: [base], patternSource: null }, { patterns: [base], patternSource: null }]),
           patternId: base.id,
           patternBindings: [base.id, base.id],
           slot: 0,
@@ -13465,6 +13511,8 @@ ${error.message}`);
               "legacy",
               "bindings",
               "patternBindings",
+              "patternSets",
+              "slot",
               "bpm",
               "seed",
               "sequence",
@@ -13503,7 +13551,7 @@ ${error.message}`);
           const loopEffects = value.loopEffects === void 0 ? [defaultLoopEffects(), defaultLoopEffects()] : Array.isArray(value.loopEffects) && value.loopEffects.length === 2 ? [validateLoopEffects(value.loopEffects[0]), validateLoopEffects(value.loopEffects[1])] : (() => {
             throw Error("Invalid per-loop effects.");
           })();
-          if (value.format !== "pentavox-chopper-project" || ![1, 2, 3, 4, 5].includes(value.version) || value.version >= 2 && (typeof value.sequence !== "boolean" || !Number.isFinite(value.probability) || value.probability < 0 || value.probability > 1) || !Array.isArray(value.sources) || value.sources.length > 64 || !Number.isFinite(value.bpm) || value.bpm < 20 || value.bpm > 400 || !Number.isInteger(value.seed) || value.seed < 0 || value.seed > 4294967295)
+          if (value.format !== "pentavox-chopper-project" || ![1, 2, 3, 4, 5, 6].includes(value.version) || value.version >= 2 && (typeof value.sequence !== "boolean" || !Number.isFinite(value.probability) || value.probability < 0 || value.probability > 1) || !Array.isArray(value.sources) || value.sources.length > 64 || !Number.isFinite(value.bpm) || value.bpm < 20 || value.bpm > 400 || !Number.isInteger(value.seed) || value.seed < 0 || value.seed > 4294967295)
             throw Error("Invalid Chopper project.");
           parsePatterns(
             JSON.stringify({
@@ -13514,6 +13562,14 @@ ${error.message}`);
             })
           );
           if (value.patternSource != null) validateTransfer(value.patterns, value.patternSource);
+          const loadedSets = value.version >= 6 ? value.patternSets : structuredClone([{ patterns: value.patterns, patternSource: value.patternSource ?? null }, { patterns: value.patterns, patternSource: value.patternSource ?? null }]);
+          if (!Array.isArray(loadedSets) || loadedSets.length !== 2) throw Error("Invalid per-slot pattern sets.");
+          for (const set of loadedSets) {
+            if (!set || !Array.isArray(set.patterns)) throw Error("Invalid slot pattern set.");
+            parsePatterns(JSON.stringify({ format: "pentavox-chopper-pattern", version: 1, cueGrid: "quarter", patterns: set.patterns }));
+            if (set.patternSource != null) validateTransfer(set.patterns, set.patternSource);
+          }
+          if (value.version >= 6 && JSON.stringify(loadedSets[value.slot]) !== JSON.stringify({ patterns: value.patterns, patternSource: value.patternSource ?? null })) throw Error("Conflicting active pattern set.");
           const buffers = /* @__PURE__ */ new Map(), blobs = /* @__PURE__ */ new Map(), ids = /* @__PURE__ */ new Set();
           let decodedBudget = 0;
           for (const s of value.sources) {
@@ -13546,7 +13602,7 @@ ${error.message}`);
           if (paired && (![0, 1].includes(value.slot) || !["A", "B", "Both"].includes(value.mode) || !Array.isArray(value.bindings) || value.bindings.length !== 2 || value.bindings.some(
             (id) => typeof id !== "string" || id && !ids.has(id)
           ) || value.bindings[value.slot] !== value.sourceId || !Array.isArray(value.patternBindings) || value.patternBindings.length !== 2 || value.patternBindings[value.slot] !== value.patternId || value.patternBindings.some(
-            (id) => !value.patterns.some((p) => p.id === id)
+            (id, slot) => !loadedSets[slot].patterns.some((p) => p.id === id)
           )))
             throw Error("Invalid A/B bindings.");
           if (value.sourceId)
@@ -13566,12 +13622,12 @@ ${error.message}`);
                 seed: value.seed
               });
           if (paired)
-            for (const id of value.bindings) {
+            for (const [slot, id] of value.bindings.entries()) {
               if (!id) continue;
               const source = value.sources.find(
                 (source2) => source2.id === id
               );
-              for (const pattern of value.patterns)
+              for (const pattern of loadedSets[slot].patterns)
                 validatePlan({
                   version: 1,
                   bpm: value.bpm,
@@ -13684,6 +13740,7 @@ ${error.message}`);
             loopEffects,
             sourceId: value.sourceId,
             patterns: value.patterns,
+            patternSets: loadedSets,
             patternSource: value.patternSource ?? null,
             patternId: value.patternId,
             bpm: value.bpm,
@@ -13710,10 +13767,11 @@ ${error.message}`);
         const from = redo ? this.redo : this.undo, to = redo ? this.undo : this.redo, snapshot = from[from.length - 1];
         if (!snapshot) return;
         try {
-          const { patterns, bindings, sources, legacy, loopEffects } = snapshot, patternBindings = snapshot.patternBindings.map(
-            (id) => patterns.some((p) => p.id === id) ? id : patterns[0].id
+          const { patterns, bindings, sources, legacy, loopEffects } = snapshot, sets = snapshot.patternSets, patternBindings = snapshot.patternBindings.map(
+            (id, slot) => sets[slot].patterns.some((p) => p.id === id) ? id : sets[slot].patterns[0].id
           );
-          const selected = patterns.find((p) => p.id === patternBindings[this.state.slot]) ?? patterns[0], source = sources.find((s) => s.id === bindings[this.state.slot]);
+          const activeSet = sets[this.state.slot];
+          const selected = activeSet.patterns.find((p) => p.id === patternBindings[this.state.slot]) ?? activeSet.patterns[0], source = sources.find((s) => s.id === bindings[this.state.slot]);
           if (this.state.playing) {
             const entries = [0, 1].map((slot) => {
               const restored = sources.find((s) => s.id === bindings[slot]);
@@ -13723,9 +13781,9 @@ ${error.message}`);
               return {
                 slot,
                 plan: this.plan(
-                  patterns.find((p) => p.id === patternBindings[slot]) ?? patterns[0],
+                  sets[slot].patterns.find((p) => p.id === patternBindings[slot]) ?? sets[slot].patterns[0],
                   restored,
-                  patterns
+                  sets[slot].patterns
                 ),
                 buffer
               };
@@ -13744,8 +13802,9 @@ ${error.message}`);
             sources,
             legacy,
             loopEffects,
-            patterns,
-            patternSource: snapshot.patternSource ?? null,
+            patternSets: sets,
+            patterns: activeSet.patterns,
+            patternSource: activeSet.patternSource ?? null,
             bindings,
             patternBindings,
             patternId: selected.id,
@@ -13768,11 +13827,12 @@ ${error.message}`);
           this.report(error);
         }
       };
-      const base = newPattern();
+      const base = newPattern(), baseB = newPattern();
       this.state = {
+        patternSets: [{ patterns: [base], patternSource: null }, { patterns: [baseB], patternSource: null }],
         slot: 0,
         bindings: ["", ""],
-        patternBindings: [base.id, base.id],
+        patternBindings: [base.id, baseB.id],
         mode: "A",
         audibleMode: "A",
         pendingMode: null,
@@ -14087,6 +14147,7 @@ ${error.message}`);
         })), /* @__PURE__ */ React.createElement("div", { className: "ch-library-actions" }, /* @__PURE__ */ React.createElement(
           DeviceActions,
           {
+            bankCounts: this.patternSets().map((set) => set.patterns.length),
             sampleAvailable: Boolean(source),
             sample: async () => {
               if (!this.source) throw Error("Select a source first.");
@@ -14097,13 +14158,18 @@ ${error.message}`);
             },
             onMessage: (message) => this.setState({ message, error: false }),
             patternsAvailable: Boolean(this.state.patterns.length),
-            patterns: async () => {
-              const payload = transferPatterns(this.state.patterns, this.state.patternSource, this.source);
-              return { patterns: payload.patterns, source: { ...payload.source } };
+            patterns: async (target2 = "both") => {
+              const slots = target2 === "A" ? [0] : target2 === "B" ? [1] : [0, 1];
+              const sets = this.patternSets();
+              return { banks: slots.map((slot) => {
+                const set = sets[slot], source2 = this.state.sources.find((s2) => s2.id === this.state.bindings[slot]);
+                const payload = transferPatterns(set.patterns, set.patternSource, source2);
+                return { slot, patterns: payload.patterns, source: { ...payload.source } };
+              }) };
             },
             onError: this.report
           }
-        )), /* @__PURE__ */ React.createElement("h2", null, "Pattern files"), /* @__PURE__ */ React.createElement("button", { title: "Import pattern JSON or A.PVXE / B.PVXE. PVXE includes the authored grid; a local WAV is not required to send it.", onClick: () => this.patternInput.click() }, "Import patterns"), /* @__PURE__ */ React.createElement("button", { onClick: this.exportPatterns }, "Export patterns"), /* @__PURE__ */ React.createElement("details", null, /* @__PURE__ */ React.createElement("summary", null, "Compatibility"), /* @__PURE__ */ React.createElement(
+        )), /* @__PURE__ */ React.createElement("h2", null, "Pattern files"), /* @__PURE__ */ React.createElement("button", { title: "Import pattern JSON or A.PVXE / B.PVXE. PVXE includes the authored grid; a local WAV is not required to send it.", onClick: () => this.patternInput.click() }, "Import patterns"), /* @__PURE__ */ React.createElement("button", { onClick: this.exportPatterns }, "Export patterns"), /* @__PURE__ */ React.createElement("p", null, "Pattern set ", s.slot === 0 ? "A" : "B", " \xB7 ", s.patterns.length, "/20. Editing this set does not edit the other loop."), /* @__PURE__ */ React.createElement("button", { onClick: () => this.copyPatternToOther() }, "Copy pattern to ", s.slot === 0 ? "B" : "A"), /* @__PURE__ */ React.createElement("button", { onClick: () => this.copyPatternToOther(true) }, "Copy whole set to ", s.slot === 0 ? "B" : "A"), /* @__PURE__ */ React.createElement("details", null, /* @__PURE__ */ React.createElement("summary", null, "Compatibility"), /* @__PURE__ */ React.createElement(
           "button",
           {
             onClick: () => {
@@ -14257,7 +14323,7 @@ ${error.message}`);
             className: "ch-icon-action",
             "aria-label": "New variation",
             title: "New variation",
-            disabled: s.patterns.length >= 8,
+            disabled: s.patterns.length >= 20,
             onClick: () => this.addPattern("variation")
           },
           "+"
@@ -14268,7 +14334,7 @@ ${error.message}`);
             className: "ch-icon-action",
             "aria-label": "New FILL",
             title: "New FILL",
-            disabled: s.patterns.length >= 8,
+            disabled: s.patterns.length >= 20,
             onClick: () => this.addPattern("fill")
           },
           "+F"

@@ -18,7 +18,12 @@ export function mountChopperDeviceBridge({frame,request,window:win=window}){
    // A legacy bank needs its geometry (a slice number without the loop's slice positions is meaningless), an
    // editor document needs its authored loop, and an already encoded bank needs nothing else.
    if(message.type==='convert-pattern'){ if(!encoded||!legacy)return; }
-   else if(!encoded&&!document)return;
+   else {
+    const banks=Array.isArray(message.banks)&&message.banks.length>=1&&message.banks.length<=2&&message.banks.every(b=>
+     (b?.slot===0||b?.slot===1)&&((b.bytes instanceof ArrayBuffer&&b.bytes.byteLength<=MAX_BANK_BYTES)||
+     (Array.isArray(b.patterns)&&b.source!==null&&typeof b.source==='object'&&JSON.stringify([b.patterns,b.source]).length<=1_000_000)));
+    if(!encoded&&!document&&!banks)return;
+   }
   }
   const reply=result=>event.source.postMessage({protocol:CHOPPER_DEVICE_PROTOCOL,id:message.id,type:'result',...result},event.origin);
   if(completed.has(message.id)){reply(completed.get(message.id));return;}

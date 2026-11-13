@@ -24,7 +24,7 @@ const COMMAND = Object.freeze({
 
 // 32 byte envelope + 8 patterns x (4 byte header + 256 events x 12 bytes). The same number the firmware buffer
 // is sized for and the chopper descriptor advertises as pvxeMax; a bank this model encodes cannot exceed it.
-export const PVXE_MAX_BYTES = 32 + 8 * (4 + 256 * 12);
+export const PVXE_MAX_BYTES = 32 + 20 * (4 + 256 * 12);
 
 // Names for the commit result byte, in the module's order.
 const PVXE_RESULTS = Object.freeze(['staged', 'gridAdapted']);

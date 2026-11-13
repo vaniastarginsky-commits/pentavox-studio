@@ -44,8 +44,13 @@ export class ChopperDeviceService {
     return {state:'uploaded',path,selected:false,audiblyActive:false};
    }
    if(request.type==='upload-pattern'||request.type==='convert-pattern'){
-    // One action for both Choppers, by construction: a pattern is the pair's behaviour, so this service does not
-    // offer a call that could leave slot A and slot B holding different banks.
+    // Preflight every selected bank before the first SD write or live upload.
+    const targets=request.target===undefined||request.target==='both'?[0,1]:request.target==='A'?[0]:request.target==='B'?[1]:null;
+    if(!targets)throw Error('Invalid pattern target.');
+    if(request.banks!==undefined&&(!Array.isArray(request.banks)||request.banks.length!==targets.length||request.banks.some((b,i)=>b?.slot!==targets[i])))throw Error('Expected exactly one bank per selected slot, in slot order.');
+    const prepared=[];
+    for(const slot of targets){
+    const input=request.banks?request.banks.find(b=>b.slot===slot):request;
     // Two accepted inputs, one meaning: a bank already encoded, or the editor's own patterns plus the loop they
     // were authored against. Both end as the same envelope the module checks, and the encoder is the Studio
     // model's - the editor ships no second byte-level implementation that could drift from the firmware.
@@ -59,9 +64,9 @@ export class ChopperDeviceService {
      bytes=converted.bytes;
      conversion={...converted.report,summary:describeConversion(converted.report,request.bpm)};
     }
-    else if(request.bytes instanceof ArrayBuffer)bytes=new Uint8Array(request.bytes);
-    else if(Array.isArray(request.patterns)){
-     try{bytes=encodeBank(bankFromEditor({patterns:request.patterns,source:request.source,revision:request.revision}));}
+    else if(input.bytes instanceof ArrayBuffer)bytes=new Uint8Array(input.bytes);
+    else if(Array.isArray(input.patterns)){
+     try{bytes=encodeBank(bankFromEditor({patterns:input.patterns,source:input.source,revision:input.revision}));}
      catch(error){throw Error(`This pattern cannot be sent to the module (${error?.message||error}). Nothing was written.`);}
     }
     else throw Error('Expected an encoded PVXE pattern bank or the editor patterns it was made from.');
@@ -69,10 +74,20 @@ export class ChopperDeviceService {
     // Decoding here is not a courtesy: it is the same envelope check the module runs, so a bank the firmware
     // would refuse never reaches the card and cannot replace a pattern that is already stored.
     let bank;try{bank=decodeBank(bytes);}catch(error){throw Error(`The pattern is not a usable PVXE v1 bank (${error?.message||error}). Nothing was written.`);}
+    if(bank.patterns.filter(p=>p.role==='base').length!==1)throw Error('Playback needs exactly one BASE pattern. Nothing was written.');
     if(!patternStores&&!patternLive)throw Error('This firmware neither stores nor accepts a PVXE pattern bank. Nothing was written.');
-    const stored=[],live=[];
-    if(patternStores)for(const name of['A','B']){await files.upload(`/CHOPPER/${name}.PVXE`,bytes,{overwrite:true,makeParents:true});stored.push(`/CHOPPER/${name}.PVXE`);}
-    if(patternLive)for(const slot of[0,1]){
+    const maxPatterns=Number.isInteger(descriptor?.chopper?.pvxeMaxPatterns)?descriptor.chopper.pvxeMaxPatterns:8;
+    const maxBytes=Number.isInteger(descriptor?.chopper?.pvxeMax)?descriptor.chopper.pvxeMax:24640;
+    if(bank.patterns.length>maxPatterns||bytes.length>maxBytes)throw Error(`Slot ${slot?'B':'A'} exceeds firmware limits (${maxPatterns} patterns / ${maxBytes} bytes). Update firmware. Nothing was written.`);
+    prepared.push({slot,bytes,bank,conversion,names:Array.isArray(input.patterns)?input.patterns.map(p=>p.name):null});
+    }
+    const stored=[],live=[],storage=[];
+    if(patternStores)for(const {slot,bytes} of prepared){
+     const path=`/CHOPPER/${slot?'B':'A'}.PVXE`;
+     try{await files.upload(path,bytes,{overwrite:true,makeParents:true});stored.push(path);storage.push({slot,path,state:'stored'});}
+     catch(error){storage.push({slot,path,state:'unknown',error:error?.message||String(error)});}
+    }
+    if(patternLive)for(const {slot,bytes} of prepared){
      // Attempted per slot, and a failure on the second one is recorded rather than thrown: the first Chopper has
      // already changed, and losing that fact behind an exception is how A and B silently diverge. SD writes do
      // not prove boot loading or playback. NoGrid is a live refusal: load a loop, then explicitly resend.
@@ -82,7 +97,7 @@ export class ChopperDeviceService {
     const accepted=live.filter(entry=>!entry.error&&entry.result!=='noGrid').length;
     // Reported per slot on purpose: the two loops need not be the same length, so one bank can legitimately land
     // on two different grids - and one slot's NoGrid must never be hidden by the other slot's success.
-    return {state:stored.length?'uploaded':'sent',stored,live,partial:live.length>0&&accepted<live.length,patterns:bank.patterns.length,conversion,audiblyActive:false};
+    return {state:stored.length?'uploaded':live.some(s=>!s.error)?'sent':'failed',stored,storage,live,partial:storage.some(s=>s.error)||(live.length>0&&accepted<live.length),patterns:prepared[0].bank.patterns.length,banks:prepared.map(({slot,bank,bytes,names})=>({slot,patterns:bank.patterns.length,bytes:bytes.length,names,crc:new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength).getUint32(8,true)})),conversion:prepared[0].conversion,audiblyActive:false};
    }
    if(request.type==='download-sample'||request.type==='download-pattern'){
     const kind=request.type==='download-sample'?'sample':'pattern';
