@@ -1075,6 +1075,27 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-sequence-table tr.is-filtered th {
   color: var(--ch-muted);
 }
+.ch-sequence-table tbody tr.is-playing {
+  background: color-mix(in srgb, #278394 28%, var(--ch-surface));
+}
+.ch-sequence-table tr.is-playing td,
+.ch-sequence-table tr.is-playing th {
+  color: var(--ch-ink);
+  box-shadow: inset 0 1px #63d4df, inset 0 -1px #63d4df;
+}
+.ch-sequence-table tr.is-playing th:first-child {
+  box-shadow: inset 3px 0 #63d4df, inset 0 1px #63d4df, inset 0 -1px #63d4df;
+}
+.ch-sequence-live {
+  width: fit-content;
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid #63d4df;
+  border-radius: 4px;
+  color: #bdf5fb;
+  font-size: 12px;
+  font-weight: 700;
+}
 .ch-sequence-table .mono {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1968,6 +1989,11 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   box-shadow: 0 2px 8px #0008;
   font-size: 11px;
 }
+.ch-matrix-track .ch-event.selected {
+  outline: 2px solid var(--ch-focus);
+  outline-offset: -2px;
+  box-shadow: 0 0 0 1px #071017;
+}
 .ch-matrix-track .ch-event.drag-source {
   opacity: 0.28;
   border-style: dashed;
@@ -1979,6 +2005,14 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
     position: absolute;
     inset: -9px;
   }
+}
+.ch-selection-marquee {
+  position: absolute;
+  z-index: 6;
+  border: 1px dashed var(--ch-focus);
+  background: color-mix(in srgb, var(--ch-focus) 14%, transparent);
+  box-shadow: 0 0 0 1px #07101788;
+  pointer-events: none;
 }
 .ch-matrix-ghost {
   position: absolute;
@@ -9076,6 +9110,137 @@ ${error.message}`);
     }
   };
 
+  // src/chopper/autosave.ts
+  var DB_NAME2 = "pentavox-chopper-autosave-v1";
+  var STORE_NAME = "workspace";
+  var KEY = "current";
+  var MAX_ENTRIES = 4096;
+  var MAX_BYTES = 256e6;
+  var saveQueue2 = Promise.resolve();
+  function safePath(name) {
+    return Boolean(name) && !name.includes("\\") && !name.startsWith("/") && !/^[a-z]:/i.test(name) && !name.split("/").some((part) => !part || part === "." || part === "..");
+  }
+  function checkedRecord(value) {
+    if (!value || typeof value !== "object" || value.version !== 1 || !Array.isArray(value.entries))
+      throw new Error("Local Chopper autosave has an unsupported version or shape.");
+    const entries = value.entries;
+    if (entries.length < 1 || entries.length > MAX_ENTRIES)
+      throw new Error("Local Chopper autosave has an invalid entry count.");
+    const names = /* @__PURE__ */ new Set(), encoder = new TextEncoder();
+    let bytes = 22;
+    for (const entry of entries) {
+      if (!entry || typeof entry.name !== "string" || !safePath(entry.name) || names.has(entry.name.toLowerCase()))
+        throw new Error("Local Chopper autosave contains an unsafe or duplicate archive path.");
+      if (!(entry.data instanceof Blob) && !(entry.data instanceof Uint8Array))
+        throw new Error("Local Chopper autosave contains an invalid asset.");
+      names.add(entry.name.toLowerCase());
+      bytes += (entry.data instanceof Blob ? entry.data.size : entry.data.byteLength) + 76 + 2 * encoder.encode(entry.name).length;
+      if (!Number.isSafeInteger(bytes) || bytes > MAX_BYTES)
+        throw new Error("Local Chopper autosave exceeds the 256 MB project limit.");
+    }
+    if (!names.has("chopper.json"))
+      throw new Error("Local Chopper autosave has no project manifest.");
+    return { version: 1, entries };
+  }
+  function openDB2() {
+    if (typeof indexedDB === "undefined") return Promise.reject(new Error("IndexedDB is unavailable in this browser."));
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const request = indexedDB.open(DB_NAME2, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
+      };
+      request.onsuccess = () => {
+        if (settled) request.result.close();
+        else {
+          settled = true;
+          resolve(request.result);
+        }
+      };
+      request.onerror = () => {
+        if (!settled) {
+          settled = true;
+          reject(request.error ?? new Error("Could not open Chopper autosave storage."));
+        }
+      };
+      request.onblocked = () => {
+        if (!settled) {
+          settled = true;
+          reject(new Error("Chopper autosave storage is blocked by another tab."));
+        }
+      };
+    });
+  }
+  async function writeRecord(record) {
+    const db = await openDB2();
+    try {
+      await new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, "readwrite");
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = transaction.onabort = () => reject(transaction.error ?? new Error("Chopper autosave transaction failed."));
+        try {
+          transaction.objectStore(STORE_NAME).put(record, KEY);
+        } catch (error) {
+          try {
+            transaction.abort();
+          } catch {
+          }
+          reject(error);
+        }
+      });
+    } finally {
+      db.close();
+    }
+  }
+  function saveChopperAutosave(entries) {
+    const record = checkedRecord({ version: 1, entries: entries.map(({ name, data }) => ({
+      name,
+      data: data instanceof Uint8Array ? data.slice() : data
+    })) });
+    const pending = saveQueue2.then(() => writeRecord(record));
+    saveQueue2 = pending.catch(() => {
+    });
+    return pending;
+  }
+  function hasPersistentChopperChange(previous, current) {
+    return [
+      "sources",
+      "patterns",
+      "patternSets",
+      "patternSource",
+      "bindings",
+      "patternBindings",
+      "patternId",
+      "sourceId",
+      "slot",
+      "mode",
+      "sequence",
+      "probability",
+      "seed",
+      "bpm",
+      "loopEffects",
+      "legacy",
+      "previewLevel"
+    ].some((key) => previous[key] !== current[key]);
+  }
+  async function loadChopperAutosave() {
+    const db = await openDB2();
+    let value;
+    try {
+      value = await new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, "readonly");
+        const request = transaction.objectStore(STORE_NAME).get(KEY);
+        transaction.oncomplete = () => resolve(request.result);
+        transaction.onerror = transaction.onabort = () => reject(transaction.error ?? new Error("Chopper autosave read failed."));
+      });
+    } finally {
+      db.close();
+    }
+    if (value === void 0) return void 0;
+    return checkedRecord(value).entries;
+  }
+
   // src/chopper/model.ts
   var newPattern = (name = "BASE", role = "base") => ({ id: crypto.randomUUID(), name, role, beats: 32, events: [] });
   var newEvent = (step, cue) => ({ id: crypto.randomUUID(), step, length: 1, cue, mode: "relative", gain: 1, pitch: 0, reverse: false, repeat: 1, roll: 1, gate: true, probability: 1 });
@@ -10768,6 +10933,9 @@ ${error.message}`);
     }
     registerProcessor("pentavox-chopper-v1", Processor);
   }
+  function activeSequenceForAudioState(plan, activated) {
+    return activated && Boolean(plan?.sequence);
+  }
   var LiveAudio = class {
     constructor() {
       this.node = null;
@@ -10827,6 +10995,7 @@ ${error.message}`);
           if (slot === this.editSlot)
             this.onState({
               ...data,
+              activeSequence: activeSequenceForAudioState(plan, Boolean(data.activated)),
               activePattern: data.activated ? plan?.sequence?.patterns.find(
                 (p) => p.id === data.patternId
               ) ?? plan?.pattern : void 0,
@@ -11074,6 +11243,33 @@ ${error.message}`);
   }
 
   // src/chopper/gestures.ts
+  function eventsIntersectingMarquee(events, bounds) {
+    const { firstStep, endStep, firstCue, endCue } = bounds;
+    if (![firstStep, endStep, firstCue, endCue].every(Number.isInteger) || firstStep < 0 || endStep <= firstStep || firstCue < 0 || endCue < firstCue)
+      return [];
+    return events.filter(
+      (event) => event.step < endStep && event.step + event.length > firstStep && event.cue >= firstCue && event.cue <= endCue
+    ).map((event) => event.id);
+  }
+  function translateEventGroup(pattern, ids, deltaSteps) {
+    if (!ids.length || !Number.isInteger(deltaSteps) || deltaSteps === 0)
+      return null;
+    const selected = new Set(ids);
+    if (selected.size !== ids.length || [...selected].some((id) => !pattern.events.some((event) => event.id === id)))
+      return null;
+    const moved = {
+      ...pattern,
+      events: pattern.events.map(
+        (event) => selected.has(event.id) ? { ...event, step: event.step + deltaSteps } : event
+      )
+    };
+    try {
+      validatePattern(moved);
+      return moved;
+    } catch {
+      return null;
+    }
+  }
   function eventDragGrabOffset(pointerStep, eventStep, length) {
     return Math.max(0, Math.min(Math.max(0, length - 1), pointerStep - eventStep));
   }
@@ -11412,13 +11608,68 @@ ${error.message}`);
     onSelect,
     onInspect,
     onChange,
+    onChangeMany,
+    onClearSelection,
     onPatternBeatsChange,
     onFillCueOrder
   }) {
-    const [manualZoom, setManualZoom] = React.useState(1), [fit, setFit] = React.useState(true), [viewportWidth, setViewportWidth] = React.useState(0), [tool, setTool] = React.useState("pencil"), [ghost, setGhost] = React.useState(null), [cursor, setCursor] = React.useState(0), [dragged, setDragged] = React.useState(null), [dragCopy, setDragCopy] = React.useState(false), [resizeDraft, setResizeDraft] = React.useState(null);
-    const down = React.useRef(null), body = React.useRef(null), scroll = React.useRef(null), wheelAnchor = React.useRef(null), draggedCueRef = React.useRef(0), draggedEventRef = React.useRef(null), grabOffsetRef = React.useRef(0), pointerDrag = React.useRef(null), suppressEventClick = React.useRef(false), nativeDrag = React.useRef(false), resizePointer = React.useRef(null);
+    const [manualZoom, setManualZoom] = React.useState(1), [fit, setFit] = React.useState(true), [viewportWidth, setViewportWidth] = React.useState(0), [tool, setTool] = React.useState("pencil"), [ghost, setGhost] = React.useState(null), [cursor, setCursor] = React.useState(0), [dragged, setDragged] = React.useState(null), [dragCopy, setDragCopy] = React.useState(false), [groupSelection, setGroupSelection] = React.useState([]), [marquee, setMarquee] = React.useState(null), [resizeDraft, setResizeDraft] = React.useState(null);
+    const down = React.useRef(null), body = React.useRef(null), scroll = React.useRef(null), wheelAnchor = React.useRef(null), draggedCueRef = React.useRef(0), draggedEventRef = React.useRef(null), grabOffsetRef = React.useRef(0), pointerDrag = React.useRef(null), selectionDrag = React.useRef(null), groupSelectionRef = React.useRef([]), suppressEventClick = React.useRef(false), nativeDrag = React.useRef(false), resizePointer = React.useRef(null);
     const maxCue = pattern.events.reduce((max, event) => Math.max(max, event.cue), -1), addressCount = placementMode === "absolute" ? Math.min(64, Math.max(4, cueCount)) : Math.min(64, Math.max(pattern.beats, cueCount)), rowCount = Math.min(64, Math.max(addressCount, maxCue + 1));
-    const baseUnit = innerWidth < 768 ? 22 : 32, cueColumn = innerWidth < 768 ? 58 : 76, rowHeight = innerWidth < 768 ? 36 : rowCount > 48 ? 18 : rowCount > 24 ? 21 : 26, resizeWidth = 24, total = pattern.beats * 4, fitZoom = patternFitZoom(viewportWidth, cueColumn, total, baseUnit), minZoom = Math.min(0.5, fitZoom), maxZoom = Math.max(3, fitZoom), zoom = fit ? fitZoom : Math.max(minZoom, Math.min(maxZoom, manualZoom)), unit = baseUnit * zoom, barStride = Math.max(1, Math.ceil(42 / (16 * unit))), chosen = pattern.events.find((e) => e.id === selected);
+    const baseUnit = innerWidth < 768 ? 22 : 32, cueColumn = innerWidth < 768 ? 58 : 76, rowHeight = innerWidth < 768 ? 36 : rowCount > 48 ? 18 : rowCount > 24 ? 21 : 26, resizeWidth = 24, total = pattern.beats * 4, fitZoom = patternFitZoom(viewportWidth, cueColumn, total, baseUnit), minZoom = Math.min(0.5, fitZoom), maxZoom = Math.max(3, fitZoom), zoom = fit ? fitZoom : Math.max(minZoom, Math.min(maxZoom, manualZoom)), unit = baseUnit * zoom, barStride = Math.max(1, Math.ceil(42 / (16 * unit)));
+    const selectedEventIds = groupSelection.filter((id) => pattern.events.some((event) => event.id === id));
+    groupSelectionRef.current = selectedEventIds;
+    const chosen = selectedEventIds.length ? void 0 : pattern.events.find((event) => event.id === selected);
+    const isEventSelected = (id) => selectedEventIds.length ? selectedEventIds.includes(id) : id === selected;
+    const updateGroupSelection = (ids) => {
+      const valid = ids.filter((id) => pattern.events.some((event) => event.id === id));
+      if (valid.length === groupSelectionRef.current.length && valid.every((id, index) => id === groupSelectionRef.current[index])) return;
+      groupSelectionRef.current = valid;
+      setGroupSelection(valid);
+      if (selected !== null) onClearSelection();
+    };
+    const clearGroupSelection = () => {
+      if (groupSelectionRef.current.length) updateGroupSelection([]);
+    };
+    const deleteGroupSelection = () => {
+      const ids = groupSelectionRef.current;
+      if (!ids.length) return;
+      const selectedIds = new Set(ids), remaining = pattern.events.filter((event) => !selectedIds.has(event.id));
+      if (onChangeMany(remaining)) clearGroupSelection();
+    };
+    const moveGroup = (source, ids, targetStep) => {
+      const delta = targetStep - source.step;
+      if (ids.length < 2 || delta === 0 || !ids.includes(source.id) || ids.some((id) => !pattern.events.some((event) => event.id === id))) return;
+      const moved = translateEventGroup(pattern, ids, delta);
+      const selectedIds = new Set(ids);
+      const candidate = moved?.events ?? pattern.events.map(
+        (event) => selectedIds.has(event.id) ? { ...event, step: event.step + delta } : event
+      );
+      onChangeMany(candidate);
+    };
+    const handleGroupKey = (event) => {
+      if (!selectedEventIds.length) return false;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        clearGroupSelection();
+        return true;
+      }
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        event.stopPropagation();
+        deleteGroupSelection();
+        return true;
+      }
+      return false;
+    };
+    React.useEffect(() => {
+      const valid = groupSelection.filter((id) => pattern.events.some((event) => event.id === id));
+      if (valid.length !== groupSelection.length) {
+        groupSelectionRef.current = valid;
+        setGroupSelection(valid);
+      }
+    }, [pattern.id, pattern.events]);
     const setZoom = (value) => {
       setFit(false);
       setManualZoom(value);
@@ -11494,7 +11745,8 @@ ${error.message}`);
         const cue = physical === null ? target2.cue : cueFromPhysical(physical);
         if (physical !== null && cue < rowCount) showRow(cue);
         const pointerStep = stepAt2(event.clientX, target2.track), movingEvent = moving ? draggedEventRef.current : null, step = movingEvent ? eventDragTargetStep(pointerStep, grabOffsetRef.current, movingEvent.length, total) : pointerStep;
-        setGhost({ step, cue });
+        const groupIds = groupSelectionRef.current, groupMove = movingEvent && !dragCopy && groupIds.length > 1 && groupIds.includes(movingEvent.id);
+        setGhost({ step, cue: groupMove ? movingEvent.cue : cue, groupCount: groupMove ? groupIds.length : 0 });
       };
       const drop = (event) => {
         const target2 = at(event);
@@ -11514,12 +11766,17 @@ ${error.message}`);
           const sourceEvent = pattern.events.find((item) => item.id === data.id);
           if (sourceEvent) {
             step = eventDragTargetStep(step, grabOffsetRef.current, sourceEvent.length, total);
-            onChange({
-              ...sourceEvent,
-              id: data.copy ? crypto.randomUUID() : sourceEvent.id,
-              step,
-              cue: target2.cue
-            });
+            const groupIds = groupSelectionRef.current;
+            if (!data.copy && groupIds.length > 1 && groupIds.includes(sourceEvent.id)) {
+              moveGroup(sourceEvent, groupIds, step);
+            } else {
+              onChange({
+                ...sourceEvent,
+                id: data.copy ? crypto.randomUUID() : sourceEvent.id,
+                step,
+                cue: target2.cue
+              });
+            }
           }
         } catch {
         }
@@ -11532,13 +11789,25 @@ ${error.message}`);
         document.removeEventListener("drop", drop, true);
         document.removeEventListener("dragend", clearGhost, true);
       };
-    }, [unit, total, pattern.events, placementMode, pattern.beats, rowCount, onPlace, onChange]);
+    }, [unit, total, pattern.events, placementMode, pattern.beats, rowCount, onPlace, onChange, onChangeMany, dragCopy]);
     React.useEffect(() => {
       const at = (x, y) => {
         const element = document.elementFromPoint(x, y), track = element?.closest(".ch-matrix-track"), row = track?.closest(".ch-matrix-row");
         return track && row ? { track, cue: Number(row.dataset.cueRow ?? 0) } : null;
       };
       const move = (e) => {
+        const selection = selectionDrag.current;
+        if (selection && selection.pointerId === e.pointerId && e.pointerType !== "touch") {
+          if (!selection.moved && Math.hypot(e.clientX - selection.x, e.clientY - selection.y) < 6) return;
+          selection.moved = true;
+          const target3 = at(e.clientX, e.clientY);
+          if (target3) {
+            const bounds = marqueeBounds(selection, stepAt2(e.clientX, target3.track), target3.cue);
+            setMarquee(bounds);
+            updateGroupSelection(eventsIntersectingMarquee(pattern.events, bounds));
+          } else setMarquee(null);
+          return;
+        }
         const drag = pointerDrag.current;
         if (!drag || drag.pointerId !== e.pointerId || e.pointerType === "touch" || nativeDrag.current)
           return;
@@ -11546,14 +11815,21 @@ ${error.message}`);
           return;
         drag.moved = true;
         const target2 = at(e.clientX, e.clientY);
+        const groupMove = drag.groupIds?.length > 1 && !drag.copy;
         setGhost(
           target2 ? {
             step: eventDragTargetStep(stepAt2(e.clientX, target2.track), drag.grabOffset, drag.event.length, total),
-            cue: target2.cue
+            cue: groupMove ? drag.event.cue : target2.cue,
+            groupCount: groupMove ? drag.groupIds.length : 0
           } : null
         );
       };
       const up = (e) => {
+        const selection = selectionDrag.current;
+        if (selection && selection.pointerId === e.pointerId) {
+          setMarquee(null);
+          return;
+        }
         const drag = pointerDrag.current;
         if (!drag || drag.pointerId !== e.pointerId) return;
         pointerDrag.current = null;
@@ -11561,19 +11837,30 @@ ${error.message}`);
         draggedEventRef.current = null;
         if (!drag.moved) return;
         const target2 = at(e.clientX, e.clientY);
-        if (target2)
-          onChange({
+        if (target2) {
+          const targetStep = eventDragTargetStep(stepAt2(e.clientX, target2.track), drag.grabOffset, drag.event.length, total);
+          if (drag.groupIds?.length > 1 && !drag.copy) moveGroup(drag.event, drag.groupIds, targetStep);
+          else onChange({
             ...drag.event,
             id: drag.copy ? crypto.randomUUID() : drag.event.id,
-            step: eventDragTargetStep(stepAt2(e.clientX, target2.track), drag.grabOffset, drag.event.length, total),
+            step: targetStep,
             cue: target2.cue
           });
+        }
         setDragged(null);
         setGhost(null);
         suppressEventClick.current = true;
         setTimeout(() => suppressEventClick.current = false, 300);
       };
       const cancel = (e) => {
+        const selection = selectionDrag.current;
+        if (selection && selection.pointerId === e.pointerId) {
+          selectionDrag.current = null;
+          down.current = null;
+          setMarquee(null);
+          clearGroupSelection();
+          return;
+        }
         const drag = pointerDrag.current;
         if (!drag || drag.pointerId !== e.pointerId) return;
         pointerDrag.current = null;
@@ -11590,9 +11877,12 @@ ${error.message}`);
         document.removeEventListener("pointerup", up, true);
         document.removeEventListener("pointercancel", cancel, true);
       };
-    }, [unit, total, onChange]);
+    }, [unit, total, onChange, onChangeMany, onClearSelection, pattern.events, pattern.beats, rowCount, selected]);
     const pinch = useMusicalPinch(scroll, zoom, setZoom, minZoom, maxZoom, () => {
       down.current = null;
+      selectionDrag.current = null;
+      setMarquee(null);
+      clearGroupSelection();
       touchMove.cancel?.();
       resizePointer.current = null;
       setResizeDraft(null);
@@ -11605,6 +11895,12 @@ ${error.message}`);
         Math.floor((x - track.getBoundingClientRect().left) / unit)
       )
     );
+    const marqueeBounds = (start, endStep, endCue) => ({
+      firstStep: Math.min(start.step, endStep),
+      endStep: Math.max(start.step, endStep) + 1,
+      firstCue: Math.min(start.cue, endCue),
+      endCue: Math.max(start.cue, endCue)
+    });
     const musical = (step) => `bar ${Math.floor(step / 16) + 1}, beat ${Math.floor(step % 16 / 4) + 1}, sixteenth ${step % 4 + 1}`;
     const samePattern = activePattern?.id === pattern.id && activePattern?.beats === pattern.beats;
     const old = (event) => samePattern ? activePattern?.events.find((e) => e.id === event.id) : void 0;
@@ -11691,7 +11987,10 @@ ${error.message}`);
           "aria-label": "Pencil tool",
           title: "Pencil tool",
           "aria-pressed": tool === "pencil",
-          onClick: () => setTool("pencil")
+          onClick: () => {
+            setTool("pencil");
+            clearGroupSelection();
+          }
         },
         "\u270E"
       )), /* @__PURE__ */ React.createElement(
@@ -11730,8 +12029,24 @@ ${error.message}`);
             "aria-label": "Slice pattern matrix",
             onPointerCancel: () => {
               down.current = null;
+              selectionDrag.current = null;
+              setMarquee(null);
+              clearGroupSelection();
             }
           },
+          marquee && /* @__PURE__ */ React.createElement(
+            "div",
+            {
+              className: "ch-selection-marquee",
+              "aria-hidden": "true",
+              style: {
+                left: cueColumn + marquee.firstStep * unit,
+                top: marquee.firstCue * rowHeight,
+                width: (marquee.endStep - marquee.firstStep) * unit,
+                height: (marquee.endCue - marquee.firstCue + 1) * rowHeight
+              }
+            }
+          ),
           Array.from({ length: rowCount }, (_, cueRow) => {
             const laneEvents = pattern.events.filter(
               (event) => event.cue === cueRow
@@ -11778,6 +12093,7 @@ ${error.message}`);
                   tabIndex: 0,
                   "aria-label": [cueLabel, `${pattern.beats / 4} bars`, trackContent].filter(Boolean).join(", "),
                   onKeyDown: (e) => {
+                    if (handleGroupKey(e)) return;
                     if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
                       e.preventDefault();
                       const next = e.key === "Home" ? 0 : e.key === "End" ? total - 1 : Math.max(
@@ -11810,9 +12126,28 @@ ${error.message}`);
                     }
                   },
                   onPointerDown: (e) => {
-                    down.current = !pinch.current && e.isPrimary && e.button === 0 && e.target === e.currentTarget ? { x: e.clientX, y: e.clientY, id: e.pointerId, cueRow } : null;
+                    const valid = !pinch.current && e.isPrimary && e.button === 0 && e.target === e.currentTarget;
+                    down.current = valid ? { x: e.clientX, y: e.clientY, id: e.pointerId, cueRow } : null;
+                    if (valid && tool === "pointer" && e.pointerType !== "touch") {
+                      selectionDrag.current = { x: e.clientX, y: e.clientY, pointerId: e.pointerId, step: stepAt2(e.clientX, e.currentTarget), cue: cueRow, moved: false };
+                      e.currentTarget.setPointerCapture?.(e.pointerId);
+                    }
                   },
                   onPointerUp: (e) => {
+                    const selection = selectionDrag.current;
+                    if (selection && selection.pointerId === e.pointerId) {
+                      selectionDrag.current = null;
+                      down.current = null;
+                      setMarquee(null);
+                      const endStep = stepAt2(e.clientX, e.currentTarget), bodyTop = body.current?.getBoundingClientRect().top, endCue = bodyTop === void 0 ? cueRow : Math.max(0, Math.min(rowCount - 1, Math.floor((e.clientY - bodyTop) / rowHeight)));
+                      setCursor(endStep);
+                      if (e.pointerType !== "touch" && Math.hypot(e.clientX - selection.x, e.clientY - selection.y) >= 6) {
+                        const bounds = marqueeBounds(selection, endStep, endCue);
+                        updateGroupSelection(eventsIntersectingMarquee(pattern.events, bounds));
+                      } else clearGroupSelection();
+                      e.currentTarget.focus?.({ preventScroll: true });
+                      return;
+                    }
                     const point = down.current;
                     down.current = null;
                     if (!point || point.id !== e.pointerId || point.cueRow !== cueRow || pinch.current || e.target !== e.currentTarget || Math.hypot(e.clientX - point.x, e.clientY - point.y) >= 6) return;
@@ -11847,8 +12182,8 @@ ${error.message}`);
                     "aria-label": `Event at ${musical(event.step)}, cue ${event.cue + 1}, ${event.mode === "relative" ? "REL" : "ABS"}, duration ${event.length} sixteenths${actions(event) ? `, ${actions(event)}` : ""}`,
                     title: `Cue ${event.cue + 1} \xB7 ${event.mode === "relative" ? "REL" : "ABS"} \xB7 ${musical(event.step)}${actions(event) ? ` \xB7 ${actions(event)}` : ""}`,
                     "data-action-marked": Boolean(actions(event)),
-                    "aria-pressed": event.id === selected,
-                    className: "ch-event " + (event.id === selected ? "selected " : "") + (dragged?.id === event.id && !dragCopy ? "drag-source " : "") + (changed(event) ? "pending " : "") + (event.id === soundingEvent ? "sounding" : ""),
+                    "aria-pressed": isEventSelected(event.id),
+                    className: "ch-event " + (isEventSelected(event.id) ? "selected " : "") + (dragged?.id === event.id && !dragCopy ? "drag-source " : "") + (changed(event) ? "pending " : "") + (event.id === soundingEvent ? "sounding" : ""),
                     style: {
                       left: event.step * unit,
                       width: (event === chosen ? previewLength ?? event.length : event.length) * unit
@@ -11862,6 +12197,7 @@ ${error.message}`);
                       grabOffsetRef.current = grabOffset;
                       pointerDrag.current = {
                         event,
+                        groupIds: tool === "pointer" && !e.altKey && selectedEventIds.length > 1 && selectedEventIds.includes(event.id) ? selectedEventIds : [],
                         pointerId: e.pointerId,
                         x: e.clientX,
                         y: e.clientY,
@@ -11891,14 +12227,22 @@ ${error.message}`);
                         e.preventDefault();
                         return;
                       }
-                      if (!touchMove.current && !pinch.current)
-                        onSelect(event.id);
+                      if (touchMove.current || pinch.current) return;
+                      if (e.shiftKey && tool === "pointer") {
+                        e.preventDefault();
+                        const current = groupSelectionRef.current;
+                        updateGroupSelection(current.includes(event.id) ? current.filter((id) => id !== event.id) : [...current, event.id]);
+                        return;
+                      }
+                      clearGroupSelection();
+                      onSelect(event.id);
                     },
                     onContextMenu: (e) => {
                       e.preventDefault();
                       onInspect(event.id);
                     },
                     onKeyDown: (e) => {
+                      if (handleGroupKey(e)) return;
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         e.stopPropagation();
@@ -12004,7 +12348,7 @@ ${error.message}`);
               },
               "aria-hidden": "true"
             },
-            dragged ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("strong", null, ghost.cue + 1), dragged.length * unit >= 48 && /* @__PURE__ */ React.createElement("small", null, dragged.mode === "relative" ? "REL" : "ABS")) : /* @__PURE__ */ React.createElement("span", null, musical(ghost.step), " \xB7 ", armed ? placement : `Cue ${ghost.cue + 1}`)
+            dragged ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("strong", null, ghost.cue + 1), dragged.length * unit >= 48 && /* @__PURE__ */ React.createElement("small", null, dragged.mode === "relative" ? "REL" : "ABS"), ghost.groupCount > 1 && /* @__PURE__ */ React.createElement("small", null, ghost.groupCount, " EVENTS")) : /* @__PURE__ */ React.createElement("span", null, musical(ghost.step), " \xB7 ", armed ? placement : `Cue ${ghost.cue + 1}`)
           ),
           playing && samePattern && /* @__PURE__ */ React.createElement(
             "div",
@@ -12018,7 +12362,7 @@ ${error.message}`);
           )
         )
       )),
-      /* @__PURE__ */ React.createElement("p", { className: "ch-hint ch-matrix-hint" }, tool === "pointer" ? "Pointer selects and moves events. Drag from the waveform to place a cue." : armed && armedCue !== null ? `Cue ${armedCue + 1} armed \xB7 tap a step to place it in the highlighted row.` : "Tap a cell to place a cue. Hold an event to move it.")
+      /* @__PURE__ */ React.createElement("p", { className: "ch-hint ch-matrix-hint", role: selectedEventIds.length ? "status" : void 0 }, selectedEventIds.length ? `${selectedEventIds.length} event${selectedEventIds.length === 1 ? "" : "s"} selected \xB7 drag horizontally to move \xB7 Delete removes \xB7 Escape clears.` : tool === "pointer" ? "Pointer selects events; Shift-click toggles, or drag empty space to marquee. Drag a group horizontally; Delete removes it. Drag from waveform to place a cue." : armed && armedCue !== null ? `Cue ${armedCue + 1} armed \xB7 tap a step to place it in the highlighted row.` : "Tap a cell to place a cue. Hold an event to move it.")
     );
   }
 
@@ -12043,9 +12387,12 @@ ${error.message}`);
     });
     return { rows, counts, fallback, baseIndex, variationChance, fillChance, earlyChance, hasFill: roles.includes("fill"), names };
   }
-  function SequencePreview({ patterns, seed, probability }) {
+  function SequencePreview({ patterns, seed, probability, liveSlot = null, activePatternName = null }) {
     const preview = buildSequencePreview(patterns, seed, probability);
-    return /* @__PURE__ */ React.createElement("section", { className: "ch-sequence-preview", "aria-label": "Seed sequence preview" }, /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-rules" }, /* @__PURE__ */ React.createElement("span", null, "BASE always"), /* @__PURE__ */ React.createElement("span", null, "Variations \xB7 ", (preview.variationChance * 100).toFixed(0), "% after 10%"), /* @__PURE__ */ React.createElement("span", null, "FILL \xB7 ", (preview.fillChance * 100).toFixed(0), "% at 16-bar windows after 20%"), /* @__PURE__ */ React.createElement("span", null, "Early FILL \xB7 ", (preview.earlyChance * 100).toFixed(0), "% at 90\u2013100%")), /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-summary", "aria-live": "polite" }, /* @__PURE__ */ React.createElement("strong", null, preview.counts.base, " BASE"), /* @__PURE__ */ React.createElement("strong", null, preview.counts.variation, " variations"), /* @__PURE__ */ React.createElement("strong", null, preview.counts.fill, " fills"), /* @__PURE__ */ React.createElement("span", null, "active out of 16 slots")), preview.baseIndex < 0 && /* @__PURE__ */ React.createElement("p", { className: "ch-sequence-warning" }, "No BASE role is assigned; the scheduler falls back to ", preview.names[preview.fallback] ?? "the first non-FILL pattern", "."), !preview.hasFill && /* @__PURE__ */ React.createElement("p", { className: "ch-sequence-note" }, "No FILL pattern is available. Scheduled FILL windows keep the primary pattern."), /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-table-wrap" }, /* @__PURE__ */ React.createElement("table", { className: "ch-sequence-table" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", null, "Slot"), /* @__PURE__ */ React.createElement("th", null, "Bars"), /* @__PURE__ */ React.createElement("th", null, "Seed candidate"), /* @__PURE__ */ React.createElement("th", null, "Draw / gate"), /* @__PURE__ */ React.createElement("th", null, "Preview output"), /* @__PURE__ */ React.createElement("th", null, "State"))), /* @__PURE__ */ React.createElement("tbody", null, preview.rows.map((row) => /* @__PURE__ */ React.createElement("tr", { key: row.slot, className: row.candidate === row.output ? "is-active" : "is-filtered" }, /* @__PURE__ */ React.createElement("th", { scope: "row" }, String(row.slot + 1).padStart(2, "0")), /* @__PURE__ */ React.createElement("td", null, row.bars), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: `ch-sequence-kind kind-${row.kind}` }, row.kind), preview.names[row.candidate] ?? `Pattern ${row.candidate + 1}`, row.fillCandidate >= 0 && /* @__PURE__ */ React.createElement("small", { className: "ch-sequence-subcandidate" }, "FILL: ", preview.names[row.fillCandidate]), row.earlyCandidate >= 0 && /* @__PURE__ */ React.createElement("small", { className: "ch-sequence-subcandidate" }, "Early FILL: ", preview.names[row.earlyCandidate])), /* @__PURE__ */ React.createElement("td", { className: "mono" }, row.draws.length ? row.draws.map((draw, index) => /* @__PURE__ */ React.createElement("small", { key: index, className: "ch-sequence-draw" }, draw)) : "\u2014"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("strong", null, preview.names[row.output] ?? `Pattern ${row.output + 1}`)), /* @__PURE__ */ React.createElement("td", null, row.state)))))), /* @__PURE__ */ React.createElement("p", { className: "ch-sequence-footnote" }, "Preview only: the seed fixes these 16 candidates and probability draws; changing probability filters the same draws. This table does not play audio or alter the project."));
+    return /* @__PURE__ */ React.createElement("section", { className: "ch-sequence-preview", "aria-label": "Seed sequence preview" }, /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-rules" }, /* @__PURE__ */ React.createElement("span", null, "BASE always"), /* @__PURE__ */ React.createElement("span", null, "Variations \xB7 ", (preview.variationChance * 100).toFixed(0), "% after 10%"), /* @__PURE__ */ React.createElement("span", null, "FILL \xB7 ", (preview.fillChance * 100).toFixed(0), "% at 16-bar windows after 20%"), /* @__PURE__ */ React.createElement("span", null, "Early FILL \xB7 ", (preview.earlyChance * 100).toFixed(0), "% at 90\u2013100%")), liveSlot !== null && /* @__PURE__ */ React.createElement("p", { className: "ch-sequence-live", role: "status", "aria-live": "polite" }, "Playing slot ", String(liveSlot + 1).padStart(2, "0"), "/16", activePatternName ? ` \xB7 ${activePatternName}` : ""), /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-summary", "aria-live": "polite" }, /* @__PURE__ */ React.createElement("strong", null, preview.counts.base, " BASE"), /* @__PURE__ */ React.createElement("strong", null, preview.counts.variation, " variations"), /* @__PURE__ */ React.createElement("strong", null, preview.counts.fill, " fills"), /* @__PURE__ */ React.createElement("span", null, "active out of 16 slots")), preview.baseIndex < 0 && /* @__PURE__ */ React.createElement("p", { className: "ch-sequence-warning" }, "No BASE role is assigned; the scheduler falls back to ", preview.names[preview.fallback] ?? "the first non-FILL pattern", "."), !preview.hasFill && /* @__PURE__ */ React.createElement("p", { className: "ch-sequence-note" }, "No FILL pattern is available. Scheduled FILL windows keep the primary pattern."), /* @__PURE__ */ React.createElement("div", { className: "ch-sequence-table-wrap" }, /* @__PURE__ */ React.createElement("table", { className: "ch-sequence-table" }, /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("th", null, "Slot"), /* @__PURE__ */ React.createElement("th", null, "Bars"), /* @__PURE__ */ React.createElement("th", null, "Seed candidate"), /* @__PURE__ */ React.createElement("th", null, "Draw / gate"), /* @__PURE__ */ React.createElement("th", null, "Preview output"), /* @__PURE__ */ React.createElement("th", null, "State"))), /* @__PURE__ */ React.createElement("tbody", null, preview.rows.map((row) => {
+      const live = liveSlot === row.slot;
+      return /* @__PURE__ */ React.createElement("tr", { key: row.slot, "aria-current": live ? "step" : void 0, className: `${row.candidate === row.output ? "is-active" : "is-filtered"}${live ? " is-playing" : ""}` }, /* @__PURE__ */ React.createElement("th", { scope: "row" }, String(row.slot + 1).padStart(2, "0")), /* @__PURE__ */ React.createElement("td", null, row.bars), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("span", { className: `ch-sequence-kind kind-${row.kind}` }, row.kind), preview.names[row.candidate] ?? `Pattern ${row.candidate + 1}`, row.fillCandidate >= 0 && /* @__PURE__ */ React.createElement("small", { className: "ch-sequence-subcandidate" }, "FILL: ", preview.names[row.fillCandidate]), row.earlyCandidate >= 0 && /* @__PURE__ */ React.createElement("small", { className: "ch-sequence-subcandidate" }, "Early FILL: ", preview.names[row.earlyCandidate])), /* @__PURE__ */ React.createElement("td", { className: "mono" }, row.draws.length ? row.draws.map((draw, index) => /* @__PURE__ */ React.createElement("small", { key: index, className: "ch-sequence-draw" }, draw)) : "\u2014"), /* @__PURE__ */ React.createElement("td", null, /* @__PURE__ */ React.createElement("strong", null, preview.names[row.output] ?? `Pattern ${row.output + 1}`)), /* @__PURE__ */ React.createElement("td", null, row.state));
+    })))), /* @__PURE__ */ React.createElement("p", { className: "ch-sequence-footnote" }, "Rows predict the 16 candidates and probability draws; changing probability filters the same draws. While Seed plays, the highlight follows the actual slot. The table itself does not start audio or alter the project."));
   }
 
   // src/chopper/components/SequenceSettings.tsx
@@ -12056,6 +12403,8 @@ ${error.message}`);
     probability,
     sequence,
     playing,
+    liveSlot,
+    activePatternName,
     canPlaySequence,
     onPlaySequence,
     onSettings,
@@ -12110,7 +12459,16 @@ ${error.message}`);
       /* @__PURE__ */ React.createElement("option", { value: "base" }, "BASE"),
       /* @__PURE__ */ React.createElement("option", { value: "variation" }, "Variation"),
       /* @__PURE__ */ React.createElement("option", { value: "fill" }, "FILL")
-    ))), /* @__PURE__ */ React.createElement(SequencePreview, { patterns, seed, probability }));
+    ))), /* @__PURE__ */ React.createElement(
+      SequencePreview,
+      {
+        patterns,
+        seed,
+        probability,
+        liveSlot,
+        activePatternName
+      }
+    ));
   }
 
   // src/chopper/components/EventInspector.tsx
@@ -12551,6 +12909,9 @@ ${error.message}`);
       this.legacyPreviewGeneration = 0;
       this.projectLoadGeneration = 0;
       this.fileDropGeneration = 0;
+      this.autosaveTimer = null;
+      this.autosaveGeneration = 0;
+      this.mounted = false;
       this.compatibilityFiles = /* @__PURE__ */ new Map();
       this.compatibilityBuffers = /* @__PURE__ */ new Map();
       this.toolbarObserver = null;
@@ -12638,6 +12999,10 @@ ${error.message}`);
             events: this.pattern.events.filter((e) => e.id !== this.event.id)
           });
       };
+      this.clearPattern = () => {
+        if (this.pattern.events.length)
+          this.commit({ ...this.pattern, events: [] });
+      };
       this.duplicateEvent = () => {
         const event = this.event;
         if (!event) return;
@@ -12714,6 +13079,7 @@ ${error.message}`);
           armed: false,
           pending: 0,
           activePattern: null,
+          activeSequence: false,
           activeSourceId: "",
           activeSourceBeats: 0,
           library: !state.bindings[slot]
@@ -12929,6 +13295,10 @@ ${error.message}`);
           return false;
         }
       };
+      this.changeMany = (events) => this.commit({ ...this.pattern, events });
+      this.clearEventSelection = () => {
+        if (this.state.selected !== null) this.setState({ selected: null });
+      };
       this.change = (event, immediate = false) => {
         const found = this.pattern.events.some((e) => e.id === event.id);
         if (!this.commit(
@@ -13028,6 +13398,7 @@ ${error.message}`);
           this.audio.stop();
           this.setState({
             playing: false,
+            activeSequence: false,
             pending: 0,
             message: "Stopped. Play starts a new transport; preview is independent."
           });
@@ -13057,6 +13428,7 @@ ${error.message}`);
           if (!await this.audio.playSlots(bindings, this.state.mode)) return;
           this.setState({
             playing: true,
+            activeSequence: false,
             beat: 0,
             active: 0,
             pending: 0,
@@ -13316,70 +13688,115 @@ ${error.message}`);
           this.report(error);
         }
       };
+      this.projectEntries = () => {
+        if (this.state.sources.length > 64 || this.state.patterns.length > 128)
+          throw Error("Workspace format supports at most 64 sources / 128 patterns; current data preserved, not truncated.");
+        const state = structuredClone(this.state);
+        const files = new Map(this.projectExtras);
+        const originals2 = new Map(audioLibrary.files);
+        const paths = /* @__PURE__ */ new Set();
+        let previousVersion = 4;
+        let previousHasPatternSource = false;
+        let previousHasPreviewLevel = false;
+        try {
+          const previous = JSON.parse(this.projectText);
+          previousVersion = previous?.version ?? 4;
+          previousHasPatternSource = Object.prototype.hasOwnProperty.call(
+            previous,
+            "patternSource"
+          );
+          previousHasPreviewLevel = Object.prototype.hasOwnProperty.call(
+            previous,
+            "previewLevel"
+          );
+        } catch {
+        }
+        const extendedData = state.sources.some((source) => (source.drumMarkers?.length ?? 0) > 0) || JSON.stringify(state.loopEffects) !== JSON.stringify([defaultLoopEffects(), defaultLoopEffects()]);
+        const sets = this.patternSets();
+        const projectVersion = previousVersion >= 6 || JSON.stringify(sets[0]) !== JSON.stringify(sets[1]) ? 6 : extendedData || previousVersion >= 5 ? 5 : 4;
+        if (state.legacy && !files.has(state.legacy.archivePath))
+          throw Error("Original legacy archive missing; save cancelled.");
+        files.set("chopper.json", new TextEncoder().encode(mergeJson(this.projectText, {
+          format: "pentavox-chopper-project",
+          version: projectVersion,
+          slot: state.slot,
+          ...projectVersion >= 5 ? { loopEffects: state.loopEffects } : {},
+          bindings: state.bindings,
+          patternBindings: state.patternBindings,
+          mode: state.mode,
+          sequence: state.sequence,
+          probability: state.probability,
+          ...state.previewLevel !== 0.65 || previousHasPreviewLevel ? { previewLevel: state.previewLevel } : {},
+          sources: state.sources,
+          patterns: state.patterns,
+          ...projectVersion >= 6 ? { patternSets: sets } : {},
+          ...state.patternSource || previousHasPatternSource ? { patternSource: state.patternSource } : {},
+          sourceId: state.sourceId,
+          patternId: state.patternId,
+          bpm: state.bpm,
+          seed: state.seed,
+          legacy: state.legacy
+        })));
+        for (const source of state.sources) {
+          if (!safeArchivePath(source.assetPath) || source.assetPath === "chopper.json" || source.assetPath === state.legacy?.archivePath || paths.has(source.assetPath))
+            throw Error("Ambiguous/reserved source storage path; save cancelled.");
+          paths.add(source.assetPath);
+          const blob = originals2.get(source.id);
+          if (!blob) throw Error("Original audio unavailable; project not exported.");
+          files.set(source.assetPath, blob);
+        }
+        return [...files].map(([name, data]) => ({
+          name,
+          data: data instanceof Uint8Array ? data.slice() : data
+        }));
+      };
+      this.scheduleAutosave = () => {
+        clearTimeout(this.autosaveTimer);
+        const generation = ++this.autosaveGeneration;
+        this.autosaveTimer = setTimeout(() => {
+          if (generation === this.autosaveGeneration) void this.flushAutosave();
+        }, 650);
+      };
+      this.flushAutosave = async () => {
+        clearTimeout(this.autosaveTimer);
+        this.autosaveGeneration++;
+        try {
+          await saveChopperAutosave(this.projectEntries());
+          if (this.mounted) this.setState({ message: "Chopper project saved locally in this browser.", error: false });
+        } catch (error) {
+          if (this.mounted) this.report(new Error(`Local Chopper autosave failed: ${error?.message ?? error}`));
+        }
+      };
+      this.restoreAutosave = async () => {
+        const before = this.state;
+        try {
+          const entries = await loadChopperAutosave();
+          if (!entries) return;
+          const archiveEntries = await Promise.all(entries.map(async ({ name, data }) => ({
+            name,
+            bytes: data instanceof Uint8Array ? data : new Uint8Array(await data.arrayBuffer())
+          })));
+          const archive = exportProjectArchive(archiveEntries);
+          if (this.state !== before) {
+            this.setState({ message: "Local autosave was not restored because editing started while it was loading.", error: false });
+            return;
+          }
+          const restored = await this.importProject({ currentTarget: { files: [archive], value: "" } });
+          if (!restored && this.mounted) this.setState({ message: "Local autosave could not be restored; current workspace was kept.", error: true });
+        } catch (error) {
+          if (this.mounted) this.report(new Error(`Local Chopper restore failed; current workspace was kept: ${error?.message ?? error}`));
+        }
+      };
       this.exportProject = async () => {
         try {
-          if (this.state.sources.length > 64 || this.state.patterns.length > 128)
-            throw Error(
-              "Workspace format supports at most 64 sources / 128 patterns; current data preserved, not truncated."
-            );
-          const state = structuredClone(this.state), files = new Map(this.projectExtras), originals2 = new Map(audioLibrary.files), paths = /* @__PURE__ */ new Set();
-          let previousVersion = 4;
-          let previousHasPatternSource = false;
-          try {
-            const previous = JSON.parse(this.projectText);
-            previousVersion = previous?.version ?? 4;
-            previousHasPatternSource = Object.prototype.hasOwnProperty.call(previous, "patternSource");
-          } catch {
-          }
-          const extendedData = state.sources.some((source) => (source.drumMarkers?.length ?? 0) > 0) || JSON.stringify(state.loopEffects) !== JSON.stringify([defaultLoopEffects(), defaultLoopEffects()]);
-          const sets = this.patternSets();
-          const projectVersion = previousVersion >= 6 || JSON.stringify(sets[0]) !== JSON.stringify(sets[1]) ? 6 : extendedData || previousVersion >= 5 ? 5 : 4;
-          if (state.legacy && !files.has(state.legacy.archivePath))
-            throw Error("Original legacy archive missing; save cancelled.");
-          files.set(
-            "chopper.json",
-            new TextEncoder().encode(
-              mergeJson(this.projectText, {
-                format: "pentavox-chopper-project",
-                version: projectVersion,
-                slot: state.slot,
-                ...projectVersion >= 5 ? { loopEffects: state.loopEffects } : {},
-                bindings: state.bindings,
-                patternBindings: state.patternBindings,
-                mode: state.mode,
-                sequence: state.sequence,
-                probability: state.probability,
-                sources: state.sources,
-                patterns: state.patterns,
-                ...projectVersion >= 6 ? { patternSets: sets } : {},
-                ...state.patternSource || previousHasPatternSource ? { patternSource: state.patternSource } : {},
-                sourceId: state.sourceId,
-                patternId: state.patternId,
-                bpm: state.bpm,
-                seed: state.seed,
-                legacy: state.legacy
-              })
-            )
-          );
-          for (const source of state.sources) {
-            if (!safeArchivePath(source.assetPath) || source.assetPath === "chopper.json" || source.assetPath === state.legacy?.archivePath || paths.has(source.assetPath))
-              throw Error(
-                "Ambiguous/reserved source storage path; save cancelled."
-              );
-            paths.add(source.assetPath);
-            const blob = originals2.get(source.id);
-            if (!blob)
-              throw Error("Original audio unavailable; project not exported.");
-            files.set(source.assetPath, new Uint8Array(await blob.arrayBuffer()));
-          }
-          download(
-            exportProjectArchive(
-              [...files].map(([name, bytes]) => ({ name, bytes }))
-            ),
-            "chopper-project.zip"
-          );
+          const entries = this.projectEntries();
+          const archiveEntries = await Promise.all(entries.map(async ({ name, data }) => ({
+            name,
+            bytes: data instanceof Uint8Array ? data : new Uint8Array(await data.arrayBuffer())
+          })));
+          download(exportProjectArchive(archiveEntries), "chopper-project.zip");
           this.setState({
-            message: state.legacy ? "Chopper workspace ZIP exported: patterns/settings, legacy edits, original WAV bytes and untouched original archive." : "Chopper workspace ZIP exported with original source bytes and A/B bindings.",
+            message: this.state.legacy ? "Chopper workspace ZIP exported: patterns/settings, legacy edits, original WAV bytes and untouched original archive." : "Chopper workspace ZIP exported with original source bytes and A/B bindings.",
             error: false
           });
         } catch (error) {
@@ -13444,6 +13861,7 @@ ${error.message}`);
           pending: 0,
           active: 0,
           activePattern: null,
+          activeSequence: false,
           activeSourceId: "",
           activeSourceBeats: 0,
           timingEdit: null,
@@ -13456,7 +13874,7 @@ ${error.message}`);
       this.importProject = async (event) => {
         const file = event.currentTarget.files?.[0];
         event.currentTarget.value = "";
-        if (!file) return;
+        if (!file) return false;
         try {
           if (this.state.playing)
             throw Error(
@@ -13466,20 +13884,7 @@ ${error.message}`);
             throw Error("Project exceeds 256 MB import limit.");
           const generation = ++this.projectLoadGeneration, before = this.state;
           const guard = () => {
-            if (generation !== this.projectLoadGeneration || this.state.playing || [
-              "sources",
-              "patterns",
-              "legacy",
-              "bindings",
-              "patternBindings",
-              "patternSets",
-              "slot",
-              "bpm",
-              "seed",
-              "sequence",
-              "probability",
-              "loopEffects"
-            ].some((key) => this.state[key] !== before[key]))
+            if (generation !== this.projectLoadGeneration || this.state.playing || hasPersistentChopperChange(before, this.state) || ["sourceBpm", "bars", "timingEdit"].some((key) => this.state[key] !== before[key]))
               throw Error(
                 "Working project changed during import; staged import cancelled, current project preserved."
               );
@@ -13487,7 +13892,7 @@ ${error.message}`);
           const bytes = new Uint8Array(await file.arrayBuffer()), files = readProjectArchive(bytes), raw = files.get("chopper.json");
           if (!raw) {
             await this.installLegacy(bytes, files, guard);
-            return;
+            return true;
           }
           let projectText, value;
           try {
@@ -13496,13 +13901,13 @@ ${error.message}`);
           } catch (error) {
             if (files.has("project.json")) {
               await this.installLegacy(bytes, files, guard);
-              return;
+              return true;
             }
             throw error;
           }
           if (value?.format !== "pentavox-chopper-project" && files.has("project.json")) {
             await this.installLegacy(bytes, files, guard);
-            return;
+            return true;
           }
           if (indexJson(projectText).duplicates.length)
             throw Error(
@@ -13512,7 +13917,7 @@ ${error.message}`);
           const loopEffects = value.loopEffects === void 0 ? [defaultLoopEffects(), defaultLoopEffects()] : Array.isArray(value.loopEffects) && value.loopEffects.length === 2 ? [validateLoopEffects(value.loopEffects[0]), validateLoopEffects(value.loopEffects[1])] : (() => {
             throw Error("Invalid per-loop effects.");
           })();
-          if (value.format !== "pentavox-chopper-project" || ![1, 2, 3, 4, 5, 6].includes(value.version) || value.version >= 2 && (typeof value.sequence !== "boolean" || !Number.isFinite(value.probability) || value.probability < 0 || value.probability > 1) || !Array.isArray(value.sources) || value.sources.length > 64 || !Number.isFinite(value.bpm) || value.bpm < 20 || value.bpm > 400 || !Number.isInteger(value.seed) || value.seed < 0 || value.seed > 4294967295)
+          if (value.format !== "pentavox-chopper-project" || ![1, 2, 3, 4, 5, 6].includes(value.version) || value.version >= 2 && (typeof value.sequence !== "boolean" || !Number.isFinite(value.probability) || value.probability < 0 || value.probability > 1) || value.previewLevel !== void 0 && (!Number.isFinite(value.previewLevel) || value.previewLevel < 0 || value.previewLevel > 1) || !Array.isArray(value.sources) || value.sources.length > 64 || !Number.isFinite(value.bpm) || value.bpm < 20 || value.bpm > 400 || !Number.isInteger(value.seed) || value.seed < 0 || value.seed > 4294967295)
             throw Error("Invalid Chopper project.");
           parsePatterns(
             JSON.stringify({
@@ -13566,42 +13971,30 @@ ${error.message}`);
             (id, slot) => !loadedSets[slot].patterns.some((p) => p.id === id)
           )))
             throw Error("Invalid A/B bindings.");
-          if (value.sourceId)
-            for (const p of value.patterns)
+          const timingInvalidSlots = [];
+          const validationBindings = paired ? value.bindings : [value.sourceId, ""];
+          for (const [slot, id] of validationBindings.entries()) {
+            const slotPatterns = paired ? loadedSets[slot].patterns : value.patterns;
+            for (const pattern of slotPatterns) validatePattern(pattern);
+            if (!id) continue;
+            const source = value.sources.find((item) => item.id === id);
+            let sourceBeats;
+            try {
+              sourceBeats = sourceTiming(source.frames, source.sampleRate, source.bpm);
+            } catch {
+              timingInvalidSlots.push(slot);
+              continue;
+            }
+            for (const pattern of slotPatterns)
               validatePlan({
                 version: 1,
                 bpm: value.bpm,
-                sourceBeats: sourceTiming(
-                  value.sources.find((s) => s.id === value.sourceId).frames,
-                  value.sources.find((s) => s.id === value.sourceId).sampleRate,
-                  value.sources.find((s) => s.id === value.sourceId).bpm
-                ),
-                sourceBpm: value.sources.find(
-                  (s) => s.id === value.sourceId
-                ).bpm,
-                pattern: p,
+                sourceBeats,
+                sourceBpm: source.bpm,
+                pattern,
                 seed: value.seed
               });
-          if (paired)
-            for (const [slot, id] of value.bindings.entries()) {
-              if (!id) continue;
-              const source = value.sources.find(
-                (source2) => source2.id === id
-              );
-              for (const pattern of loadedSets[slot].patterns)
-                validatePlan({
-                  version: 1,
-                  bpm: value.bpm,
-                  sourceBeats: sourceTiming(
-                    source.frames,
-                    source.sampleRate,
-                    source.bpm
-                  ),
-                  sourceBpm: source.bpm,
-                  pattern,
-                  seed: value.seed
-                });
-            }
+          }
           let legacy = null, legacyNotices = [], legacyFiles = /* @__PURE__ */ new Map(), legacyBuffers = /* @__PURE__ */ new Map();
           if (value.version >= 4 && value.legacy !== null && value.legacy !== void 0) {
             const attachment = value.legacy;
@@ -13709,6 +14102,7 @@ ${error.message}`);
             patternSets: loadedSets,
             patternSource: value.patternSource ?? null,
             patternId: value.patternId,
+            activeSequence: false,
             bpm: value.bpm,
             seed: value.seed,
             slot: paired ? value.slot : 0,
@@ -13718,14 +14112,17 @@ ${error.message}`);
             timingEdit: null,
             sequence: value.version >= 2 ? value.sequence : false,
             probability: value.version >= 2 ? value.probability : 0.5,
+            previewLevel: value.previewLevel ?? 0.65,
             selected: null,
             cue: null,
             beat: 0,
-            message: "Project restored with original audio bytes and event addresses.",
-            error: false
+            message: timingInvalidSlots.length ? `Project restored. Correct source timing for Loop ${timingInvalidSlots.map((slot) => slot === 0 ? "A" : "B").join(" and ")} in Inspector before playback; originals and event addresses are preserved.` : "Project restored with original audio bytes and event addresses.",
+            error: timingInvalidSlots.length > 0
           });
+          return true;
         } catch (error) {
           this.report(error);
+          return false;
         }
       };
       this.history = (redo = false) => {
@@ -13817,6 +14214,7 @@ ${error.message}`);
         eventId: null,
         patternStart: 0,
         sequenceSlot: 0,
+        activeSequence: false,
         activeSourceBeats: 0,
         activeSourceId: "",
         sequence: false,
@@ -13851,6 +14249,7 @@ ${error.message}`);
         eventId: state.eventId,
         patternStart: state.patternStart,
         sequenceSlot: state.sequenceSlot,
+        activeSequence: state.activeSequence ?? false,
         activeSourceBeats: state.activeSourceBeats ?? 0,
         activeSourceId: state.activeSourceId ?? "",
         ...!state.pending && previous.pending && previous.message.startsWith("Pending") ? { message: "Edit active \xB7 transport continued." } : {}
@@ -13861,7 +14260,9 @@ ${error.message}`);
       });
     }
     componentDidMount() {
+      this.mounted = true;
       document.addEventListener("keydown", this.shortcut);
+      window.addEventListener("pagehide", this.flushAutosave);
       const toolbar = document.querySelector(".ch-transport");
       this.toolbarObserver = new ResizeObserver(() => {
         toolbar.closest(".ch-workspace").style.setProperty(
@@ -13870,8 +14271,16 @@ ${error.message}`);
         );
       });
       this.toolbarObserver.observe(toolbar);
+      void this.restoreAutosave();
+    }
+    componentDidUpdate(_previousProps, previousState) {
+      if (hasPersistentChopperChange(previousState, this.state))
+        this.scheduleAutosave();
     }
     componentWillUnmount() {
+      this.mounted = false;
+      clearTimeout(this.autosaveTimer);
+      window.removeEventListener("pagehide", this.flushAutosave);
       this.legacyPreviewGeneration++;
       document.removeEventListener("keydown", this.shortcut);
       this.toolbarObserver?.disconnect();
@@ -14283,6 +14692,16 @@ ${error.message}`);
             onClick: () => this.addPattern("fill")
           },
           "+F"
+        ), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            type: "button",
+            className: "ch-clear-pattern",
+            "aria-label": "Clear Pattern",
+            disabled: !pattern.events.length,
+            onClick: this.clearPattern
+          },
+          "Clear Pattern"
         )), /* @__PURE__ */ React.createElement(
           PatternTimeline,
           {
@@ -14307,6 +14726,8 @@ ${error.message}`);
             onPlace: this.place,
             onSelect: this.selectEvent,
             onChange: this.change,
+            onChangeMany: this.changeMany,
+            onClearSelection: this.clearEventSelection,
             onPatternBeatsChange: this.changePatternBeats,
             onFillCueOrder: this.fillCueOrder
           }
@@ -14319,6 +14740,8 @@ ${error.message}`);
             seed: s.seed,
             probability: s.probability,
             playing: s.playing,
+            liveSlot: s.playing && s.activeSequence ? (s.sequenceSlot % 16 + 16) % 16 : null,
+            activePatternName: s.playing && s.activeSequence ? s.activePattern?.name ?? null : null,
             canPlaySequence: Boolean(source && beats),
             onPlaySequence: () => s.playing && s.sequence ? this.toggle() : this.changePlaybackMode(true, s.slot),
             onPattern: this.commit,
