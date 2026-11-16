@@ -1054,6 +1054,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 .ch-sequence-preview {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 9px;
   padding: 8px 10px 10px;
   border-top: 1px solid var(--ch-line);
@@ -1080,6 +1081,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   color: var(--ch-ink);
 }
 .ch-sequence-table-wrap {
+  overflow-x: auto;
   border: 1px solid var(--ch-line);
   border-radius: 5px;
 }
@@ -14477,7 +14479,8 @@ ${error.message}`);
         this.autosaveGeneration++;
         try {
           await saveChopperAutosave(this.projectEntries());
-          if (this.mounted) this.setState({ message: "Chopper project saved locally in this browser.", error: false });
+          if (this.mounted && !this.state.error)
+            this.setState({ message: "Chopper project saved locally in this browser.", error: false });
         } catch (error) {
           if (this.mounted) this.report(new Error(`Local Chopper autosave failed: ${error?.message ?? error}`));
         }
