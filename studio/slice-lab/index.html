@@ -182,6 +182,41 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   --ch-focus: #c4b2ff;
   --ch-pending: #f0aa53;
   --ch-muted: #b5c6d3;
+  --ch-play-ink: #0d151e;
+  --ch-event-bg: #2b3e4c;
+  --ch-grid-bg: #152530;
+  --ch-grid-major: #52657488;
+  --ch-grid-minor: #2b3e4c88;
+  --ch-grid-division: #2b3e4c55;
+  --ch-cue-border: #2b3e4c80;
+  --ch-focus-fill: #c4b2ff22;
+  --ch-sounding-fill: #f2f5fa30;
+  --ch-active-fill: #14212b88;
+  --ch-active-ink: #f2f5fa;
+  --ch-active-border: #f2f5fa;
+  --ch-playhead: #fff;
+  --ch-sequence-playing: color-mix(in srgb, #278394 28%, var(--ch-surface));
+  --ch-sequence-live: #63d4df;
+  --ch-sequence-live-ink: #bdf5fb;
+  --ch-sequence-kind-bg: #394252;
+  --ch-kind-base: #b5d9c2;
+  --ch-kind-variation: #d3bcff;
+  --ch-error: #ffb6a8;
+  --ch-matrix-overlay: #10202b;
+  --ch-matrix-active-fill: #65758166;
+  --ch-matrix-event-base: #172833;
+  --ch-matrix-ghost-base: #20303c;
+  --ch-marker-label-bg: #10202b;
+  --ch-cue-layer-bg: #16323c;
+  --ch-marker-kick: #ef7979;
+  --ch-marker-snare: #e8b16d;
+  --ch-marker-hat: #76c9ad;
+  --ch-marker-other: #b6a0ea;
+  --ch-layer-kick: #f8a0a0;
+  --ch-layer-snare: #d7c1ff;
+  --ch-layer-hat: #b9df99;
+  --ch-layer-selected-border: #566f7f;
+  --ch-legacy-wave: #b7c9d3;
   display: grid;
   grid-template-columns: 216px minmax(0, 1fr) 250px;
   grid-template-rows: auto 1fr auto;
@@ -285,7 +320,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 .ch-transport .ch-play {
   background: var(--ch-play-color);
-  color: #0d151e;
+  color: var(--ch-play-ink);
   min-width: 72px;
   font-weight: 650;
 }
@@ -403,7 +438,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-wave {
   height: 230px;
   position: relative;
-  background: #1b2c39;
+  background: var(--ch-surface);
 }
 .ch-wave canvas {
   display: block;
@@ -421,7 +456,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   min-width: 0;
   border-radius: 0;
   border-width: 0 1px 0 0;
-  border-color: #2b3e4c80;
+  border-color: var(--ch-cue-border);
   background: transparent;
   position: relative;
   padding: 0;
@@ -435,19 +470,19 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   color: var(--ch-muted);
 }
 .ch-cues button.selected {
-  background: #c4b2ff22;
+  background: var(--ch-focus-fill);
   outline: 2px solid var(--ch-focus);
   outline-offset: -2px;
 }
 .ch-cues button.sounding {
-  background: #f2f5fa30;
-  border-left: 3px solid white;
+  background: var(--ch-sounding-fill);
+  border-left: 3px solid var(--ch-playhead);
 }
 .ch-transient {
   position: absolute;
   top: 36px;
   bottom: 10px;
-  border-left: 1px dashed #f0aa53;
+  border-left: 1px dashed var(--ch-pending);
   pointer-events: none;
 }
 .ch-hint {
@@ -478,8 +513,8 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
     to right,
     transparent 0,
     transparent calc(var(--step) - 1px),
-    #2b3e4c55 calc(var(--step) - 1px),
-    #2b3e4c55 var(--step)
+    var(--ch-grid-division) calc(var(--step) - 1px),
+    var(--ch-grid-division) var(--step)
   );
   touch-action: pan-x pan-y;
 }
@@ -501,7 +536,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   left: 0;
   right: 0;
   height: 32px;
-  background: #2b3e4c;
+  background: var(--ch-event-bg);
   color: var(--ch-ink);
   padding: 6px 10px;
   pointer-events: none;
@@ -516,7 +551,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   align-items: flex-start;
   justify-content: center;
   overflow: hidden;
-  background: #2b3e4c;
+  background: var(--ch-event-bg);
   border: 1px solid var(--ch-focus);
   border-radius: 2px;
   padding: 8px 6px;
@@ -528,15 +563,15 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   position: absolute;
   top: 76px;
   height: 136px;
-  border: 1px solid #f2f5fa;
-  background: #14212b88;
-  color: #f2f5fa;
+  border: 1px solid var(--ch-active-border);
+  background: var(--ch-active-fill);
+  color: var(--ch-active-ink);
   font-size: 10px;
   pointer-events: none;
   overflow: hidden;
 }
 .ch-event.sounding {
-  border-left: 3px solid white;
+  border-left: 3px solid var(--ch-playhead);
 }
 .ch-event-dock {
   grid-column: 1/-1;
@@ -564,7 +599,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #14212b88;
+  background: var(--ch-active-fill);
   cursor: ew-resize;
   touch-action: none;
 }
@@ -572,7 +607,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 2px solid white;
+  border-left: 2px solid var(--ch-playhead);
   pointer-events: none;
 }
 .ch-ghost {
@@ -819,7 +854,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   position: relative;
   margin: 0 20px 12px;
   overflow: hidden;
-  background: #1b2c39;
+  background: var(--ch-surface);
 }
 .ch-source-overview canvas {
   display: block;
@@ -831,7 +866,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   top: 0;
   bottom: 0;
   border: 1px solid var(--ch-focus);
-  background: #c4b2ff22;
+  background: var(--ch-focus-fill);
   pointer-events: none;
 }
 .ch-source-overview b {
@@ -1076,23 +1111,23 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   color: var(--ch-muted);
 }
 .ch-sequence-table tbody tr.is-playing {
-  background: color-mix(in srgb, #278394 28%, var(--ch-surface));
+  background: var(--ch-sequence-playing);
 }
 .ch-sequence-table tr.is-playing td,
 .ch-sequence-table tr.is-playing th {
   color: var(--ch-ink);
-  box-shadow: inset 0 1px #63d4df, inset 0 -1px #63d4df;
+  box-shadow: inset 0 1px var(--ch-sequence-live), inset 0 -1px var(--ch-sequence-live);
 }
 .ch-sequence-table tr.is-playing th:first-child {
-  box-shadow: inset 3px 0 #63d4df, inset 0 1px #63d4df, inset 0 -1px #63d4df;
+  box-shadow: inset 3px 0 var(--ch-sequence-live), inset 0 1px var(--ch-sequence-live), inset 0 -1px var(--ch-sequence-live);
 }
 .ch-sequence-live {
   width: fit-content;
   margin: 0;
   padding: 4px 8px;
-  border: 1px solid #63d4df;
+  border: 1px solid var(--ch-sequence-live);
   border-radius: 4px;
-  color: #bdf5fb;
+  color: var(--ch-sequence-live-ink);
   font-size: 12px;
   font-weight: 700;
 }
@@ -1105,12 +1140,12 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   margin-right: 6px;
   padding: 1px 5px;
   border-radius: 8px;
-  background: #394252;
+  background: var(--ch-sequence-kind-bg);
   font-size: 9px;
   text-transform: uppercase;
 }
-.ch-sequence-kind.kind-base { color: #b5d9c2; }
-.ch-sequence-kind.kind-variation { color: #d3bcff; }
+.ch-sequence-kind.kind-base { color: var(--ch-kind-base); }
+.ch-sequence-kind.kind-variation { color: var(--ch-kind-variation); }
 .ch-sequence-subcandidate,
 .ch-sequence-draw {
   display: block;
@@ -1202,11 +1237,11 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   font-size: 12px;
 }
 .ch-transport .ch-operation-feedback.error {
-  color: #ffb6a8;
+  color: var(--ch-error);
 }
 .ch-numeric-field small {
   grid-column: 1/-1;
-  color: #ffb6a8;
+  color: var(--ch-error);
 }
 @media (max-width: 767px) {
   .ch-transport:not(.more-open) .ch-secondary {
@@ -1385,7 +1420,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   top: 0;
   bottom: 0;
   border: 2px solid var(--ch-focus);
-  background: #c4b2ff22;
+  background: var(--ch-focus-fill);
 }
 .ch-legacy-wave b {
   position: absolute;
@@ -1717,8 +1752,8 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   --ch-pattern-accent: var(--ch-b);
 }
 .ch-pattern[data-slot] .ch-event {
-  border-color: color-mix(in srgb, var(--ch-pattern-accent) 82%, #2b3e4c);
-  background: color-mix(in srgb, var(--ch-pattern-accent) 19%, #2b3e4c);
+  border-color: color-mix(in srgb, var(--ch-pattern-accent) 82%, var(--ch-line));
+  background: color-mix(in srgb, var(--ch-pattern-accent) 19%, var(--ch-event-bg));
 }
 .ch-pattern[data-slot] .ch-event[aria-pressed="true"] {
   box-shadow: 0 0 0 2px var(--ch-pattern-accent);
@@ -1751,10 +1786,10 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   flex-basis: 100%;
   color: var(--ch-muted);
 }
-.ch-marker-toggle[data-kind="kick"] { color: #ef7979; }
-.ch-marker-toggle[data-kind="snare"] { color: #e8b16d; }
-.ch-marker-toggle[data-kind="hat"] { color: #76c9ad; }
-.ch-marker-toggle[data-kind="other"] { color: #b6a0ea; }
+.ch-marker-toggle[data-kind="kick"] { color: var(--ch-marker-kick); }
+.ch-marker-toggle[data-kind="snare"] { color: var(--ch-marker-snare); }
+.ch-marker-toggle[data-kind="hat"] { color: var(--ch-marker-hat); }
+.ch-marker-toggle[data-kind="other"] { color: var(--ch-marker-other); }
 .ch-drum-marker {
   position: absolute;
   z-index: 5;
@@ -1774,7 +1809,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   top: 0;
   bottom: 18px;
   left: -1px;
-  border-left: 2px solid var(--marker-color, #b6a0ea);
+  border-left: 2px solid var(--marker-color, var(--ch-marker-other));
   opacity: .85;
 }
 .ch-drum-marker span {
@@ -1785,16 +1820,16 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   height: 16px;
   padding: 0 3px;
   border-radius: 4px;
-  background: #10202b;
-  color: var(--marker-color, #b6a0ea);
+  background: var(--ch-marker-label-bg);
+  color: var(--marker-color, var(--ch-marker-other));
   font-size: 10px;
   line-height: 16px;
   font-weight: 700;
 }
-.ch-drum-marker[data-kind="kick"] { --marker-color: #ef7979; }
-.ch-drum-marker[data-kind="snare"] { --marker-color: #e8b16d; }
-.ch-drum-marker[data-kind="hat"] { --marker-color: #76c9ad; }
-.ch-drum-marker[data-kind="other"] { --marker-color: #b6a0ea; }
+.ch-drum-marker[data-kind="kick"] { --marker-color: var(--ch-marker-kick); }
+.ch-drum-marker[data-kind="snare"] { --marker-color: var(--ch-marker-snare); }
+.ch-drum-marker[data-kind="hat"] { --marker-color: var(--ch-marker-hat); }
+.ch-drum-marker[data-kind="other"] { --marker-color: var(--ch-marker-other); }
 @media (max-width: 640px) {
   .ch-analysis { align-items: flex-start; }
 }
@@ -1830,7 +1865,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 .ch-tool-toggle button[aria-pressed="true"] {
   border-color: var(--ch-pattern-accent, var(--ch-focus));
-  background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 20%, #1b2c39);
+  background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 20%, var(--ch-surface));
   color: var(--ch-ink);
 }
 .ch-fill-order {
@@ -1855,7 +1890,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   display: grid;
   grid-template-columns: var(--cue-column) max-content;
   height: 36px;
-  background: #1b2c39;
+  background: var(--ch-surface);
   border-bottom: 1px solid var(--ch-line);
 }
 .ch-matrix-label {
@@ -1871,7 +1906,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   height: var(--cue-height);
   padding: 0 8px;
   border-right: 1px solid var(--ch-line);
-  background: #1b2c39;
+  background: var(--ch-surface);
   color: var(--ch-muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
@@ -1895,8 +1930,8 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   overflow: clip;
   height: 36px;
   background:
-    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) * 4 - 1px), #52657488 calc(var(--step) * 4 - 1px), #52657488 calc(var(--step) * 4)),
-    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) - 1px), #2b3e4c88 calc(var(--step) - 1px), #2b3e4c88 var(--step));
+    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) * 4 - 1px), var(--ch-grid-major) calc(var(--step) * 4 - 1px), var(--ch-grid-major) calc(var(--step) * 4)),
+    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) - 1px), var(--ch-grid-minor) calc(var(--step) - 1px), var(--ch-grid-minor) var(--step));
 }
 .ch-matrix-ruler-track span {
   position: absolute;
@@ -1917,7 +1952,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 .ch-matrix-row.armed-row .ch-matrix-label {
   color: var(--ch-pattern-accent, var(--ch-focus));
-  background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 16%, #1b2c39);
+  background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 16%, var(--ch-surface));
 }
 .ch-matrix-row.armed-row .ch-matrix-label strong {
   color: var(--ch-pattern-accent, var(--ch-focus));
@@ -1925,11 +1960,11 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 .ch-matrix-track {
   position: relative;
   height: var(--cue-height);
-  background-color: #152530;
+  background-color: var(--ch-grid-bg);
   background-image:
-    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) * 4 - 1px), #52657466 calc(var(--step) * 4 - 1px), #52657466 calc(var(--step) * 4)),
-    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) - 1px), #2b3e4c88 calc(var(--step) - 1px), #2b3e4c88 var(--step));
-  border-bottom: 1px solid #2b3e4c;
+    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) * 4 - 1px), var(--ch-grid-major) calc(var(--step) * 4 - 1px), var(--ch-grid-major) calc(var(--step) * 4)),
+    repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) - 1px), var(--ch-grid-minor) calc(var(--step) - 1px), var(--ch-grid-minor) var(--step));
+  border-bottom: 1px solid var(--ch-line);
   touch-action: pan-x pan-y;
 }
 .ch-matrix-track:focus-visible {
@@ -1937,7 +1972,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   outline-offset: -2px;
 }
 .ch-matrix-row.armed-row .ch-matrix-track {
-  background-color: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 6%, #152530);
+  background-color: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 6%, var(--ch-grid-bg));
 }
 .ch-matrix-track .ch-event {
   top: 2px;
@@ -1969,9 +2004,9 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   height: calc(var(--cue-height) - 4px);
   z-index: 1;
   padding-left: 3px;
-  border-color: #f2f5fa;
-  background: #65758166;
-  color: var(--ch-ink);
+  border-color: var(--ch-active-border);
+  background: var(--ch-matrix-active-fill);
+  color: var(--ch-active-ink);
   font-size: 9px;
   line-height: 24px;
 }
@@ -1985,7 +2020,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   z-index: 4;
   border: 1px solid var(--ch-pattern-accent, var(--ch-focus));
   border-radius: 4px;
-  background: #14212b;
+  background: var(--ch-matrix-overlay);
   box-shadow: 0 2px 8px #0008;
   font-size: 11px;
 }
@@ -2029,7 +2064,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   padding: 1px 3px;
   border: 1px solid var(--ch-pattern-accent, var(--ch-focus));
   border-radius: 3px;
-  background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 36%, #20303c);
+  background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 36%, var(--ch-matrix-ghost-base));
   box-shadow: 0 3px 12px #0009;
   color: var(--ch-ink);
 }
@@ -2052,7 +2087,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   overflow: hidden;
   padding: 2px 4px;
   border-radius: 3px;
-  background: #10202b;
+  background: var(--ch-matrix-overlay);
   color: var(--ch-ink);
   font-size: 10px;
   text-overflow: ellipsis;
@@ -2063,7 +2098,7 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   z-index: 4;
   top: 0;
   width: 0;
-  border-left: 2px solid white;
+  border-left: 2px solid var(--ch-playhead);
   pointer-events: none;
 }
 .ch-matrix-hint {
@@ -2108,42 +2143,104 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   }
 }
 
-/* Keep the Chopper palette self-contained inside Studio's appearance theme. */
-:root[data-studio-appearance="custom"] .ch-workspace :is(button, input, select) {
+/* Embedded Chopper consumes the Studio palette; no attributes means standalone dark fallback. */
+:root[data-theme] .ch-workspace {
+  --ch-canvas: var(--bg, #0d151e);
+  --ch-panel: var(--surface, #111d27);
+  --ch-surface: var(--surface-2, #1b2c39);
+  --ch-line: var(--line, #2b3e4c);
+  --ch-ink: var(--text, #f2f5fa);
+  --ch-muted: var(--muted, #b5c6d3);
+  --ch-focus: var(--accent, #c4b2ff);
+  --ch-event-bg: var(--ch-surface);
+  --ch-grid-bg: color-mix(in srgb, var(--ch-canvas) 88%, var(--ch-surface));
+  --ch-grid-major: color-mix(in srgb, var(--ch-ink) 35%, var(--ch-line));
+  --ch-grid-minor: color-mix(in srgb, var(--ch-ink) 16%, var(--ch-line));
+  --ch-grid-division: color-mix(in srgb, var(--ch-ink) 24%, var(--ch-line));
+  --ch-cue-border: color-mix(in srgb, var(--ch-ink) 16%, var(--ch-line));
+  --ch-focus-fill: color-mix(in srgb, var(--ch-focus) 18%, transparent);
+  --ch-sounding-fill: color-mix(in srgb, var(--ch-ink) 14%, transparent);
+  --ch-active-fill: color-mix(in srgb, var(--ch-ink) 16%, transparent);
+  --ch-active-ink: var(--ch-ink);
+  --ch-active-border: var(--ch-line);
+  --ch-playhead: var(--ch-focus);
+  --ch-sequence-playing: color-mix(in srgb, var(--ch-a) 18%, var(--ch-surface));
+  --ch-sequence-live: var(--ch-a);
+  --ch-sequence-live-ink: var(--ch-a);
+  --ch-sequence-kind-bg: var(--ch-surface);
+  --ch-matrix-overlay: var(--ch-surface);
+  --ch-matrix-active-fill: color-mix(in srgb, var(--ch-ink) 16%, transparent);
+  --ch-matrix-event-base: var(--ch-surface);
+  --ch-matrix-ghost-base: var(--ch-surface);
+  --ch-marker-label-bg: var(--ch-surface);
+  --ch-cue-layer-bg: color-mix(in srgb, var(--ch-a) 14%, var(--ch-surface));
+  --ch-layer-selected-border: var(--ch-line);
+  --ch-legacy-wave: var(--ch-muted);
+  --ch-play-ink: #0d151e;
+  color-scheme: dark;
+  font-family: var(--studio-font, inherit);
+}
+:root[data-theme="light"] .ch-workspace {
+  --ch-grid-major: color-mix(in srgb, var(--ch-ink) 46%, var(--ch-line));
+  --ch-grid-minor: color-mix(in srgb, var(--ch-ink) 24%, var(--ch-line));
+  --ch-grid-division: color-mix(in srgb, var(--ch-ink) 33%, var(--ch-line));
+  --ch-cue-border: color-mix(in srgb, var(--ch-ink) 25%, var(--ch-line));
+  --ch-a: #006975;
+  --ch-b: #955100;
+  --ch-play-ink: #fff;
+  --ch-pending: #874900;
+  --ch-sequence-live-ink: var(--ch-a);
+  --ch-kind-base: #24613f;
+  --ch-kind-variation: #604494;
+  --ch-error: #a61d17;
+  --ch-marker-kick: #a62a25;
+  --ch-marker-snare: #874900;
+  --ch-marker-hat: #216f4b;
+  --ch-marker-other: #604494;
+  --ch-layer-kick: #a62a25;
+  --ch-layer-snare: #604494;
+  --ch-layer-hat: #216f4b;
+  --ch-legacy-wave: #486577;
+  color-scheme: light;
+}
+:root[data-theme="dark"] .ch-workspace {
+  color-scheme: dark;
+}
+:root[data-theme] .ch-workspace :is(button, input, select) {
   background-color: var(--ch-surface);
   border-color: var(--ch-line);
-  border-radius: 4px;
+  border-radius: var(--studio-radius, 8px);
   color: var(--ch-ink);
-  font-family: inherit;
+  font-family: var(--studio-font, inherit);
 }
-:root[data-studio-appearance="custom"] .ch-workspace :is(input:not([type="checkbox"]):not([type="range"]), select) {
+:root[data-theme] .ch-workspace :is(input:not([type="checkbox"]):not([type="range"]), select) {
   background-color: var(--ch-canvas);
 }
-:root[data-studio-appearance="custom"] .ch-workspace :is(input[type="checkbox"], input[type="range"]) {
+:root[data-theme] .ch-workspace :is(input[type="checkbox"], input[type="range"]) {
   background-color: transparent;
   border-color: transparent;
 }
-:root[data-studio-appearance="custom"] .ch-workspace .ch-transport .ch-play {
+:root[data-theme] .ch-workspace .ch-transport .ch-play {
   background-color: var(--ch-play-color);
   border-color: var(--ch-play-color);
-  color: #0d151e;
+  color: var(--ch-play-ink);
 }
-:root[data-studio-appearance="custom"] .ch-workspace .ch-cues button {
+:root[data-theme] .ch-workspace .ch-cues button {
   background-color: transparent;
 }
-:root[data-studio-appearance="custom"] .ch-workspace .ch-source[data-slot] .ch-cues button.selected {
+:root[data-theme] .ch-workspace .ch-source[data-slot] .ch-cues button.selected {
   background-color: color-mix(in srgb, var(--loop-accent) 22%, transparent);
 }
-:root[data-studio-appearance="custom"] .ch-workspace .ch-cues button.sounding {
-  background-color: #f2f5fa30;
+:root[data-theme] .ch-workspace .ch-cues button.sounding {
+  background-color: var(--ch-sounding-fill);
 }
-:root[data-studio-appearance="custom"] .ch-workspace .ch-drum-marker {
+:root[data-theme] .ch-workspace .ch-drum-marker {
   background-color: transparent;
   border-color: transparent;
   border-radius: 0;
 }
-:root[data-studio-appearance="custom"] .ch-workspace .ch-tool-toggle button[aria-pressed="true"] {
-  background-color: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 20%, #1b2c39);
+:root[data-theme] .ch-workspace .ch-tool-toggle button[aria-pressed="true"] {
+  background-color: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 20%, var(--ch-surface));
 }
 /* V02 keeps the waveform and the first matrix lanes in the same view. */
 .ch-transport,
@@ -2320,17 +2417,17 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 .ch-cue-layer {
   color: var(--ch-a);
-  background: #16323c;
+  background: var(--ch-cue-layer-bg);
 }
 .ch-workspace .ch-layer-toggle {
   cursor: pointer;
   color: var(--ch-muted);
 }
-.ch-workspace .ch-layer-toggle[data-kind="kick"] { color: #f8a0a0; }
-.ch-workspace .ch-layer-toggle[data-kind="snare"] { color: #d7c1ff; }
-.ch-workspace .ch-layer-toggle[data-kind="hat"] { color: #b9df99; }
+.ch-workspace .ch-layer-toggle[data-kind="kick"] { color: var(--ch-layer-kick); }
+.ch-workspace .ch-layer-toggle[data-kind="snare"] { color: var(--ch-layer-snare); }
+.ch-workspace .ch-layer-toggle[data-kind="hat"] { color: var(--ch-layer-hat); }
 .ch-workspace .ch-layer-toggle:has(input:checked) {
-  border-color: #566f7f;
+  border-color: var(--ch-layer-selected-border);
   background: var(--ch-surface);
 }
 .ch-layer-toggle:focus-within {
@@ -2498,10 +2595,10 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   min-height: 0;
   color: var(--ch-ink);
   border-color: var(--ch-pattern-accent);
-  background-color: color-mix(in srgb, var(--ch-pattern-accent) 30%, #172833);
+  background-color: color-mix(in srgb, var(--ch-pattern-accent) 30%, var(--ch-matrix-event-base));
 }
 .ch-workspace .ch-matrix-track .ch-event[aria-pressed="true"] {
-  outline: 2px solid #f2f5fa;
+  outline: 2px solid var(--ch-playhead);
   outline-offset: -2px;
   box-shadow: none;
 }
@@ -2808,7 +2905,18 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
 }
 
 .ch-device-dialog-backdrop{position:fixed;inset:0;background:#0009;z-index:10000;display:flex;align-items:center;justify-content:center;padding:1rem}
-.ch-device-dialog{background:var(--panel,#20232a);color:var(--text,#fff);padding:1.5rem;max-width:40rem;width:100%;max-height:90vh;overflow:auto;border:1px solid #888;border-radius:.5rem}
+.ch-device-dialog{background:var(--surface,#20232a);color:var(--text,#fff);padding:1.5rem;max-width:40rem;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--line,#888);border-radius:var(--studio-radius,.5rem)}
+:root[data-theme] .ch-workspace .ch-event {
+  background: var(--ch-event-bg);
+}
+:root[data-theme] .ch-workspace .ch-pattern[data-slot] .ch-event {
+  border-color: color-mix(in srgb, var(--ch-pattern-accent) 82%, var(--ch-line));
+  background: color-mix(in srgb, var(--ch-pattern-accent) 19%, var(--ch-event-bg));
+}
+:root[data-theme] .ch-workspace .ch-matrix-track .ch-event {
+  border-color: var(--ch-pattern-accent, var(--ch-focus));
+  background: color-mix(in srgb, var(--ch-pattern-accent, var(--ch-focus)) 30%, var(--ch-event-bg));
+}
 </style>
 </head>
 <body>
@@ -10153,6 +10261,8 @@ ${error.message}`);
         el2.height = 130 * devicePixelRatio;
         const ctx = el2.getContext("2d");
         ctx.scale(devicePixelRatio, devicePixelRatio);
+        const workspace = el2.closest(".ch-workspace");
+        const waveformColor = workspace ? getComputedStyle(workspace).getPropertyValue("--ch-legacy-wave").trim() : "";
         drawWave(
           ctx,
           buffer,
@@ -10162,13 +10272,21 @@ ${error.message}`);
           0,
           el2.clientWidth,
           130,
-          "#b7c9d3"
+          waveformColor || "#b7c9d3"
         );
       };
       paint();
       const observer = new ResizeObserver(paint);
       observer.observe(el2);
-      return () => observer.disconnect();
+      const themeObserver = new MutationObserver(paint);
+      themeObserver.observe(window.document.documentElement, {
+        attributes: true,
+        attributeFilter: ["style", "data-theme"]
+      });
+      return () => {
+        observer.disconnect();
+        themeObserver.disconnect();
+      };
     }, [buffer]);
     const field = (label, path2, value, min, max, step = 1) => /* @__PURE__ */ React.createElement(
       NumericField,
@@ -11528,6 +11646,20 @@ ${error.message}`);
     const canvas = React.useRef(null), overview = React.useRef(null), scroll = React.useRef(null), [zoom, setZoom] = React.useState(1);
     const pinch = useMusicalPinch(scroll, zoom, setZoom, 1, 4, () => {
     });
+    const waveformColor = (node) => {
+      const workspace = node.closest(".ch-workspace");
+      const token = slot === 0 ? "--ch-a" : "--ch-b";
+      const color = workspace ? getComputedStyle(workspace).getPropertyValue(token).trim() : "";
+      return color || (slot === 0 ? "#63d4df" : "#ffad66");
+    };
+    const observeTheme = (draw) => {
+      const observer = new MutationObserver(draw);
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["style", "data-theme"]
+      });
+      return observer;
+    };
     React.useEffect(() => {
       const node = canvas.current;
       if (!node) return;
@@ -11538,7 +11670,7 @@ ${error.message}`);
         if (!ctx) return;
         const data = buffer.getChannelData(0), framesPerPixel = data.length / node.width;
         ctx.clearRect(0, 0, node.width, node.height);
-        ctx.fillStyle = slot === 0 ? "#63d4df" : "#ffad66";
+        ctx.fillStyle = waveformColor(node);
         for (let x = 0; x < node.width; x++) {
           const from2 = Math.floor(x * framesPerPixel), to = Math.min(data.length, Math.ceil((x + 1) * framesPerPixel));
           let low = 1, high = -1;
@@ -11557,7 +11689,11 @@ ${error.message}`);
       draw();
       const observer = new ResizeObserver(draw);
       observer.observe(node);
-      return () => observer.disconnect();
+      const themeObserver = observeTheme(draw);
+      return () => {
+        observer.disconnect();
+        themeObserver.disconnect();
+      };
     }, [buffer, zoom, slot]);
     React.useEffect(() => {
       const node = overview.current;
@@ -11569,7 +11705,7 @@ ${error.message}`);
         if (!ctx) return;
         const data = buffer.getChannelData(0);
         ctx.clearRect(0, 0, node.width, node.height);
-        ctx.fillStyle = slot === 0 ? "#63d4df" : "#ffad66";
+        ctx.fillStyle = waveformColor(node);
         for (let x = 0; x < node.width; x++) {
           const from2 = Math.floor(x / node.width * data.length), to = Math.ceil((x + 1) / node.width * data.length);
           let peak = 0;
@@ -11586,7 +11722,11 @@ ${error.message}`);
       draw();
       const observer = new ResizeObserver(draw);
       observer.observe(node);
-      return () => observer.disconnect();
+      const themeObserver = observeTheme(draw);
+      return () => {
+        observer.disconnect();
+        themeObserver.disconnect();
+      };
     }, [buffer, slot]);
     const from = windowStart % beats, span3 = Math.min(beats, windowBeats), first = Math.min(span3, beats - from), second = span3 - first;
     return /* @__PURE__ */ React.createElement("section", { className: "ch-source", "aria-label": "Source waveform", "data-slot": slot }, /* @__PURE__ */ React.createElement("div", { className: "ch-region-title" }, /* @__PURE__ */ React.createElement("h2", null, source.name), /* @__PURE__ */ React.createElement("span", null, beats / 4, " bars \xB7 ", source.bpm, " BPM \xB7 source cues 1/4 \xB7", " ", bindingStatus), /* @__PURE__ */ React.createElement("label", null, "Zoom", " ", /* @__PURE__ */ React.createElement(

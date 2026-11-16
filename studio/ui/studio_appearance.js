@@ -99,5 +99,13 @@ export function mountStudioAppearance(host, frame) {
     else if (event.key === DESIGNER_CONTRAST_KEY) { try { localStorage.setItem(CONTRAST_KEY,event.newValue || '0'); } catch {} }
     else if (event.key === CONTRAST_KEY) { try { localStorage.setItem(DESIGNER_CONTRAST_KEY,event.newValue || '0'); } catch {} }
   });
+  const followsSystemAppearance = () => {
+    try { return !localStorage.getItem(KEY) && !localStorage.getItem('pentavox.studio.theme'); }
+    catch { return false; }
+  };
+  const systemAppearance = window.matchMedia?.('(prefers-color-scheme: dark)');
+  const syncSystemAppearance = () => { if (followsSystemAppearance()) syncSamples(); };
+  if (systemAppearance?.addEventListener) systemAppearance.addEventListener('change', syncSystemAppearance);
+  else systemAppearance?.addListener?.(syncSystemAppearance);
   apply(read()); syncContrast(readContrast()); render();
 }
