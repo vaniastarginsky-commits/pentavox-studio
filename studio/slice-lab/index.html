@@ -2409,23 +2409,59 @@ footer{flex-shrink:0;height:32px;display:flex;align-items:center;gap:15px;paddin
   padding-inline: 14px;
 }
 .ch-pattern-entry {
+  position: relative;
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 2px;
+  gap: 0;
+}
+.ch-pattern-entry > .ch-pattern-name {
+  padding-inline: 10px;
+}
+.ch-pattern-entry > .ch-pattern-name.has-delete {
+  padding-right: 34px;
 }
 .ch-pattern-entry > .ch-pattern-delete {
-  width: 30px;
-  min-width: 30px;
-  min-height: 32px;
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: 3px;
+  transform: translateY(-50%);
+  width: 24px;
+  min-width: 24px;
+  min-height: 24px;
   padding: 0;
+  border: 0;
   border-radius: 50%;
+  background: transparent;
+  color: inherit;
   font-size: 18px;
   line-height: 1;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.ch-pattern-entry:hover > .ch-pattern-delete {
+  opacity: 0.5;
 }
 .ch-pattern-entry > .ch-pattern-delete:focus-visible {
+  opacity: 1;
   outline: 2px solid currentColor;
   outline-offset: 2px;
+}
+@media (hover: none), (pointer: coarse) {
+  .ch-pattern-entry > .ch-pattern-delete {
+    opacity: 1;
+  }
+}
+@media (max-width: 767px) {
+  .ch-pattern-entry > .ch-pattern-name.has-delete {
+    padding-right: 48px;
+  }
+  .ch-pattern-entry > .ch-pattern-delete {
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 :is(.ch-workspace, :root[data-studio-appearance="custom"] .ch-workspace) .ch-pattern-bank button[aria-pressed="true"] {
   background-color: var(--ch-a);
@@ -9990,12 +10026,16 @@ ${error.message}`);
     immediate = false,
     onCommit
   }) {
-    const [draft, setDraft] = React.useState(String(value)), [error, setError] = React.useState("");
+    const [draft, setDraft] = React.useState(value === null ? "" : String(value)), [error, setError] = React.useState("");
     React.useLayoutEffect(() => {
-      setDraft(String(value));
+      setDraft(value === null ? "" : String(value));
       setError("");
     }, [value]);
     const commit = () => {
+      if (value === null && draft.trim() === "") {
+        setError("");
+        return;
+      }
       const next = Number(draft);
       if (draft.trim() === "" || !Number.isFinite(next) || next < min || next > max || step === 1 && (!Number.isInteger(next) || !exactIntegerDraft(draft))) {
         setError(`Enter ${min}\u2013${max}${step === 1 ? " (whole numbers)" : ""}.`);
@@ -10018,6 +10058,7 @@ ${error.message}`);
         max,
         step,
         value: draft,
+        placeholder: value === null ? "Mixed" : void 0,
         onChange: (e) => {
           setDraft(e.target.value);
           setError("");
@@ -10036,7 +10077,7 @@ ${error.message}`);
           if (e.key === "Escape") {
             e.preventDefault();
             e.stopPropagation();
-            setDraft(String(value));
+            setDraft(value === null ? "" : String(value));
             setError("");
           }
         }
@@ -11670,6 +11711,8 @@ ${error.message}`);
     onChange,
     onChangeMany,
     onClearSelection,
+    onGroupSelectionChange,
+    groupSelectionIds,
     onPatternBeatsChange,
     onFillCueOrder
   }) {
@@ -11686,6 +11729,7 @@ ${error.message}`);
       if (valid.length === groupSelectionRef.current.length && valid.every((id, index) => id === groupSelectionRef.current[index])) return;
       groupSelectionRef.current = valid;
       setGroupSelection(valid);
+      onGroupSelectionChange(valid);
       if (selected !== null) onClearSelection();
     };
     const clearGroupSelection = () => {
@@ -11724,12 +11768,28 @@ ${error.message}`);
       return false;
     };
     React.useEffect(() => {
+      const ids = groupSelectionIds.filter((id) => pattern.events.some((event) => event.id === id));
+      if (ids.length !== groupSelectionRef.current.length || ids.some((id, index) => id !== groupSelectionRef.current[index])) {
+        groupSelectionRef.current = ids;
+        setGroupSelection(ids);
+      }
+    }, [groupSelectionIds]);
+    const selectionScope = `${slot}:${pattern.id}`, selectionScopeRef = React.useRef(selectionScope);
+    React.useEffect(() => {
+      if (selectionScopeRef.current !== selectionScope) {
+        selectionScopeRef.current = selectionScope;
+        groupSelectionRef.current = [];
+        setGroupSelection([]);
+        onGroupSelectionChange([]);
+        return;
+      }
       const valid = groupSelection.filter((id) => pattern.events.some((event) => event.id === id));
       if (valid.length !== groupSelection.length) {
         groupSelectionRef.current = valid;
         setGroupSelection(valid);
+        onGroupSelectionChange(valid);
       }
-    }, [pattern.id, pattern.events]);
+    }, [selectionScope, pattern.events, onGroupSelectionChange]);
     const setZoom = (value) => {
       setFit(false);
       setManualZoom(value);
@@ -11937,7 +11997,7 @@ ${error.message}`);
         document.removeEventListener("pointerup", up, true);
         document.removeEventListener("pointercancel", cancel, true);
       };
-    }, [unit, total, onChange, onChangeMany, onClearSelection, pattern.events, pattern.beats, rowCount, selected]);
+    }, [unit, total, onChange, onChangeMany, onClearSelection, onGroupSelectionChange, pattern.events, pattern.beats, rowCount, selected]);
     const pinch = useMusicalPinch(scroll, zoom, setZoom, minZoom, maxZoom, () => {
       down.current = null;
       selectionDrag.current = null;
@@ -12532,6 +12592,17 @@ ${error.message}`);
   }
 
   // src/chopper/components/EventInspector.tsx
+  function SourceTimingInspector({
+    sourceBpm,
+    sourceBars,
+    timingValid,
+    timingMessage,
+    onSourceBpmChange,
+    onSourceBarsChange,
+    onApplyTiming
+  }) {
+    return /* @__PURE__ */ React.createElement("section", { className: "ch-source-timing", "aria-label": "Source timing Inspector" }, /* @__PURE__ */ React.createElement("h3", null, "Loop source timing \xB7 4/4"), /* @__PURE__ */ React.createElement("label", null, "Source BPM", /* @__PURE__ */ React.createElement("input", { "aria-label": "Source BPM", type: "number", min: "20", max: "400", step: "0.01", value: sourceBpm, disabled: !sourceBpm, onChange: (e) => onSourceBpmChange(e.target.value) })), /* @__PURE__ */ React.createElement("label", null, "Source bars", /* @__PURE__ */ React.createElement("input", { "aria-label": "Source bars", type: "number", min: "1", step: "1", value: sourceBars, disabled: !sourceBpm, onChange: (e) => onSourceBarsChange(e.target.value) })), /* @__PURE__ */ React.createElement("small", { role: timingValid ? "status" : "alert" }, timingMessage), /* @__PURE__ */ React.createElement("button", { type: "button", disabled: !timingValid, onClick: onApplyTiming }, "Apply source timing"));
+  }
   function EventInspector({
     event,
     sourceBpm,
@@ -12582,7 +12653,18 @@ ${error.message}`);
         })
       },
       mode === "relative" ? "Relative (REL)" : "Fixed (ABS)"
-    )))), /* @__PURE__ */ React.createElement("div", { className: "ch-inspector-body" }, /* @__PURE__ */ React.createElement("section", { className: "ch-source-timing", "aria-label": "Source timing Inspector" }, /* @__PURE__ */ React.createElement("h3", null, "Loop source timing \xB7 4/4"), /* @__PURE__ */ React.createElement("label", null, "Source BPM", /* @__PURE__ */ React.createElement("input", { "aria-label": "Source BPM", type: "number", min: "20", max: "400", step: "0.01", value: sourceBpm, disabled: !sourceBpm, onChange: (e) => onSourceBpmChange(e.target.value) })), /* @__PURE__ */ React.createElement("label", null, "Source bars", /* @__PURE__ */ React.createElement("input", { "aria-label": "Source bars", type: "number", min: "1", step: "1", value: sourceBars, disabled: !sourceBpm, onChange: (e) => onSourceBarsChange(e.target.value) })), /* @__PURE__ */ React.createElement("small", { role: timingValid ? "status" : "alert" }, timingMessage), /* @__PURE__ */ React.createElement("button", { type: "button", disabled: !timingValid, onClick: onApplyTiming }, "Apply source timing")), !event ? /* @__PURE__ */ React.createElement("p", null, "Select an event to hear and edit it.") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", null, resolved === null ? "Source unavailable" : `Source bar ${Math.floor(resolved / 4) + 1}, beat ${resolved % 4 + 1} \xB7 cue ${resolved + 1}`, /* @__PURE__ */ React.createElement("br", null), "Relative (REL) follows the loop as the pattern repeats. Fixed (ABS) always plays the same place in the original WAV."), numeric("Source cue (1\u201364)", "cue", 1, 64), numeric("Position (sixteenths)", "step", 1, maxPosition), numeric("Duration (sixteenths)", "length", 1, maxLength), numeric("Gain", "gain", 0, 2, 0.05), numeric("Pitch (semitones)", "pitch", -24, 24), numeric("Probability", "probability", 0, 1, 0.05), /* @__PURE__ */ React.createElement("fieldset", { className: "ch-event-actions" }, /* @__PURE__ */ React.createElement("legend", null, "Action markers on this event"), ["repeat", "roll"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, key === "repeat" ? "Fixed repeat (legacy fallback)" : "Roll", /* @__PURE__ */ React.createElement(
+    )))), /* @__PURE__ */ React.createElement("div", { className: "ch-inspector-body" }, /* @__PURE__ */ React.createElement(
+      SourceTimingInspector,
+      {
+        sourceBpm,
+        sourceBars,
+        timingValid,
+        timingMessage,
+        onSourceBpmChange,
+        onSourceBarsChange,
+        onApplyTiming
+      }
+    ), !event ? /* @__PURE__ */ React.createElement("p", null, "Select an event to hear and edit it.") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("p", null, resolved === null ? "Source unavailable" : `Source bar ${Math.floor(resolved / 4) + 1}, beat ${resolved % 4 + 1} \xB7 cue ${resolved + 1}`, /* @__PURE__ */ React.createElement("br", null), "Relative (REL) follows the loop as the pattern repeats. Fixed (ABS) always plays the same place in the original WAV."), numeric("Source cue (1\u201364)", "cue", 1, 64), numeric("Position (sixteenths)", "step", 1, maxPosition), numeric("Duration (sixteenths)", "length", 1, maxLength), numeric("Gain", "gain", 0, 2, 0.05), numeric("Pitch (semitones)", "pitch", -24, 24), numeric("Probability", "probability", 0, 1, 0.05), /* @__PURE__ */ React.createElement("fieldset", { className: "ch-event-actions" }, /* @__PURE__ */ React.createElement("legend", null, "Action markers on this event"), ["repeat", "roll"].map((key) => /* @__PURE__ */ React.createElement("label", { key }, key === "repeat" ? "Fixed repeat (legacy fallback)" : "Roll", /* @__PURE__ */ React.createElement(
       "select",
       {
         "aria-label": key === "repeat" ? "Fixed repeat (legacy fallback)" : "Roll",
@@ -12638,6 +12720,156 @@ ${error.message}`);
         onChange: (e) => onChange({ ...event, [key]: e.target.checked })
       }
     ), key === "reverse" ? "Reverse" : "Gate at cue end")), /* @__PURE__ */ React.createElement("button", { onClick: onPin }, "Use last heard cue as fixed"), /* @__PURE__ */ React.createElement("button", { onClick: onPreview }, "Preview processed event"), /* @__PURE__ */ React.createElement("div", { className: "ch-edit-actions" }, /* @__PURE__ */ React.createElement("button", { onClick: onDuplicate }, "Duplicate"), /* @__PURE__ */ React.createElement("button", { disabled: event.length < 2, onClick: onSplit }, "Split"), /* @__PURE__ */ React.createElement("button", { onClick: onDelete }, "Delete")))));
+  }
+
+  // src/chopper/components/GroupEventInspector.tsx
+  var common = (values) => values.length && values.every((value) => Object.is(value, values[0])) ? values[0] : null;
+  var effectOf = (event) => {
+    const active = [];
+    if (event.retriggerProbability) active.push("retrigger");
+    if (event.pitchedRush) active.push("rush");
+    if (event.tapeStop) active.push("stop");
+    return active.length > 1 ? null : active[0] ?? "none";
+  };
+  function GroupEventInspector({
+    events,
+    patternBeats,
+    sourceBpm = "",
+    sourceBars = "",
+    timingValid = false,
+    timingMessage = "Choose a source and valid 4/4 timing.",
+    onSourceBpmChange = () => {
+    },
+    onSourceBarsChange = () => {
+    },
+    onApplyTiming = () => {
+    },
+    onPatch,
+    onClose = () => {
+    }
+  }) {
+    const maxSteps = patternBeats * 4;
+    const effects = events.map(effectOf);
+    const effect = common(effects);
+    const numeric = (label, key, min, max, step = 1, offset = 0) => /* @__PURE__ */ React.createElement(
+      NumericField,
+      {
+        label,
+        min,
+        max,
+        step,
+        value: common(events.map((event) => event[key] + offset)),
+        immediate: false,
+        onCommit: (value) => onPatch({ [key]: value - offset })
+      }
+    );
+    const select = (label, value, values, change, disabled = false) => /* @__PURE__ */ React.createElement("label", { key: label }, label, /* @__PURE__ */ React.createElement(
+      "select",
+      {
+        "aria-label": label,
+        value: value === null ? "" : String(value),
+        disabled,
+        onChange: (event) => {
+          if (event.target.value !== "") change(event.target.value);
+        }
+      },
+      /* @__PURE__ */ React.createElement("option", { value: "" }, "Mixed"),
+      values.map((option) => /* @__PURE__ */ React.createElement("option", { key: String(option.value), value: String(option.value) }, option.label))
+    ));
+    const reverseLocked = effects.some((value) => value !== "none");
+    return /* @__PURE__ */ React.createElement("aside", { className: "ch-inspector ch-group-inspector", "aria-label": "Group event inspector" }, /* @__PURE__ */ React.createElement("header", { className: "ch-inspector-head" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("h2", null, "Group \xB7 ", events.length, " event", events.length === 1 ? "" : "s"), /* @__PURE__ */ React.createElement("button", { type: "button", onClick: onClose, "aria-label": "Close inspector" }, "Close")), /* @__PURE__ */ React.createElement("p", null, "Mixed values are unchanged until you edit that field.")), /* @__PURE__ */ React.createElement("div", { className: "ch-inspector-body" }, /* @__PURE__ */ React.createElement(
+      SourceTimingInspector,
+      {
+        sourceBpm,
+        sourceBars,
+        timingValid,
+        timingMessage,
+        onSourceBpmChange,
+        onSourceBarsChange,
+        onApplyTiming
+      }
+    ), select("Address mode", common(events.map((event) => event.mode)), [
+      { value: "relative", label: "Relative (REL)" },
+      { value: "absolute", label: "Fixed (ABS)" }
+    ], (mode) => onPatch({ mode })), numeric("Source cue (1\u201364)", "cue", 1, 64, 1, 1), numeric("Position (sixteenths)", "step", 1, maxSteps, 1, 1), numeric("Duration (sixteenths)", "length", 1, maxSteps), numeric("Gain", "gain", 0, 2, 0.05), numeric("Pitch (semitones)", "pitch", -24, 24), numeric("Probability", "probability", 0, 1, 0.05), select(
+      "Fixed repeat (legacy fallback)",
+      common(events.map((event) => event.repeat)),
+      [1, 2, 3, 4, 6, 8].map((value) => ({ value, label: value === 1 ? "Off" : `${value}\xD7` })),
+      (value) => onPatch({ repeat: Number(value) })
+    ), select(
+      "Roll",
+      common(events.map((event) => event.roll)),
+      [1, 2, 4, 8].map((value) => ({ value, label: value === 1 ? "Off" : `${value}\xD7` })),
+      (value) => onPatch({ roll: Number(value) })
+    ), select("Slicer effect", effect, [
+      { value: "none", label: "Off" },
+      { value: "retrigger", label: "Slicer Retrigger" },
+      { value: "rush", label: "Pitched Rush" },
+      { value: "stop", label: "Tape Stop" }
+    ], (slicerEffect) => onPatch({ slicerEffect })), effect === "retrigger" && /* @__PURE__ */ React.createElement(
+      NumericField,
+      {
+        label: "Slicer Retrigger (%)",
+        min: 1,
+        max: 100,
+        step: 1,
+        value: common(events.map((event) => Math.round((event.retriggerProbability ?? 0) * 100))),
+        immediate: false,
+        onCommit: (value) => onPatch({ retriggerProbability: value / 100 })
+      }
+    ), effect === "rush" && select(
+      "Pitched Rush hits",
+      common(events.map((event) => event.rushHits ?? null)),
+      [2, 4, 8].map((value) => ({ value, label: String(value) })),
+      (value) => onPatch({ rushHits: Number(value) })
+    ), select("Reverse", common(events.map((event) => event.reverse)), [
+      { value: true, label: "On" },
+      { value: false, label: "Off" }
+    ], (value) => onPatch({ reverse: value === true || String(value) === "true" }), reverseLocked), select("Gate", common(events.map((event) => event.gate)), [
+      { value: true, label: "On" },
+      { value: false, label: "Off" }
+    ], (value) => onPatch({ gate: value === true || String(value) === "true" })), effect === null && /* @__PURE__ */ React.createElement("p", { className: "ch-group-hint" }, "Choose one Slicer effect to edit its effect-specific parameters.")));
+  }
+
+  // src/chopper/group_event_patch.ts
+  function applyGroupEventPatch(pattern, ids, patch, context = { masterBeat: 0 }) {
+    if (!ids.length || new Set(ids).size !== ids.length)
+      return { ok: false, error: "Select one or more distinct events before editing the group." };
+    const selected = new Set(ids);
+    if (ids.some((id) => !pattern.events.some((event) => event.id === id)))
+      return { ok: false, error: "The group selection changed; select the events again." };
+    try {
+      const { slicerEffect, ...fields } = patch;
+      const events = pattern.events.map((event) => {
+        if (!selected.has(event.id)) return event;
+        const next = { ...event, ...fields };
+        if (patch.mode === "absolute" && event.mode === "relative") {
+          if (!Number.isInteger(context.sourceBeats) || !context.sourceBeats)
+            throw Error("Valid source timing is required to pin relative cues as ABS.");
+          next.cue = resolveCue(
+            event.cue,
+            "relative",
+            context.masterBeat,
+            pattern.beats,
+            context.sourceBeats,
+            context.windowOrigin
+          );
+        }
+        if (slicerEffect) {
+          next.retriggerProbability = slicerEffect === "retrigger" ? event.retriggerProbability || 1 : 0;
+          next.pitchedRush = slicerEffect === "rush";
+          next.rushHits = slicerEffect === "rush" ? event.rushHits || 4 : 0;
+          next.tapeStop = slicerEffect === "stop";
+          if (slicerEffect !== "none") next.reverse = false;
+        }
+        return next;
+      });
+      const candidate = { ...pattern, events };
+      validatePattern(candidate);
+      return { ok: true, events, pattern: candidate };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "The group edit is invalid." };
+    }
   }
 
   // src/chopper/device.ts
@@ -13166,7 +13398,7 @@ ${error.message}`);
         const sets = structuredClone(this.patternSets());
         sets[slot] = structuredClone(bank);
         const selected = sets[slot].patterns[0].id, bindings = this.state.patternBindings.map((id, index) => index === slot ? selected : id);
-        this.setState({ patternSets: sets, patternBindings: bindings, ...this.state.slot === slot ? { patterns: sets[slot].patterns, patternSource: sets[slot].patternSource, patternId: selected, selected: null } : {}, message: `Imported ${slot ? "B" : "A"}.PVXE from module SD into Studio. Live playback is not confirmed.`, error: false }, done);
+        this.setState({ patternSets: sets, patternBindings: bindings, ...this.state.slot === slot ? { patterns: sets[slot].patterns, patternSource: sets[slot].patternSource, patternId: selected, selected: null, groupSelectionIds: [] } : {}, message: `Imported ${slot ? "B" : "A"}.PVXE from module SD into Studio. Live playback is not confirmed.`, error: false }, done);
       };
       this.resolveDeviceConflict = (slot, action) => {
         const entry = this.state.deviceConflicts.find((item) => item.slot === slot);
@@ -13186,6 +13418,15 @@ ${error.message}`);
         } catch (error) {
           this.report(error);
         }
+      };
+      this.selectGroupEvents = (ids) => {
+        const available = new Set(this.pattern.events.map((event) => event.id));
+        const valid = [...new Set(ids)].filter((id) => available.has(id));
+        this.setState({
+          groupSelectionIds: valid,
+          ...valid.length ? { selected: null } : {},
+          inspector: innerWidth >= 1200 || this.state.inspector
+        });
       };
       this.revealSelection = () => requestAnimationFrame(() => {
         const selected = document.querySelector(
@@ -13222,7 +13463,7 @@ ${error.message}`);
           `[data-event-id="${CSS.escape(this.state.selected ?? "")}"]`
         )?.focus({ preventScroll: true });
       });
-      this.inspectEvent = (id) => this.setState({ selected: id, inspector: true }, () => {
+      this.inspectEvent = (id) => this.setState({ selected: id, groupSelectionIds: [], inspector: true }, () => {
         void this.previewEvent();
         this.revealSelection();
       });
@@ -13237,7 +13478,7 @@ ${error.message}`);
             ".ch-project-menu[open],.ch-sequence-settings[open]"
           );
           document.querySelectorAll(".ch-project-menu[open],.ch-sequence-settings[open]").forEach((node) => node.open = false);
-          this.setState({ inspector: false, library: false, armed: false }, () => {
+          this.setState({ inspector: false, library: false, armed: false, groupSelectionIds: [] }, () => {
             const target2 = library ? document.querySelector(".ch-library-toggle") : details ? details.querySelector("summary") : this.state.selected ? document.querySelector(
               `[data-event-id="${CSS.escape(this.state.selected)}"]`
             ) : document.querySelector(".ch-library-toggle");
@@ -13298,6 +13539,7 @@ ${error.message}`);
           if (this.state.playing) this.publish(pattern);
           this.setState({
             patternId: id,
+            groupSelectionIds: [],
             patternBindings: this.state.patternBindings.map(
               (old, slot) => slot === this.state.slot ? id : old
             ),
@@ -13347,6 +13589,7 @@ ${error.message}`);
           sourceId: state.bindings[slot],
           patternId: selected.id,
           selected: null,
+          groupSelectionIds: [],
           cue: null,
           armed: false,
           pending: 0,
@@ -13378,7 +13621,7 @@ ${error.message}`);
             patterns,
             patternId,
             patternBindings,
-            ...wasActive ? { selected: null } : {},
+            ...wasActive ? { selected: null, groupSelectionIds: [] } : {},
             library: false,
             ...!this.state.playing ? { message: `Deleted ${removed.name} from Studio only. Undo restores it; send the bank separately to update the module.`, error: false } : {}
           },
@@ -13406,6 +13649,7 @@ ${error.message}`);
           {
             patterns: [...this.state.patterns, pattern],
             patternId: pattern.id,
+            groupSelectionIds: [],
             patternBindings: this.state.patternBindings.map(
               (id, slot) => slot === this.state.slot ? pattern.id : id
             ),
@@ -13485,6 +13729,7 @@ ${error.message}`);
           }))
             this.setState({
               selected: null,
+              groupSelectionIds: [],
               message: `Filled ${events.length} beats in source cue order. Undo restores the previous pattern.`,
               error: false
             });
@@ -13603,6 +13848,28 @@ ${error.message}`);
         }
       };
       this.changeMany = (events) => this.commit({ ...this.pattern, events });
+      this.patchGroupEvents = (patch) => {
+        const selected = this.groupEvents;
+        let sourceBeats;
+        try {
+          if (patch.mode === "absolute" && selected.some((event) => event.mode === "relative")) {
+            const source = this.source;
+            if (!source || this.state.timingEdit) throw Error("Apply valid source timing before pinning the group as ABS.");
+            sourceBeats = sourceTiming(source.frames, source.sampleRate, source.bpm);
+          }
+          const result = applyGroupEventPatch(this.pattern, this.state.groupSelectionIds, patch, {
+            masterBeat: this.state.beat,
+            sourceBeats,
+            windowOrigin: this.windowOrigin()
+          });
+          if (!result.ok) throw Error(result.error);
+          if (!this.changeMany(result.events)) return "The group edit could not be committed.";
+          return;
+        } catch (error) {
+          this.report(error);
+          return error instanceof Error ? error.message : "The group edit is invalid.";
+        }
+      };
       this.clearEventSelection = () => {
         if (this.state.selected !== null) this.setState({ selected: null });
       };
@@ -13694,7 +13961,7 @@ ${error.message}`);
         }
       };
       this.selectEvent = (id) => this.setState(
-        { selected: id, inspector: innerWidth >= 1200 || this.state.inspector },
+        { selected: id, groupSelectionIds: [], inspector: innerWidth >= 1200 || this.state.inspector },
         () => {
           void this.previewEvent();
           this.revealSelection();
@@ -13918,6 +14185,7 @@ ${error.message}`);
             patternId: patterns[0].id,
             patternBindings: this.state.patternBindings.map((id, slot) => slot === this.state.slot ? patterns[0].id : id),
             selected: null,
+            groupSelectionIds: [],
             error: false,
             message: patternSource ? "Patterns imported with their authored grid. Sending to the module does not require a local WAV. PVXE names are role labels." : "Patterns imported. To send without a WAV, import A.PVXE / B.PVXE or a JSON carrying source metadata."
           });
@@ -14167,6 +14435,7 @@ ${error.message}`);
           probability: 0.5,
           bpm: Number.isFinite(legacyProject.bpm) && legacyProject.bpm >= 20 && legacyProject.bpm <= 400 ? legacyProject.bpm : 174,
           selected: null,
+          groupSelectionIds: [],
           cue: null,
           armed: false,
           beat: 0,
@@ -14426,6 +14695,7 @@ ${error.message}`);
             probability: value.version >= 2 ? value.probability : 0.5,
             previewLevel: value.previewLevel ?? 0.65,
             selected: null,
+            groupSelectionIds: [],
             cue: null,
             beat: 0,
             message: timingInvalidSlots.length ? `Project restored. Correct source timing for Loop ${timingInvalidSlots.map((slot) => slot === 0 ? "A" : "B").join(" and ")} in Inspector before playback; originals and event addresses are preserved.` : "Project restored with original audio bytes and event addresses.",
@@ -14487,6 +14757,7 @@ ${error.message}`);
             bars: source ? String(Math.max(1, Math.round(source.frames / source.sampleRate * source.bpm / 240))) : "",
             timingEdit: null,
             selected: null,
+            groupSelectionIds: [],
             cue: null,
             armed: false,
             message: this.state.playing ? "Pending \xB7 Undo/Redo source and pattern transaction." : "History restored.",
@@ -14513,6 +14784,7 @@ ${error.message}`);
         patterns: [base],
         patternId: base.id,
         selected: null,
+        groupSelectionIds: [],
         cue: null,
         playingCue: null,
         armed: false,
@@ -14612,8 +14884,12 @@ ${error.message}`);
     get event() {
       return this.pattern.events.find((e) => e.id === this.state.selected) || null;
     }
+    get groupEvents() {
+      const selected = new Set(this.state.groupSelectionIds);
+      return this.pattern.events.filter((event) => selected.has(event.id));
+    }
     render() {
-      const s = this.state, source = this.source, buffer = source && audioLibrary.get(source.id), pattern = this.pattern, event = this.event, playingEditedPattern = s.playing && !s.sequence && s.mode === (s.slot === 0 ? "A" : "B");
+      const s = this.state, source = this.source, buffer = source && audioLibrary.get(source.id), pattern = this.pattern, event = this.event, groupEvents = this.groupEvents, playingEditedPattern = s.playing && !s.sequence && s.mode === (s.slot === 0 ? "A" : "B");
       let beats = 0, waveformBeats = 0, timingDraftValid = false, timingMessage = source ? "Source timing needs validation." : "Select or import a loop to edit source timing.", resolved = null;
       if (source) {
         try {
@@ -14984,10 +15260,11 @@ ${error.message}`);
           "button",
           {
             type: "button",
+            className: `ch-pattern-name${p.role !== "base" ? " has-delete" : ""}`,
             "aria-pressed": p.id === s.patternId,
             onClick: () => this.selectPattern(p.id)
           },
-          p.name
+          p.role === "variation" && /^Variation \d+$/.test(p.name) ? p.name.replace(/^Variation /, "Var ") : p.name
         ), p.role !== "base" && /* @__PURE__ */ React.createElement(
           "button",
           {
@@ -15056,10 +15333,12 @@ ${error.message}`);
             onChange: this.change,
             onChangeMany: this.changeMany,
             onClearSelection: this.clearEventSelection,
+            onGroupSelectionChange: this.selectGroupEvents,
+            groupSelectionIds: s.groupSelectionIds,
             onPatternBeatsChange: this.changePatternBeats,
             onFillCueOrder: this.fillCueOrder
           }
-        ), event && !s.inspector && /* @__PURE__ */ React.createElement("button", { className: "ch-event-dock", onClick: this.openInspector }, event.mode === "relative" ? "REL" : "ABS", " cue ", event.cue + 1, " \xB7 Edit event"), /* @__PURE__ */ React.createElement(
+        ), groupEvents.length > 0 && !s.inspector && /* @__PURE__ */ React.createElement("button", { className: "ch-event-dock", onClick: this.openInspector }, groupEvents.length, " event", groupEvents.length === 1 ? "" : "s", " selected \xB7 Edit group"), event && !groupEvents.length && !s.inspector && /* @__PURE__ */ React.createElement("button", { className: "ch-event-dock", onClick: this.openInspector }, event.mode === "relative" ? "REL" : "ABS", " cue ", event.cue + 1, " \xB7 Edit event"), /* @__PURE__ */ React.createElement(
           SequenceSettings,
           {
             patterns: s.patterns,
@@ -15094,7 +15373,22 @@ ${error.message}`);
           }
         )),
         /* @__PURE__ */ React.createElement("div", { className: "ch-clocks" }, /* @__PURE__ */ React.createElement("span", null, "Slot ", s.slot === 0 ? "A" : "B", " source", " ", s.playing ? `${this.state.sources.find((source2) => source2.id === s.activeSourceId)?.name ?? "awaiting audio"} \xB7 ${(s.beat % (s.activeSourceBeats || 1) / 4 + 1).toFixed(2)} / ${s.activeSourceBeats / 4} bars` : "stopped"), /* @__PURE__ */ React.createElement("span", null, "Slot ", s.slot === 0 ? "A" : "B", " pattern", " ", s.activePattern?.name ?? "none", " \xB7", " ", ((s.beat - s.patternStart) / 4 + 1).toFixed(2), " /", " ", (s.activePattern?.beats ?? 0) / 4), /* @__PURE__ */ React.createElement("span", null, "Listen ", s.audibleMode, s.pendingMode ? ` \u2192 ${s.pendingMode} pending` : ""), /* @__PURE__ */ React.createElement("span", null, "Seed slot ", s.sequenceSlot + 1, " \xB7 master step", " ", Math.floor(s.beat * 4)), /* @__PURE__ */ React.createElement("strong", { className: s.pending ? "ch-pending" : "" }, s.pending ? `Pending \xB7 ${s.boundary === null ? "waiting for audio boundary" : `bar ${s.boundary / 4 + 1}`}` : `Active \xB7 revision ${s.active}`)),
-        s.inspector && /* @__PURE__ */ React.createElement(
+        s.inspector && groupEvents.length > 0 ? /* @__PURE__ */ React.createElement(
+          GroupEventInspector,
+          {
+            events: groupEvents,
+            patternBeats: pattern.beats,
+            sourceBpm: source ? s.sourceBpm : "",
+            sourceBars: source ? s.bars : "",
+            timingValid: timingDraftValid,
+            timingMessage,
+            onSourceBpmChange: this.changeSourceBpm,
+            onSourceBarsChange: this.changeSourceBars,
+            onApplyTiming: this.applySourceTiming,
+            onPatch: this.patchGroupEvents,
+            onClose: this.closeInspector
+          }
+        ) : s.inspector && /* @__PURE__ */ React.createElement(
           EventInspector,
           {
             onClose: this.closeInspector,
