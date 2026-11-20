@@ -15,6 +15,7 @@ import { mountSampler } from './ui/sampler.js';
 import { mountSamplesDelivery } from './ui/samples_delivery.js';
 import { mountSamplesBridge } from './ui/samples_bridge.js';
 import { mountChopperDeviceBridge } from './ui/chopper_device_bridge.js';
+import { chopperPerformSettings } from './model/chopper_device.js';
 import { mountSdCard } from './ui/sdcard.js';
 import { mountPanelSkin } from './ui/panel_skin.js';
 import { mountKnobLocks } from './ui/knob_locks.js';
@@ -201,7 +202,7 @@ samplerMount = mountSampler(document.querySelector('#sampler-root'), {
 });
 
 mountSamplesBridge({frame:document.querySelector('.slice-lab-frame'),stage:file=>samplerMount.stageArtifact(file),installCue:(file,slot)=>samplerMount.installCueBank(file,slot),reloadCue:slot=>samplerMount.reloadCueBank(slot),navigate:()=>samplesDelivery.open()});
-const chopperBridge=mountChopperDeviceBridge({frame:document.querySelector('.slice-lab-frame'),request:(request,options)=>samplerMount.chopperDeviceRequest(request,options)});
+const chopperBridge=mountChopperDeviceBridge({frame:document.querySelector('.slice-lab-frame'),getPerformSettings:()=>{if(connectionStatus.dataset.state!=='on')throw Error('Connect the module first.');return chopperPerformSettings(session);},request:(request,options)=>samplerMount.chopperDeviceRequest(request,options)});
 
 locksMount = mountKnobLocks(document.querySelector('#locks-root'), {
   getSession: () => connectionStatus.dataset.state === 'on' ? session : null,

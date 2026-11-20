@@ -7,6 +7,16 @@ import {decodeBank,encodeBank,bankFromEditor,MAX_BANK_BYTES} from './chopper_eve
 import {convertLegacyBank,describeConversion} from './chopper_legacy_convert.js';
 import {validateArtifactBytes,MAX_ARTIFACT_BYTES} from '../ui/samples_bridge.js';
 
+// Use the logical sampler index, NOT activePlaits (one visible Plaits can
+// still occupy a two-Plaits descriptor layout).
+export function chopperPerformSettings(session){
+ const table=session?.settings,c=table?.capabilities;
+ const logical=c?.logicalPlaits??c?.plaitsVoices;
+ if(!Number.isInteger(logical))throw Error('Looper MIDI channel unavailable.');
+ const midiChannel=table.get(`voice.${logical}.midi_channel`);
+ if(!Number.isInteger(midiChannel)||midiChannel<0||midiChannel>16)throw Error('Looper MIDI channel unavailable.');
+ return {keyLoops:session?.descriptor?.perform?.keyLoops===1,midiChannel};
+}
 export function validChopperDevicePath(path,kind){
  return typeof path==='string'&&(kind==='sample'?/^\/LOOPS\/(?!0000)\d{4}\.WAV$/i.test(path):/^\/CHOPPER\/[AB]\.PVXP$/i.test(path));
 }

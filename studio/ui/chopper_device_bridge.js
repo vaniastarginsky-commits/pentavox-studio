@@ -1,8 +1,8 @@
 // Separate experimental protocol: does not alter the legacy staging bridge.
 import {MAX_BANK_BYTES} from '../model/chopper_event_bank.js';
 export const CHOPPER_DEVICE_PROTOCOL='pentavox-chopper-device-v1';
-const TYPES=new Set(['capabilities','list-samples','upload-sample','download-sample','download-pattern','upload-pattern','convert-pattern','read-pattern-banks','perform']);
-export function mountChopperDeviceBridge({frame,request,window:win=window}){
+const TYPES=new Set(['capabilities','list-samples','upload-sample','download-sample','download-pattern','upload-pattern','convert-pattern','read-pattern-banks','perform','perform-settings']);
+export function mountChopperDeviceBridge({frame,request,getPerformSettings,window:win=window}){
  let busy=false,activeId=null,disposed=false,generation=0;const completed=new Map();
  const receive=async event=>{
   const message=event.data;
@@ -30,6 +30,9 @@ export function mountChopperDeviceBridge({frame,request,window:win=window}){
   const requestGeneration=generation;
   const current=()=>!disposed&&generation===requestGeneration&&event.source===frame.contentWindow;
   const reply=result=>{if(current())event.source.postMessage({protocol:CHOPPER_DEVICE_PROTOCOL,id:message.id,type:'result',...result},event.origin);};
+  if(message.type==='perform-settings'){
+   try{reply({ok:true,value:await getPerformSettings()});}catch(error){reply({ok:false,error:error?.message||String(error)});}return;
+  }
   if(completed.has(message.id)){reply(completed.get(message.id));return;}
   if(busy){if(activeId!==message.id)reply({ok:false,error:'Another device operation is in progress.'});return;}
   busy=true;activeId=message.id;let result,active=true;

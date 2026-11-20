@@ -24,9 +24,9 @@ export function firmwarePanelPages(pages, descriptor) {
     }
     if(swappedLoops && page.name==='Looper')page.note+=' Middle-left selects recording A/B; Master top-right crossfades playback. The recording target is locked during a queued/running take.';
     if(page.name==='Slice' && fw.chopperOnly) {
-      const names=['Target A / Both / B','Seed','Probability','Not used','Not used','Not used'];
-      const shifts=['Rate','Rate','Rate','','',''];
-      result.push({...page,name:'Chopper',perfIndex:-1,note:'Chopper is the only loop engine in this firmware. Turn the three active pots for target, seed and variation probability. Hold B1 for rate. Hold B2 for a one-bar Fill. The Looper and Chopper use the same transport; select a compatible Chopper grid WAV for slot A or B in Studio.',pots:names.map((name,id)=>({id,name,shift:shifts[id],b2:id===0?'Hold: one-bar Fill':'Hold B2: one-bar Fill',live:false,def:0,colour:'#00a890'}))});
+      const names=['Target A / Both / B','Effect probability','Seed','Probability','Not used','Not used'];
+      const shifts=['Rate','Rate','Rate','Rate','',''];
+      result.push({...page,name:'Chopper',perfIndex:-1,note:'Chopper is the only loop engine in this firmware. Turn the four active pots for target, effect probability, seed and variation probability. Hold B1 for rate. Hold B2 for a one-bar Fill. The Looper and Chopper use the same transport; select a compatible Chopper grid WAV for slot A or B in Studio.',pots:names.map((name,id)=>({id,name,shift:shifts[id],b2:id===0?'Hold: one-bar Fill':'Hold B2: one-bar Fill',live:false,def:0,colour:'#00a890'}))});
       continue;
     }
     if(page.name==='Slice' && single && Number(descriptor?.slice?.version)>=19) {
