@@ -2,7 +2,7 @@
 const KEY = 'pentavox.studio.appearance';
 const CONTRAST_KEY = 'pentavox.studio.viewContrast';
 const DESIGNER_CONTRAST_KEY = 'panel-designer:viewContrast';
-const MAPPED = ['--bg','--surface','--surface-2','--text','--muted','--line','--accent','--accent-strong','--accent-ink','--accent-soft','--tile','--tile-hover','--studio-font','--studio-radius','--studio-density'];
+const MAPPED = ['--bg','--surface','--surface-2','--text','--muted','--line','--accent','--accent-strong','--accent-safe','--accent-ink','--accent-soft','--tile','--tile-hover','--studio-font','--studio-radius','--studio-density'];
 
 export function mountStudioAppearance(host, frame) {
   const samples = document.querySelector('.slice-lab-frame');
@@ -10,6 +10,35 @@ export function mountStudioAppearance(host, frame) {
   const root = document.documentElement;
   const read = () => { try { return localStorage.getItem(KEY) ? engine.load() : null; } catch { return null; } };
   const readContrast = () => { try { return localStorage.getItem(CONTRAST_KEY) || '0'; } catch { return '0'; } };
+  const probe = document.createElement('canvas').getContext('2d');
+  const toRgb = (color) => { probe.fillStyle = '#000'; probe.fillStyle = color; const m = /^#([0-9a-f]{6})$/i.exec(probe.fillStyle); if (!m) return null; const n = parseInt(m[1], 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const luminance = (color) => { const rgb = toRgb(color); if (!rgb) return .5; const c = rgb.map(x => { x /= 255; return x <= .04045 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4; }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+  const contrast = (a, b) => { const l1 = luminance(a), l2 = luminance(b); return (Math.max(l1, l2) + .05) / (Math.min(l1, l2) + .05); };
+  // An accent can be a soft pastel (Sakura) or a bright dragged hue, and embedded workspaces use it for
+  // focus rings, playheads and selected events. Keep the accent itself untouched for fills that pair it
+  // with --accent-ink, but blend a copy toward the palette's own text colour until it stays readable on
+  // every surface an embedded workspace paints it onto.
+  const safeAccent = (accent, surfaces, text) => {
+    const readable = (surfaces || []).filter(Boolean);
+    if (!accent || !readable.length) return accent;
+    if (readable.every(surface => contrast(accent, surface) >= 3)) return accent;
+    const ink = text || (luminance(readable[0]) > .35 ? '#000' : '#fff');
+    const from = toRgb(accent), to = toRgb(ink);
+    if (!from || !to) return ink;
+    for (let step = 1; step <= 20; step++) {
+      const t = step / 20;
+      const mixed = `rgb(${Math.round(from[0] + (to[0] - from[0]) * t)}, ${Math.round(from[1] + (to[1] - from[1]) * t)}, ${Math.round(from[2] + (to[2] - from[2]) * t)})`;
+      if (readable.every(surface => contrast(mixed, surface) >= 3)) return mixed;
+    }
+    return ink;
+  };
+  // Studio's own palette in default/system mode also needs a readable accent in embedded workspaces.
+  function syncDefaultAccent() {
+    const css = getComputedStyle(root);
+    const g = key => css.getPropertyValue(key).trim();
+    const accent = g('--accent') || g('--ui-gold');
+    if (accent) root.style.setProperty('--accent-safe', safeAccent(accent, [g('--surface'), g('--surface-2'), g('--bg')], g('--text')));
+  }
   function syncSamples() {
     try {
       const doc = samples?.contentDocument; if (!doc) return;
@@ -39,16 +68,14 @@ export function mountStudioAppearance(host, frame) {
     if (!state) {
       delete root.dataset.studioAppearance; delete root.dataset.studioSurfaceStyle;
       try { const theme = localStorage.getItem('pentavox.studio.theme'); if (theme) root.dataset.theme = theme; else delete root.dataset.theme; } catch { delete root.dataset.theme; }
-      syncSamples(); return;
+      syncDefaultAccent(); syncSamples(); return;
     }
     engine.apply(state.preset, state.style, state.overrides, state.glow, state.accentHue);
     const css = getComputedStyle(root); const v = key => css.getPropertyValue(key).trim();
     const bg = v('--ui-bg'), text = v('--ui-text'), accent = v('--ui-gold');
-    const probe = document.createElement('canvas').getContext('2d');
-    const luminance = color => { probe.fillStyle = '#000'; probe.fillStyle = color; const m = /^#([0-9a-f]{6})$/i.exec(probe.fillStyle); if (!m) return .5; const n = parseInt(m[1],16); const c = [n >> 16,(n >> 8)&255,n&255].map(x => { x /= 255; return x <= .04045 ? x/12.92 : ((x+.055)/1.055)**2.4; }); return .2126*c[0]+.7152*c[1]+.0722*c[2]; };
     root.dataset.theme = luminance(bg) > .35 ? 'light' : 'dark'; root.dataset.studioAppearance = 'custom';
     root.dataset.studioSurfaceStyle = state.style || engine.PRESETS[state.preset].defaultStyle || 'flat';
-    const map = {'--bg':bg,'--surface':v('--ui-panel'),'--surface-2':v('--ui-surface'),'--text':text,'--muted':v('--ui-text-soft'),'--line':`rgba(${v('--ui-line-rgb')}, .35)`,'--accent':accent,'--accent-strong':accent,'--accent-ink':luminance(accent) > .35 ? '#111' : '#fff','--accent-soft':`rgba(${v('--ui-gold-rgb')}, .18)`,'--tile':v('--ui-surface'),'--tile-hover':v('--ui-surface-hover'),'--studio-font':state.overrides['--theme-font'] || v('--theme-font'),'--studio-radius':state.overrides['--theme-radius'] || v('--theme-radius'),'--studio-density':state.overrides['--theme-btn-height'] || v('--theme-btn-height')};
+    const map = {'--bg':bg,'--surface':v('--ui-panel'),'--surface-2':v('--ui-surface'),'--text':text,'--muted':v('--ui-text-soft'),'--line':`rgba(${v('--ui-line-rgb')}, .35)`,'--accent':accent,'--accent-strong':accent,'--accent-safe':safeAccent(accent, [v('--ui-panel'), v('--ui-surface'), bg], text),'--accent-ink':luminance(accent) > .35 ? '#111' : '#fff','--accent-soft':`rgba(${v('--ui-gold-rgb')}, .18)`,'--tile':v('--ui-surface'),'--tile-hover':v('--ui-surface-hover'),'--studio-font':state.overrides['--theme-font'] || v('--theme-font'),'--studio-radius':state.overrides['--theme-radius'] || v('--theme-radius'),'--studio-density':state.overrides['--theme-btn-height'] || v('--theme-btn-height')};
     for (const [key,value] of Object.entries(map)) root.style.setProperty(key,value);
     syncSamples();
   }
@@ -104,7 +131,9 @@ export function mountStudioAppearance(host, frame) {
     catch { return false; }
   };
   const systemAppearance = window.matchMedia?.('(prefers-color-scheme: dark)');
-  const syncSystemAppearance = () => { if (followsSystemAppearance()) syncSamples(); };
+  // Live system light/dark changes take the Studio stylesheet's palette; the derived safe accent has to be
+  // recomputed in the same pass, or embedded workspaces keep the previous scheme's blended accent.
+  const syncSystemAppearance = () => { if (followsSystemAppearance()) { syncDefaultAccent(); syncSamples(); } };
   if (systemAppearance?.addEventListener) systemAppearance.addEventListener('change', syncSystemAppearance);
   else systemAppearance?.addListener?.(syncSystemAppearance);
   apply(read()); syncContrast(readContrast()); render();

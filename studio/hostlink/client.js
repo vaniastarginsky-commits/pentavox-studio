@@ -20,6 +20,8 @@ const COMMAND = Object.freeze({
   PVXE_CHUNK: 0x65,
   PVXE_COMMIT: 0x66,
   PVXE_ABORT: 0x67,
+  // Live perform surface (macros, notes, transport): one round-trip, one-word setters.
+  PERFORM: 0x68,
 });
 
 // 32 byte envelope + 8 patterns x (4 byte header + 256 events x 12 bytes). The same number the firmware buffer
@@ -341,6 +343,12 @@ export class HostLinkClient {
     });
   }
 
+  /** Live perform command: kind byte + optional body; reply is playing + perform-mask. */
+  async perform(kind, body = new Uint8Array()) {
+    const reply = await this.request(COMMAND.PERFORM, concat(Uint8Array.of(kind), body));
+    requireLength(reply.body, 2, 'PERFORM');
+    return { status: reply.status, playing: reply.body[0], mask: reply.body[1] };
+  }
   async saveToSlot(slot) {
     await this.request(COMMAND.SAVE_TO_SLOT, Uint8Array.of(slot), COMMIT_TIMEOUT_MS);
   }

@@ -17,6 +17,12 @@ export class ChopperDeviceService {
  owner(){const client=this.getClient(),info=this.getInfo(),descriptor=this.getDescriptor();if(!client||!info)throw Error('Connect the module using the existing Studio connection first.');return {client,info,descriptor,files:this.makeFiles(client,info)};}
  async request(request,{onProgress=()=>{}}={}){
   const owner=this.owner(),{files,descriptor}=owner;
+  if(request.type==='perform'){
+   const client=this.getClient();
+   if(!client)throw Error('Connect a device first.');
+   if(descriptor?.perform?.capable!==true)throw Error('This firmware does not advertise live perform.');
+   return client.perform(request.kind|0,request.body?Uint8Array.from(request.body):undefined);
+  }
   // No command is invented for new REL/ABS. Filesystem access is verified by
   // FS_INFO, rather than inferred from the existence of a Javascript method.
   return this.runJob('Chopper device files',async()=>{
@@ -25,7 +31,7 @@ export class ChopperDeviceService {
    const loops=loopIoVersion(descriptor)>0;
    const patternStores=descriptor?.chopper?.pvxeFile===1,patternLive=descriptor?.pvxeUpload?.playable===true;
    const patternVersion=Number.isInteger(descriptor?.chopper?.pvxeVersion)?descriptor.chopper.pvxeVersion:1;
-   if(request.type==='capabilities')return {sampleUpload:loops,sampleDownload:loops,legacyPatternDownload:descriptor?.chopper?.cueFileVersion===1,newPatternUpload:patternStores||patternLive,patternFileStorage:patternStores,patternLiveUpload:patternLive,patternVersion,reason:patternStores||patternLive?'This firmware accepts a PVXE pattern bank and stores it per slot; the legacy PVXP bank keeps its own file and semantics.':'REL/ABS pattern upload requires compatible firmware; current PVXP v1–v4 is not reinterpreted.'};
+   if(request.type==='capabilities')return {sampleUpload:loops,sampleDownload:loops,legacyPatternDownload:descriptor?.chopper?.cueFileVersion===1,newPatternUpload:patternStores||patternLive,performCapable:descriptor?.perform?.capable===true,patternFileStorage:patternStores,patternLiveUpload:patternLive,patternVersion,reason:patternStores||patternLive?'This firmware accepts a PVXE pattern bank and stores it per slot; the legacy PVXP bank keeps its own file and semantics.':'REL/ABS pattern upload requires compatible firmware; current PVXP v1–v4 is not reinterpreted.'};
    if(request.type==='read-pattern-banks'){
     if(!patternStores)throw Error('This firmware does not advertise PVXE storage.');
     let entries;try{entries=await files.list('/CHOPPER');}catch(error){if(error?.status===12)entries=[];else throw error;}

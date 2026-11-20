@@ -1,13 +1,15 @@
 // Separate experimental protocol: does not alter the legacy staging bridge.
 import {MAX_BANK_BYTES} from '../model/chopper_event_bank.js';
 export const CHOPPER_DEVICE_PROTOCOL='pentavox-chopper-device-v1';
-const TYPES=new Set(['capabilities','list-samples','upload-sample','download-sample','download-pattern','upload-pattern','convert-pattern','read-pattern-banks']);
+const TYPES=new Set(['capabilities','list-samples','upload-sample','download-sample','download-pattern','upload-pattern','convert-pattern','read-pattern-banks','perform']);
 export function mountChopperDeviceBridge({frame,request,window:win=window}){
  let busy=false,activeId=null,disposed=false,generation=0;const completed=new Map();
  const receive=async event=>{
   const message=event.data;
   if(disposed||event.source!==frame.contentWindow||event.origin!==win.location.origin||win.location.protocol==='file:'||message?.protocol!==CHOPPER_DEVICE_PROTOCOL||!TYPES.has(message.type)||typeof message.id!=='string'||message.id.length<1||message.id.length>100)return;
   if(message.type==='upload-sample'&&(!(message.bytes instanceof ArrayBuffer)||message.bytes.byteLength>6_000_000))return;
+  // PERFORM is a one-word setter: a kind byte plus at most a small body, never a transfer.
+  if(message.type==='perform'&&(!Number.isInteger(message.kind)||message.kind<0||message.kind>255||(message.body!==undefined&&(!Array.isArray(message.body)||message.body.length>8))))return;
   // A pattern arrives as an encoded bank, as the editor's document plus the loop it was authored against, or as a
   // legacy PVXP bank plus the slice geometry it was cut on. All three are bounded here, so an absurd frame never
   // reaches the service, and the document keeps the editor's own 1 MB import limit.

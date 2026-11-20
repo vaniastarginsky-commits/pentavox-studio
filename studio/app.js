@@ -586,7 +586,7 @@ function refreshWorkspace() {
     palette: ['Engines', `${buildVoiceCount === 1 ? 'One voice' : 'Two voices'}, ${buildEngineBanks === 4 ? 'four' : 'three'} banks of eight`],
     dx7: ['DX7 banks', 'Six-op patches on the SD card'], wavetable: ['Wave tables', 'Resources for the next firmware build'],
     terrain: ['Wave terrain', 'Resources for the next firmware build'], sampler: [loops ? 'Loops' : 'Sampler', loops ? 'Prepare audio and manage the loop library' : `Prepare audio and manage ${slots} sample slots`],
-    'slice-lab': ['Samples', 'One source library for pattern editing and audio preparation'],
+    'slice-lab': ['Chopper', 'Waveform-first sample & pattern editor'],
     'panel-designer': ['Panel Designer', 'Design and export Eurorack panels'],
     presets: ['Setup presets', 'Stored module configurations'], routing: ['Routing', 'CV, MIDI, notes and knob mapping'], midi: ['MIDI routing', 'Controllers to sound parameters'],
     locks: ['Knob record', 'Recorded and drawn movements'], panel: ['Live panel', 'Controls and colours on the module'], settings: ['Module settings', 'Clock, levels and module preferences'], interface: ['Interface', 'Global Studio appearance and display preferences'], manual: ['Manual', 'Controls, gestures and Studio help'],

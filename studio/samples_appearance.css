@@ -2,12 +2,14 @@
    Keep audio/data colors (waveforms, slice accents, FX categories) semantic; theme UI chrome. */
 :root[data-studio-appearance="custom"] { background: var(--bg); color: var(--text); font-family: var(--studio-font,system-ui,sans-serif); }
 :root[data-studio-appearance="custom"] .app {
-  --focus: var(--accent);
+  /* Selection, drop hints and outlines are essential cues: follow the readable copy of the Studio accent
+     (the bridge derives it for pastel or freely dragged accents) and fall back to the raw accent. */
+  --focus: var(--accent-safe,var(--accent));
   --border: var(--line);
   --top: var(--surface);
   --panel: var(--surface);
   --panel-hi: var(--surface-2);
-  --teal: var(--accent);
+  --teal: var(--accent-safe,var(--accent));
   color: var(--text);
   background: var(--bg);
 }
@@ -21,7 +23,7 @@
 :root[data-studio-appearance="custom"] .app .native-break-editor .bk-step:not(.ev),
 :root[data-studio-appearance="custom"] .app .native-break-editor .bk-key { background: var(--panel-hi) !important; color: var(--text) !important; border-color: var(--line) !important; }
 :root[data-studio-appearance="custom"] .app .native-break-editor .bk-key.black { background: color-mix(in srgb,var(--panel-hi) 75%,var(--text)) !important; }
-:root[data-studio-appearance="custom"] .entry.selected { background: var(--accent-soft); border-color: var(--accent); color: var(--text); box-shadow: inset 3px 0 var(--accent); }
+:root[data-studio-appearance="custom"] .entry.selected { background: var(--accent-soft); border-color: var(--accent-safe,var(--accent)); color: var(--text); box-shadow: inset 3px 0 var(--accent-safe,var(--accent)); }
 :root[data-studio-appearance="custom"] .entry.selected :is(.entry-main,strong) { color: var(--text); }
 :root[data-studio-appearance="custom"] .entry.selected small { color: var(--muted); }
 :root[data-studio-appearance="custom"] :is(.samples-views,.toolbar,.pattern-toolbar,.clip-label-header,.clip-ruler,.piano-corner,.piano-head,.pattern-bar-label,.track-rule,.fx-label) { background-color: var(--surface-2); }
@@ -32,7 +34,7 @@
 :root[data-studio-appearance="custom"] .preparation-status { color: var(--text); }
 :root[data-studio-appearance="custom"] .samples-views button[aria-current="page"],
 :root[data-studio-appearance="custom"] .samples-views button[aria-pressed="true"],
-:root[data-studio-appearance="custom"] .source-entry.selected { background: var(--accent-soft); border-color: var(--accent); color: var(--text); box-shadow: inset 0 -2px var(--accent); }
+:root[data-studio-appearance="custom"] .source-entry.selected { background: var(--accent-soft); border-color: var(--accent-safe,var(--accent)); color: var(--text); box-shadow: inset 0 -2px var(--accent-safe,var(--accent)); }
 :root[data-studio-appearance="custom"] .samples-views button small { color: var(--muted); }
 :root[data-studio-appearance="custom"] button.primary,
 :root[data-studio-appearance="custom"] .app .primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
@@ -47,8 +49,8 @@
 :root[data-studio-appearance="custom"] .pattern-step { background: var(--surface-2); color: var(--text); }
 :root[data-studio-appearance="custom"] .pattern-step.empty { background: var(--bg); color: var(--muted); }
 :root[data-studio-appearance="custom"] .pattern-step strong { color: var(--text); }
-:root[data-studio-appearance="custom"] .pattern-step.selected { outline-color: var(--accent); }
+:root[data-studio-appearance="custom"] .pattern-step.selected { outline-color: var(--accent-safe,var(--accent)); }
 :root[data-studio-appearance="custom"] .pattern-fx summary,
 :root[data-studio-appearance="custom"] .fx-controls { background-color: var(--surface-2); color: var(--text); }
-:root[data-studio-appearance="custom"] .source-drop-hint { color: var(--text); border-color: var(--accent); }
+:root[data-studio-appearance="custom"] .source-drop-hint { color: var(--text); border-color: var(--accent-safe,var(--accent)); }
 :root[data-studio-appearance="custom"] :is(.source-wave-wrap,.timeline-canvas,.pattern-steps,.clip-lane,.piano-grid,.lock-shape) { color-scheme: dark; }

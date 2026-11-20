@@ -21,7 +21,7 @@ const BUILDABLE_REFS = ['experiment/single-plaits-20261024', 'feat/chopper-engin
 // The Chopper image can only be built from the Chopper line. A branch outside it is not offered for that
 // profile, because start() would reset it - and a picker that shows a choice which does not happen is worse
 // than no picker: the user believes they changed something.
-const CHOPPER_REFS = ['feat/chopper-engine', 'feat/chopper-event-address', 'merge/chopper-editor-line'];
+const CHOPPER_REFS = ['feat/chopper-engine', 'feat/chopper-event-address', 'merge/chopper-editor-line', 'build/1-plaits-looper-chopper2'];
 const CHOPPER_DEFAULT_REF = 'merge/chopper-editor-line';
 const ALL_BUILDABLE_REFS = [...BUILDABLE_REFS, ...CHOPPER_REFS];
 function buildableRef(key, fallback, allowed = BUILDABLE_REFS) {
